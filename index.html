@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows 10 Setup Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="screen-setup" class="screen active">
+        <div class="setup-container">
+            <div class="setup-logo">
+                <div class="windows-logo">
+                    <div class="logo-square"></div>
+                    <div class="logo-square"></div>
+                    <div class="logo-square"></div>
+                    <div class="logo-square"></div>
+                </div>
+            </div>
+            <h1 class="setup-title">Windows 10 Setup</h1>
+            <div class="setup-content" id="setup-content">
+                <div class="setup-step active" id="step-welcome">
+                    <h2>Welcome to Windows 10</h2>
+                    <p>Let's get you set up. This will only take a few minutes.</p>
+                    <button class="btn-primary" onclick="setupNext()">Next</button>
+                </div>
+                
+                <div class="setup-step" id="step-region">
+                    <h2>Select your region</h2>
+                    <select class="setup-select" id="region-select">
+                        <option>United States</option>
+                        <option>United Kingdom</option>
+                        <option>Canada</option>
+                        <option>Australia</option>
+                        <option>Germany</option>
+                        <option>France</option>
+                        <option>Japan</option>
+                    </select>
+                    <button class="btn-primary" onclick="setupNext()">Yes</button>
+                </div>
+
+                <div class="setup-step" id="step-keyboard">
+                    <h2>Select keyboard layout</h2>
+                    <select class="setup-select" id="keyboard-select">
+                        <option>US</option>
+                        <option>UK</option>
+                        <option>Canadian French</option>
+                        <option>German</option>
+                        <option>Spanish</option>
+                    </select>
+                    <button class="btn-primary" onclick="setupNext()">Yes</button>
+                </div>
+
+                <div class="setup-step" id="step-account">
+                    <h2>Create your account</h2>
+                    <p>Who's going to use this PC?</p>
+                    <input type="text" class="setup-input" id="username-input" placeholder="Enter your name" maxlength="20">
+                    <button class="btn-primary" onclick="setupNext()">Next</button>
+                </div>
+
+                <div class="setup-step" id="step-password">
+                    <h2>Create a password</h2>
+                    <p>Make sure it's something you'll remember</p>
+                    <input type="password" class="setup-input" id="password-input" placeholder="Enter password">
+                    <input type="password" class="setup-input" id="password-confirm" placeholder="Confirm password">
+                    <button class="btn-primary" onclick="setupNext()">Next</button>
+                </div>
+
+                <div class="setup-step" id="step-installing">
+                    <h2>Setting things up for you</h2>
+                    <p class="install-message" id="install-message">Installing Windows...</p>
+                    <div class="loading-container">
+                        <div class="loading-dots">
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <p class="progress-text" id="progress-text">0%</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-lock" class="screen">
+        <div class="lock-screen">
+            <div class="lock-time" id="lock-time">12:00</div>
+            <div class="lock-date" id="lock-date">Monday, January 1</div>
+            <div class="lock-hint">Click anywhere to continue</div>
+        </div>
+    </div>
+
+    <div id="screen-login" class="screen">
+        <div class="login-container">
+            <div class="user-avatar">
+                <svg width="100" height="100" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="48" fill="#0078d4"/>
+                    <circle cx="50" cy="40" r="18" fill="white"/>
+                    <path d="M 20 85 Q 50 70 80 85" fill="white"/>
+                </svg>
+            </div>
+            <div class="user-name" id="login-username">User</div>
+            <div class="password-container">
+                <input type="password" class="password-input" id="login-password" placeholder="Password">
+                <button class="btn-submit" onclick="attemptLogin()">→</button>
+            </div>
+            <div class="login-error" id="login-error"></div>
+            <div class="login-options">
+                <button class="btn-text" onclick="switchUser()">Sign in to a different account</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-desktop" class="screen">
+        <div class="desktop">
+            <div class="desktop-icons">
+                <div class="desktop-icon" ondblclick="openApp('computer')">
+                    <div class="icon-img">💻</div>
+                    <div class="icon-label">This PC</div>
+                </div>
+                <div class="desktop-icon" ondblclick="openApp('trash')">
+                    <div class="icon-img">🗑️</div>
+                    <div class="icon-label">Recycle Bin</div>
+                </div>
+            </div>
+
+            <div class="taskbar">
+                <div class="taskbar-left">
+                    <button class="start-button" onclick="toggleStartMenu()">
+                        <div class="windows-icon"></div>
+                    </button>
+                    <div class="search-box" onclick="openApp('search')">
+                        <span class="search-icon">🔍</span>
+                        <span class="search-text">Type here to search</span>
+                    </div>
+                </div>
+                <div class="taskbar-center" id="taskbar-apps"></div>
+                <div class="taskbar-right">
+                    <div class="system-tray">
+                        <span class="tray-icon" onclick="openApp('taskmgr')">📊</span>
+                        <span class="tray-icon">🔊</span>
+                        <span class="tray-icon">📶</span>
+                        <span class="tray-icon">🔋</span>
+                        <div class="clock" id="taskbar-clock">12:00 PM<br>1/1/2024</div>
+                        <button class="notification-button" onclick="toggleNotifications()">💬</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="start-menu" id="start-menu">
+                <div class="start-content">
+                    <div class="start-user">
+                        <div class="start-avatar">👤</div>
+                        <div class="start-username" id="start-username">User</div>
+                    </div>
+                    <div class="start-apps">
+                        <h3>All apps</h3>
+                        <div class="app-list">
+                            <div class="app-item" onclick="openApp('calculator'); toggleStartMenu()">
+                                <span class="app-icon">🔢</span>
+                                <span>Calculator</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('notepad'); toggleStartMenu()">
+                                <span class="app-icon">📝</span>
+                                <span>Notepad</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('explorer'); toggleStartMenu()">
+                                <span class="app-icon">📁</span>
+                                <span>File Explorer</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('settings'); toggleStartMenu()">
+                                <span class="app-icon">⚙️</span>
+                                <span>Settings</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('taskmgr'); toggleStartMenu()">
+                                <span class="app-icon">📊</span>
+                                <span>Task Manager</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('browser'); toggleStartMenu()">
+                                <span class="app-icon">🌐</span>
+                                <span>Microsoft Edge</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="start-power">
+                        <button class="power-button" onclick="togglePowerMenu()">⚡</button>
+                    </div>
+                </div>
+                <div class="power-menu" id="power-menu">
+                    <div class="power-option" onclick="signOut()">Sign out</div>
+                    <div class="power-option" onclick="lockScreen()">Lock</div>
+                    <div class="power-option" onclick="restart()">Restart</div>
+                    <div class="power-option" onclick="shutdown()">Shut down</div>
+                </div>
+            </div>
+
+            <div class="notification-center" id="notification-center">
+                <div class="notification-header">
+                    <h3>Notifications</h3>
+                    <button onclick="toggleNotifications()">✕</button>
+                </div>
+                <div class="notification-content">
+                    <div class="notification">
+                        <div class="notification-icon">ℹ️</div>
+                        <div class="notification-text">
+                            <div class="notification-title">Windows Update</div>
+                            <div class="notification-body">Your device is up to date</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="windows-container"></div>
+        </div>
+    </div>
+
+    <div id="screen-shutdown" class="screen">
+        <div class="shutdown-screen">
+            <div class="loading-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <h2 id="shutdown-text">Shutting down...</h2>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
