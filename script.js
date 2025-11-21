@@ -31,7 +31,7 @@ function setupNext() {
     
     if (currentStep === 'step-wifi') {
         if (!userData.wifiNetwork) {
-            return;
+            userData.wifiNetwork = 'offline';
         }
     }
     
@@ -85,19 +85,17 @@ function setupNext() {
         userData.password = password;
     }
     
-    if (currentStep === 'step-privacy') {
-        currentSetupStep = setupSteps.indexOf('step-installing');
-        document.getElementById(currentStep).classList.remove('active');
-        document.getElementById('step-installing').classList.add('active');
-        startInstallation();
-        return;
+    const currentStepElement = document.getElementById(currentStep);
+    if (currentStepElement) {
+        currentStepElement.classList.remove('active');
     }
-    
-    document.getElementById(currentStep).classList.remove('active');
     currentSetupStep++;
     
     if (currentSetupStep < setupSteps.length) {
-        document.getElementById(setupSteps[currentSetupStep]).classList.add('active');
+        const nextStepElement = document.getElementById(setupSteps[currentSetupStep]);
+        if (nextStepElement) {
+            nextStepElement.classList.add('active');
+        }
         
         if (setupSteps[currentSetupStep] === 'step-installing') {
             startInstallation();
@@ -125,7 +123,7 @@ function connectWifi() {
     }
     
     document.getElementById('step-wifi-password').classList.remove('active');
-    currentSetupStep = setupSteps.indexOf('step-wifi');
+    document.getElementById('step-wifi').classList.add('active');
     setupNext();
 }
 
@@ -209,6 +207,13 @@ function handleMicrosoftPasswordNext() {
     userData.password = password;
     document.getElementById('step-microsoft-password').classList.remove('active');
     document.getElementById('step-privacy').classList.add('active');
+}
+
+function handlePrivacyNext() {
+    document.getElementById('step-privacy').classList.remove('active');
+    currentSetupStep = setupSteps.indexOf('step-installing');
+    document.getElementById('step-installing').classList.add('active');
+    startInstallation();
 }
 
 function createMicrosoftAccount() {

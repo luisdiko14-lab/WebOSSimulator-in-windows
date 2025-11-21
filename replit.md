@@ -10,10 +10,20 @@ This project is a fully functional Windows 10 simulator built with pure HTML, CS
 
 ### Installation & Setup
 - Windows 10 installation wizard with animated loading bars
-- Multi-step setup process (region, keyboard, account creation, password setup)
+- Multi-step setup process:
+  - Region selection
+  - Keyboard layout selection
+  - WiFi network connection with password entry
+  - Drive selection for Windows installation (SSD, HDD, USB)
+  - Account type selection (Microsoft Account or Local Account)
+  - Microsoft Account sign-in with email and password
+  - Local account creation with username and password
+  - Privacy settings configuration (Location, Diagnostics, Tailored experiences)
 - Realistic installation progress with dynamic messages
 
 ### User Management
+- Microsoft Account integration option
+- Local account creation option
 - User account creation with username and password
 - Login screen with password authentication
 - Lock screen with time/date display
@@ -30,7 +40,14 @@ This project is a fully functional Windows 10 simulator built with pure HTML, CS
 - **Calculator**: Full-featured calculator with basic operations
 - **Notepad**: Simple text editor
 - **File Explorer**: File and folder browsing interface
-- **Settings**: System settings panel
+- **Settings**: Fully functional settings panel with multiple sections:
+  - System (brightness, night light, sound, storage)
+  - Personalization (background, colors, themes)
+  - Apps (installed apps list with uninstall options)
+  - Accounts (user profile info showing username and email)
+  - Time & Language (time zone, language settings)
+  - Privacy (location, camera, microphone, diagnostics)
+  - Update & Security (Windows Update, security status, backup)
 - **Task Manager**: Real-time CPU and memory monitoring with process list
 - **Microsoft Edge**: Browser simulation
 
@@ -71,6 +88,11 @@ This project is a fully functional Windows 10 simulator built with pure HTML, CS
 - Implemented complete Windows 10 UI simulation
 - Fixed CSS display conflicts for proper screen rendering
 - Added all core features: setup, login, desktop, apps, task manager
+- Added WiFi setup with network selection and password entry
+- Added drive selection for Windows installation
+- Added Microsoft Account sign-in option
+- Expanded Settings app with 7 fully functional sections
+- Added privacy settings configuration during setup
 
 ## Usage
 
@@ -78,11 +100,24 @@ The simulator runs on port 5000. Simply open the application and:
 
 1. Click "Next" through the setup wizard
 2. Select your region and keyboard layout
-3. Create a user account with username and password
-4. Wait for installation to complete
-5. Click the lock screen to proceed to login
-6. Enter your password to access the desktop
-7. Explore apps, settings, and system functions
+3. Connect to a WiFi network (password required for secured networks)
+4. Select a drive for Windows installation (SSD, HDD, or USB)
+5. Choose between Microsoft Account or Local Account
+   - For Microsoft Account: Enter email and password
+   - For Local Account: Enter username and password
+6. Configure privacy settings (Location, Diagnostics, Tailored experiences)
+7. Wait for installation to complete
+8. Click the lock screen to proceed to login
+9. Enter your password to access the desktop
+10. Explore apps, settings, and system functions
+
+### Navigating Settings
+
+The Settings app includes 7 sections, each fully functional:
+- Click on any section in the sidebar to view its settings
+- Toggle switches work for privacy and system options
+- Sliders adjust brightness and volume levels
+- Account section shows your username and account type
 
 ## Performance Monitoring
 
