@@ -51,11 +51,100 @@
                     <button class="btn-primary" onclick="setupNext()">Yes</button>
                 </div>
 
+                <div class="setup-step" id="step-wifi">
+                    <h2>Connect to a network</h2>
+                    <p>You'll need an internet connection to continue setting up your device</p>
+                    <div class="wifi-list">
+                        <div class="wifi-item" onclick="selectWifi('HomeNetwork')">
+                            <span class="wifi-icon">📶</span>
+                            <span class="wifi-name">HomeNetwork</span>
+                            <span class="wifi-lock">🔒</span>
+                        </div>
+                        <div class="wifi-item" onclick="selectWifi('Office-WiFi')">
+                            <span class="wifi-icon">📶</span>
+                            <span class="wifi-name">Office-WiFi</span>
+                            <span class="wifi-lock">🔒</span>
+                        </div>
+                        <div class="wifi-item" onclick="selectWifi('Guest Network')">
+                            <span class="wifi-icon">📶</span>
+                            <span class="wifi-name">Guest Network</span>
+                        </div>
+                    </div>
+                    <button class="btn-text" onclick="setupNext()">I don't have internet</button>
+                </div>
+
+                <div class="setup-step" id="step-wifi-password">
+                    <h2>Enter the network security key</h2>
+                    <p id="wifi-network-name">HomeNetwork</p>
+                    <input type="password" class="setup-input" id="wifi-password-input" placeholder="Network password">
+                    <button class="btn-primary" onclick="connectWifi()">Connect</button>
+                </div>
+
+                <div class="setup-step" id="step-drive">
+                    <h2>Where do you want to install Windows?</h2>
+                    <div class="drive-list">
+                        <div class="drive-item" onclick="selectDrive(0)">
+                            <div class="drive-info">
+                                <span class="drive-name">Drive 0: SSD</span>
+                                <span class="drive-size">476.9 GB</span>
+                            </div>
+                            <div class="drive-details">Primary, NTFS</div>
+                        </div>
+                        <div class="drive-item" onclick="selectDrive(1)">
+                            <div class="drive-info">
+                                <span class="drive-name">Drive 1: HDD</span>
+                                <span class="drive-size">931.5 GB</span>
+                            </div>
+                            <div class="drive-details">Primary, NTFS</div>
+                        </div>
+                        <div class="drive-item" onclick="selectDrive(2)">
+                            <div class="drive-info">
+                                <span class="drive-name">Drive 2: External USB</span>
+                                <span class="drive-size">256.0 GB</span>
+                            </div>
+                            <div class="drive-details">Removable, FAT32</div>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="setupNext()" id="drive-next-btn" disabled>Next</button>
+                </div>
+
+                <div class="setup-step" id="step-account-type">
+                    <h2>How would you like to set up this device?</h2>
+                    <div class="account-type-options">
+                        <div class="account-type-card" onclick="selectAccountType('microsoft')">
+                            <div class="account-type-icon">🌐</div>
+                            <h3>Sign in with Microsoft</h3>
+                            <p>Get the most out of Windows with a Microsoft account</p>
+                        </div>
+                        <div class="account-type-card" onclick="selectAccountType('local')">
+                            <div class="account-type-icon">👤</div>
+                            <h3>Offline account</h3>
+                            <p>Limited experience without signing in</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-step" id="step-microsoft-account">
+                    <h2>Sign in with Microsoft</h2>
+                    <p>Enter your email, phone, or Skype</p>
+                    <input type="email" class="setup-input" id="microsoft-email" placeholder="Email or phone">
+                    <button class="btn-primary" onclick="handleMicrosoftAccountNext()">Next</button>
+                    <button class="btn-text" onclick="createMicrosoftAccount()">Create account</button>
+                </div>
+
+                <div class="setup-step" id="step-microsoft-password">
+                    <h2>Enter password</h2>
+                    <p id="microsoft-email-display">user@example.com</p>
+                    <input type="password" class="setup-input" id="microsoft-password-input" placeholder="Password">
+                    <button class="btn-primary" onclick="handleMicrosoftPasswordNext()">Sign in</button>
+                    <button class="btn-text" onclick="forgotPassword()">Forgot password?</button>
+                </div>
+
                 <div class="setup-step" id="step-account">
                     <h2>Create your account</h2>
                     <p>Who's going to use this PC?</p>
                     <input type="text" class="setup-input" id="username-input" placeholder="Enter your name" maxlength="20">
-                    <button class="btn-primary" onclick="setupNext()">Next</button>
+                    <button class="btn-primary" onclick="handleLocalAccountNext()">Next</button>
                 </div>
 
                 <div class="setup-step" id="step-password">
@@ -63,7 +152,44 @@
                     <p>Make sure it's something you'll remember</p>
                     <input type="password" class="setup-input" id="password-input" placeholder="Enter password">
                     <input type="password" class="setup-input" id="password-confirm" placeholder="Confirm password">
-                    <button class="btn-primary" onclick="setupNext()">Next</button>
+                    <button class="btn-primary" onclick="handleLocalPasswordNext()">Next</button>
+                </div>
+
+                <div class="setup-step" id="step-privacy">
+                    <h2>Choose privacy settings for your device</h2>
+                    <div class="privacy-options">
+                        <div class="privacy-item">
+                            <div class="privacy-label">
+                                <strong>Location</strong>
+                                <p>Let Windows and apps request your location</p>
+                            </div>
+                            <label class="toggle">
+                                <input type="checkbox" id="privacy-location" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="privacy-item">
+                            <div class="privacy-label">
+                                <strong>Diagnostics</strong>
+                                <p>Send optional diagnostic data to Microsoft</p>
+                            </div>
+                            <label class="toggle">
+                                <input type="checkbox" id="privacy-diagnostics" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="privacy-item">
+                            <div class="privacy-label">
+                                <strong>Tailored experiences</strong>
+                                <p>Let Microsoft provide personalized tips and ads</p>
+                            </div>
+                            <label class="toggle">
+                                <input type="checkbox" id="privacy-ads">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="setupNext()">Accept</button>
                 </div>
 
                 <div class="setup-step" id="step-installing">

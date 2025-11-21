@@ -16,17 +16,20 @@ body {
     position: absolute;
     width: 100%;
     height: 100%;
-    display: none;
+    display: none !important;
 }
 
 .screen.active {
-    display: block;
+    display: block !important;
 }
 
 #screen-setup {
     background: linear-gradient(135deg, #0078d4 0%, #0053a6 100%);
     color: white;
-    display: flex;
+}
+
+#screen-setup.active {
+    display: flex !important;
     align-items: center;
     justify-content: center;
 }
@@ -195,13 +198,222 @@ body {
     font-size: 18px;
 }
 
+.wifi-list {
+    max-width: 500px;
+    margin: 20px auto;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.wifi-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    transition: background 0.2s;
+}
+
+.wifi-item:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.wifi-item:last-child {
+    border-bottom: none;
+}
+
+.wifi-icon {
+    font-size: 20px;
+}
+
+.wifi-name {
+    flex: 1;
+    font-size: 16px;
+}
+
+.wifi-lock {
+    font-size: 16px;
+    opacity: 0.8;
+}
+
+.drive-list {
+    max-width: 600px;
+    margin: 20px auto;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.drive-item {
+    padding: 16px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    transition: background 0.2s;
+}
+
+.drive-item:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+.drive-item.selected {
+    background: rgba(255,255,255,0.2);
+    border-left: 4px solid white;
+}
+
+.drive-item:last-child {
+    border-bottom: none;
+}
+
+.drive-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.drive-name {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.drive-size {
+    font-size: 16px;
+    opacity: 0.9;
+}
+
+.drive-details {
+    font-size: 13px;
+    opacity: 0.7;
+}
+
+.account-type-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    max-width: 600px;
+    margin: 30px auto;
+}
+
+.account-type-card {
+    background: rgba(255,255,255,0.1);
+    padding: 30px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+}
+
+.account-type-card:hover {
+    background: rgba(255,255,255,0.15);
+    transform: translateY(-4px);
+    border-color: rgba(255,255,255,0.3);
+}
+
+.account-type-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.account-type-card h3 {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.account-type-card p {
+    font-size: 13px;
+    opacity: 0.8;
+}
+
+.privacy-options {
+    max-width: 600px;
+    margin: 30px auto;
+}
+
+.privacy-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: rgba(255,255,255,0.05);
+    margin-bottom: 12px;
+    border-radius: 4px;
+}
+
+.privacy-label {
+    flex: 1;
+    margin-right: 20px;
+}
+
+.privacy-label strong {
+    font-size: 16px;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.privacy-label p {
+    font-size: 13px;
+    opacity: 0.8;
+    margin: 0;
+}
+
+.toggle {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+}
+
+.toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255,255,255,0.3);
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.toggle input:checked + .toggle-slider {
+    background-color: #0078d4;
+}
+
+.toggle input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+}
+
 #screen-lock {
     background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080"><rect fill="%230078d4" width="1920" height="1080"/></svg>');
     background-size: cover;
-    display: flex;
+    cursor: pointer;
+}
+
+#screen-lock.active {
+    display: flex !important;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
 }
 
 .lock-screen {
@@ -229,7 +441,10 @@ body {
 #screen-login {
     background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080"><rect fill="%230078d4" width="1920" height="1080"/></svg>');
     background-size: cover;
-    display: flex;
+}
+
+#screen-login.active {
+    display: flex !important;
     align-items: center;
     justify-content: center;
 }
@@ -758,7 +973,10 @@ body {
 
 #screen-shutdown {
     background: #000;
-    display: flex;
+}
+
+#screen-shutdown.active {
+    display: flex !important;
     align-items: center;
     justify-content: center;
 }

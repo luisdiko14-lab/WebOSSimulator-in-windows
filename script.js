@@ -1,7 +1,11 @@
 let currentSetupStep = 0;
 let userData = {
     username: 'User',
-    password: ''
+    password: '',
+    email: '',
+    accountType: 'local',
+    selectedDrive: -1,
+    wifiNetwork: ''
 };
 let openWindows = [];
 let nextWindowZ = 100;
@@ -16,13 +20,27 @@ const setupSteps = [
     'step-welcome',
     'step-region',
     'step-keyboard',
-    'step-account',
-    'step-password',
+    'step-wifi',
+    'step-drive',
+    'step-account-type',
     'step-installing'
 ];
 
 function setupNext() {
     const currentStep = setupSteps[currentSetupStep];
+    
+    if (currentStep === 'step-wifi') {
+        if (!userData.wifiNetwork) {
+            return;
+        }
+    }
+    
+    if (currentStep === 'step-drive') {
+        if (userData.selectedDrive === -1) {
+            alert('Please select a drive');
+            return;
+        }
+    }
     
     if (currentStep === 'step-account') {
         const username = document.getElementById('username-input').value.trim();
@@ -47,6 +65,34 @@ function setupNext() {
         userData.password = password;
     }
     
+    if (currentStep === 'step-microsoft-account') {
+        const email = document.getElementById('microsoft-email').value.trim();
+        if (!email) {
+            alert('Please enter your email');
+            return;
+        }
+        userData.email = email;
+        userData.username = email.split('@')[0];
+        document.getElementById('microsoft-email-display').textContent = email;
+    }
+    
+    if (currentStep === 'step-microsoft-password') {
+        const password = document.getElementById('microsoft-password-input').value;
+        if (!password) {
+            alert('Please enter your password');
+            return;
+        }
+        userData.password = password;
+    }
+    
+    if (currentStep === 'step-privacy') {
+        currentSetupStep = setupSteps.indexOf('step-installing');
+        document.getElementById(currentStep).classList.remove('active');
+        document.getElementById('step-installing').classList.add('active');
+        startInstallation();
+        return;
+    }
+    
     document.getElementById(currentStep).classList.remove('active');
     currentSetupStep++;
     
@@ -57,6 +103,120 @@ function setupNext() {
             startInstallation();
         }
     }
+}
+
+function selectWifi(networkName) {
+    userData.wifiNetwork = networkName;
+    document.getElementById('wifi-network-name').textContent = networkName;
+    
+    if (networkName === 'Guest Network') {
+        setupNext();
+    } else {
+        document.getElementById('step-wifi').classList.remove('active');
+        document.getElementById('step-wifi-password').classList.add('active');
+    }
+}
+
+function connectWifi() {
+    const password = document.getElementById('wifi-password-input').value;
+    if (!password) {
+        alert('Please enter the network password');
+        return;
+    }
+    
+    document.getElementById('step-wifi-password').classList.remove('active');
+    currentSetupStep = setupSteps.indexOf('step-wifi');
+    setupNext();
+}
+
+function selectDrive(driveIndex) {
+    document.querySelectorAll('.drive-item').forEach((item, index) => {
+        item.classList.toggle('selected', index === driveIndex);
+    });
+    
+    userData.selectedDrive = driveIndex;
+    document.getElementById('drive-next-btn').disabled = false;
+}
+
+function selectAccountType(type) {
+    userData.accountType = type;
+    
+    if (type === 'microsoft') {
+        document.getElementById('step-account-type').classList.remove('active');
+        document.getElementById('step-microsoft-account').classList.add('active');
+    } else {
+        document.getElementById('step-account-type').classList.remove('active');
+        document.getElementById('step-account').classList.add('active');
+    }
+}
+
+function handleMicrosoftAccountNext() {
+    document.getElementById('step-microsoft-account').classList.remove('active');
+    document.getElementById('step-microsoft-password').classList.add('active');
+}
+
+function handleMicrosoftPasswordNext() {
+    document.getElementById('step-microsoft-password').classList.remove('active');
+    document.getElementById('step-privacy').classList.add('active');
+}
+
+function handleLocalAccountNext() {
+    const username = document.getElementById('username-input').value.trim();
+    if (!username) {
+        alert('Please enter a name');
+        return;
+    }
+    userData.username = username;
+    document.getElementById('step-account').classList.remove('active');
+    document.getElementById('step-password').classList.add('active');
+}
+
+function handleLocalPasswordNext() {
+    const password = document.getElementById('password-input').value;
+    const confirm = document.getElementById('password-confirm').value;
+    if (!password) {
+        alert('Please enter a password');
+        return;
+    }
+    if (password !== confirm) {
+        alert('Passwords do not match');
+        return;
+    }
+    userData.password = password;
+    document.getElementById('step-password').classList.remove('active');
+    document.getElementById('step-privacy').classList.add('active');
+}
+
+function handleMicrosoftAccountNext() {
+    const email = document.getElementById('microsoft-email').value.trim();
+    if (!email) {
+        alert('Please enter your email');
+        return;
+    }
+    userData.email = email;
+    userData.username = email.split('@')[0];
+    document.getElementById('microsoft-email-display').textContent = email;
+    document.getElementById('step-microsoft-account').classList.remove('active');
+    document.getElementById('step-microsoft-password').classList.add('active');
+}
+
+function handleMicrosoftPasswordNext() {
+    const password = document.getElementById('microsoft-password-input').value;
+    if (!password) {
+        alert('Please enter your password');
+        return;
+    }
+    userData.password = password;
+    document.getElementById('step-microsoft-password').classList.remove('active');
+    document.getElementById('step-privacy').classList.add('active');
+}
+
+function createMicrosoftAccount() {
+    alert('Create account feature - redirects to Microsoft account creation page');
+}
+
+function forgotPassword() {
+    alert('Forgot password feature - redirects to Microsoft account recovery');
 }
 
 function startInstallation() {
@@ -515,6 +675,242 @@ function createExplorer() {
 }
 
 function createSettings() {
+    setTimeout(() => {
+        const menuItems = document.querySelectorAll('.settings-menu-item');
+        menuItems.forEach(item => {
+            item.addEventListener('click', function() {
+                menuItems.forEach(mi => mi.classList.remove('active'));
+                this.classList.add('active');
+                
+                const contentArea = this.closest('.window-content').querySelector('.settings-content');
+                const section = this.textContent;
+                
+                let content = '';
+                
+                switch(section) {
+                    case 'System':
+                        content = `
+                            <h2>System</h2>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Display brightness</div>
+                                    <div class="setting-description">Adjust the brightness level</div>
+                                </div>
+                                <input type="range" min="0" max="100" value="80" style="width: 200px;">
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Night light</div>
+                                    <div class="setting-description">Reduce blue light at night</div>
+                                </div>
+                                <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Sound</div>
+                                    <div class="setting-description">Volume: 70%</div>
+                                </div>
+                                <input type="range" min="0" max="100" value="70" style="width: 200px;">
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Storage</div>
+                                    <div class="setting-description">C: Drive - 237 GB free of 476 GB</div>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'Personalization':
+                        content = `
+                            <h2>Personalization</h2>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Background</div>
+                                    <div class="setting-description">Choose your desktop background</div>
+                                </div>
+                                <select style="padding: 8px; border-radius: 4px;">
+                                    <option>Picture</option>
+                                    <option>Solid color</option>
+                                    <option>Slideshow</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Colors</div>
+                                    <div class="setting-description">Choose your accent color</div>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <div style="width: 30px; height: 30px; background: #0078d4; border-radius: 4px; cursor: pointer;"></div>
+                                    <div style="width: 30px; height: 30px; background: #e81123; border-radius: 4px; cursor: pointer;"></div>
+                                    <div style="width: 30px; height: 30px; background: #107c10; border-radius: 4px; cursor: pointer;"></div>
+                                    <div style="width: 30px; height: 30px; background: #ff8c00; border-radius: 4px; cursor: pointer;"></div>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Themes</div>
+                                    <div class="setting-description">Light, Dark, or Custom</div>
+                                </div>
+                                <select style="padding: 8px; border-radius: 4px;">
+                                    <option>Light</option>
+                                    <option selected>Dark</option>
+                                    <option>Custom</option>
+                                </select>
+                            </div>
+                        `;
+                        break;
+                    case 'Apps':
+                        content = `
+                            <h2>Apps & features</h2>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Calculator</div>
+                                    <div class="setting-description">Installed - 125 MB</div>
+                                </div>
+                                <button style="padding: 6px 12px; border-radius: 4px; background: #0078d4; color: white; border: none; cursor: pointer;">Uninstall</button>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Microsoft Edge</div>
+                                    <div class="setting-description">Installed - 1.2 GB</div>
+                                </div>
+                                <button style="padding: 6px 12px; border-radius: 4px; background: #0078d4; color: white; border: none; cursor: pointer;">Uninstall</button>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Default apps</div>
+                                    <div class="setting-description">Choose default apps for file types</div>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'Accounts':
+                        content = `
+                            <h2>Your info</h2>
+                            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px;">
+                                <div style="width: 80px; height: 80px; background: #0078d4; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36px;">👤</div>
+                                <div>
+                                    <div style="font-size: 18px; font-weight: 500; margin-bottom: 4px;">${userData.username}</div>
+                                    <div style="font-size: 14px; color: #666;">${userData.email || 'Local Account'}</div>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Sign-in options</div>
+                                    <div class="setting-description">Password, PIN, Windows Hello</div>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Family & other users</div>
+                                    <div class="setting-description">Add family members or other users</div>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'Time & Language':
+                        content = `
+                            <h2>Date & time</h2>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Set time automatically</div>
+                                    <div class="setting-description">Sync with internet time servers</div>
+                                </div>
+                                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Time zone</div>
+                                    <div class="setting-description">Current time zone</div>
+                                </div>
+                                <select style="padding: 8px; border-radius: 4px; width: 250px;">
+                                    <option>(UTC-08:00) Pacific Time</option>
+                                    <option>(UTC-05:00) Eastern Time</option>
+                                    <option>(UTC+00:00) London</option>
+                                    <option>(UTC+01:00) Paris, Berlin</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Language</div>
+                                    <div class="setting-description">Windows display language</div>
+                                </div>
+                                <div>English (United States)</div>
+                            </div>
+                        `;
+                        break;
+                    case 'Privacy':
+                        content = `
+                            <h2>Privacy</h2>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Location</div>
+                                    <div class="setting-description">Let apps use your location</div>
+                                </div>
+                                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Camera</div>
+                                    <div class="setting-description">Let apps use your camera</div>
+                                </div>
+                                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Microphone</div>
+                                    <div class="setting-description">Let apps use your microphone</div>
+                                </div>
+                                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Diagnostics & feedback</div>
+                                    <div class="setting-description">Send diagnostic data to Microsoft</div>
+                                </div>
+                                <select style="padding: 8px; border-radius: 4px;">
+                                    <option>Required</option>
+                                    <option selected>Optional</option>
+                                </select>
+                            </div>
+                        `;
+                        break;
+                    case 'Update & Security':
+                        content = `
+                            <h2>Windows Update</h2>
+                            <div style="background: #f0f0f0; padding: 20px; border-radius: 4px; margin-bottom: 20px;">
+                                <div style="font-size: 18px; margin-bottom: 8px;">✓ You're up to date</div>
+                                <div style="font-size: 14px; color: #666;">Last checked: Today, ${new Date().toLocaleTimeString()}</div>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Check for updates</div>
+                                    <div class="setting-description">Get the latest features and security improvements</div>
+                                </div>
+                                <button style="padding: 8px 16px; border-radius: 4px; background: #0078d4; color: white; border: none; cursor: pointer;">Check for updates</button>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Windows Security</div>
+                                    <div class="setting-description">Virus & threat protection</div>
+                                </div>
+                                <button style="padding: 8px 16px; border-radius: 4px; background: white; border: 1px solid #d0d0d0; cursor: pointer;">Open Security</button>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Backup</div>
+                                    <div class="setting-description">Back up your files with File History</div>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                }
+                
+                contentArea.innerHTML = content;
+            });
+        });
+    }, 100);
+    
     return `
         <div style="display: flex; height: 100%;">
             <div class="settings-sidebar">
@@ -529,20 +925,31 @@ function createSettings() {
             <div class="settings-content">
                 <h2>System</h2>
                 <div class="setting-item">
-                    <div class="setting-label">Display</div>
-                    <div class="setting-description">Adjust brightness, resolution, and orientation</div>
+                    <div>
+                        <div class="setting-label">Display brightness</div>
+                        <div class="setting-description">Adjust the brightness level</div>
+                    </div>
+                    <input type="range" min="0" max="100" value="80" style="width: 200px;">
                 </div>
                 <div class="setting-item">
-                    <div class="setting-label">Sound</div>
-                    <div class="setting-description">Manage audio devices and volume levels</div>
+                    <div>
+                        <div class="setting-label">Night light</div>
+                        <div class="setting-description">Reduce blue light at night</div>
+                    </div>
+                    <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
                 </div>
                 <div class="setting-item">
-                    <div class="setting-label">Notifications & actions</div>
-                    <div class="setting-description">Choose what notifications you see</div>
+                    <div>
+                        <div class="setting-label">Sound</div>
+                        <div class="setting-description">Volume: 70%</div>
+                    </div>
+                    <input type="range" min="0" max="100" value="70" style="width: 200px;">
                 </div>
                 <div class="setting-item">
-                    <div class="setting-label">Power & sleep</div>
-                    <div class="setting-description">Control when your device sleeps</div>
+                    <div>
+                        <div class="setting-label">Storage</div>
+                        <div class="setting-description">C: Drive - 237 GB free of 476 GB</div>
+                    </div>
                 </div>
             </div>
         </div>
