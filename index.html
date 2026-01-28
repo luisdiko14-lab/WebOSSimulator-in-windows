@@ -7,7 +7,45 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="screen-lock" class="screen active">
+    <div id="screen-boot" class="screen active">
+        <div class="boot-screen">
+            <div class="windows-logo-large">
+                <div class="windows-squares">
+                    <div class="square"></div>
+                    <div class="square"></div>
+                    <div class="square"></div>
+                    <div class="square"></div>
+                </div>
+            </div>
+            <div class="loading-circle"></div>
+            <p id="boot-status">Loading Windows...</p>
+        </div>
+    </div>
+
+    <div id="screen-logging-in" class="screen">
+        <div class="login-progress-screen">
+            <div class="user-avatar-large">
+                <svg width="120" height="120" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="48" fill="#0078d4"/>
+                    <circle cx="50" cy="40" r="18" fill="white"/>
+                    <path d="M 20 85 Q 50 70 80 85" fill="white"/>
+                </svg>
+            </div>
+            <h2 id="logging-in-text">Logging in...</h2>
+            <div class="loading-circle"></div>
+            <p id="login-status">Welcome</p>
+        </div>
+    </div>
+
+    <div id="screen-getting-ready" class="screen">
+        <div class="getting-ready-screen">
+            <div class="loading-circle"></div>
+            <h2>Getting your desktop ready...</h2>
+            <p>This won't take long</p>
+        </div>
+    </div>
+
+    <div id="screen-lock" class="screen">
         <div class="lock-screen">
             <div class="lock-time" id="lock-time">12:00</div>
             <div class="lock-date" id="lock-date">Monday, January 1</div>

@@ -70,7 +70,10 @@ body {
 #screen-setup,
 #setup-screen,
 #restart-screen,
-#boot-screen {
+#boot-screen,
+#screen-boot,
+#screen-logging-in,
+#screen-getting-ready {
     background: #f0f4f8;
     color: #333;
 }
@@ -78,10 +81,39 @@ body {
 #screen-setup.active,
 #setup-screen.active,
 #restart-screen.active,
-#boot-screen.active {
+#boot-screen.active,
+#screen-boot.active,
+#screen-logging-in.active,
+#screen-getting-ready.active {
     display: flex !important;
     align-items: center;
     justify-content: center;
+}
+
+.boot-screen,
+.login-progress-screen,
+.getting-ready-screen {
+    text-align: center;
+    color: #333;
+}
+
+.boot-screen p,
+.login-progress-screen p,
+.getting-ready-screen p {
+    margin-top: 20px;
+    font-size: 16px;
+    color: #666;
+}
+
+.login-progress-screen h2,
+.getting-ready-screen h2 {
+    margin: 20px 0 10px;
+    font-weight: 400;
+    font-size: 24px;
+}
+
+.user-avatar-large {
+    margin-bottom: 20px;
 }
 
 .setup-container {

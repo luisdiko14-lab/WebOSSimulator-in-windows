@@ -288,6 +288,8 @@ document.addEventListener('DOMContentLoaded', () => {
     userData.email = parsed.email || '';
     userData.accountType = parsed.accountType || 'local';
     
+    startBootSequence();
+    
     document.getElementById('screen-lock')?.addEventListener('click', () => {
         showScreen('screen-login');
         document.getElementById('login-username').textContent = userData.username;
@@ -297,22 +299,67 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') attemptLogin();
     });
     
-    updateLockTime();
     updateClock();
     setInterval(updateClock, 1000);
     
     startPerformanceMonitoring();
 });
 
+function startBootSequence() {
+    const bootStatus = document.getElementById('boot-status');
+    const bootMessages = [
+        'Loading Windows...',
+        'Starting services...',
+        'Loading system files...'
+    ];
+    
+    let messageIndex = 0;
+    const messageInterval = setInterval(() => {
+        messageIndex++;
+        if (messageIndex < bootMessages.length) {
+            if (bootStatus) bootStatus.textContent = bootMessages[messageIndex];
+        }
+    }, 800);
+    
+    setTimeout(() => {
+        clearInterval(messageInterval);
+        showScreen('screen-lock');
+        updateLockTime();
+    }, 2500);
+}
+
+function startLoginSequence() {
+    const loggingInText = document.getElementById('logging-in-text');
+    const loginStatus = document.getElementById('login-status');
+    
+    if (loggingInText) loggingInText.textContent = 'Welcome';
+    if (loginStatus) loginStatus.textContent = userData.username;
+    
+    showScreen('screen-logging-in');
+    
+    setTimeout(() => {
+        if (loggingInText) loggingInText.textContent = 'Signing in...';
+        if (loginStatus) loginStatus.textContent = 'Setting up your account';
+    }, 1500);
+    
+    setTimeout(() => {
+        showScreen('screen-getting-ready');
+    }, 3000);
+    
+    setTimeout(() => {
+        showScreen('screen-desktop');
+        document.getElementById('start-username').textContent = userData.username;
+    }, 5000);
+}
+
 function attemptLogin() {
     const enteredPassword = document.getElementById('login-password').value;
     const errorElement = document.getElementById('login-error');
     
     if (enteredPassword === userData.password) {
-        showScreen('screen-desktop');
-        document.getElementById('start-username').textContent = userData.username;
         document.getElementById('login-password').value = '';
         errorElement.textContent = '';
+        startLoginSequence();
     } else {
         errorElement.textContent = 'Incorrect password. Please try again.';
         document.getElementById('login-password').value = '';
