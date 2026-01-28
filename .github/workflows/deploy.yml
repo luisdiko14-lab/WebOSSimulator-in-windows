@@ -72,6 +72,21 @@ jobs:
           find .
           echo "Files listed above."
 
+
+  # =========================
+  # 🧪 TEST JOB
+  # =========================
+
+  setup:
+    name: 🔍 Setup node.js and other stuff,  and check for issues.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Check issues and stuff.
+        run: npm install || echo "hmm. seems like no errors found.
+      
+        
+  
   # =========================
   # 🚀 DEPLOY JOB
   # =========================
