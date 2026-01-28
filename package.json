@@ -1,7 +1,7 @@
 {
   "scripts": {
     "start": "npm run dev",
-    "dev": "npm run dev",
+    "dev": "npm run dev"
   },
   "dependencies": {
     "discord.js": "^14.25.1",
