@@ -1,4 +1,4 @@
-name: 🚀 Ultra Cool No-Error Deploy 😎🔥
+name: 🚀 Ultra Clean Zero-Error Deploy
 
 on:
   push:
@@ -53,21 +53,31 @@ jobs:
           # Next.js export: './out'
           path: '.'
 
-       - name: Run Website.
-       run: npm run dev || echo "No dev script is inputed!"
-       
+      - name: 🖥️ Run Website (optional)
+        run: npm run dev || echo "No dev script is inputted!"
+
+
+# ==========#
+# test#
+# ========= #
+test:
+ name: find the files.
+ run: find . && echo Found file {file.name}
+ 
   # =========================
   # 🚀 DEPLOY JOB
   # =========================
   deploy:
     name: 🚀 Deploy to GitHub Pages
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    environment:
+      name: github-pages
 
     steps:
+      - name: 📥 Checkout Repo
+        uses: actions/checkout@v4
+
       - name: 🌍 Deploy Website
         id: deployment
         uses: actions/deploy-pages@v4
