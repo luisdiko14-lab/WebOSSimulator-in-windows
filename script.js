@@ -432,7 +432,9 @@ function createWindow(appName) {
         browser: { title: '🌐 Microsoft Edge', content: createBrowser() },
         computer: { title: '💻 This PC', content: createComputer() },
         trash: { title: '🗑️ Recycle Bin', content: '<p>Recycle Bin is empty</p>' },
-        search: { title: '🔍 Search', content: '<p>Type to search your PC...</p>' }
+        search: { title: '🔍 Search', content: '<p>Type to search your PC...</p>' },
+        google_setup: { title: '🌐 Google Chrome Setup', content: createGoogleSetup() },
+        chrome: { title: '🔵 Google Chrome', content: createChrome() }
     };
     
     const appData = apps[appName] || { title: 'Window', content: '<p>App content</p>' };
@@ -1108,4 +1110,176 @@ function createComputer() {
             </div>
         </div>
     `;
+}
+
+function createGoogleSetup() {
+    setTimeout(() => {
+        startChromeDownload();
+    }, 100);
+    
+    return `
+        <div class="chrome-setup">
+            <div class="chrome-setup-header">
+                <div class="chrome-logo">
+                    <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #ea4335 0%, #ea4335 25%, #fbbc05 25%, #fbbc05 50%, #34a853 50%, #34a853 75%, #4285f4 75%); border-radius: 50%; position: relative;">
+                        <div style="width: 24px; height: 24px; background: white; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+                        <div style="width: 16px; height: 16px; background: #4285f4; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+                    </div>
+                </div>
+                <h2 style="margin: 20px 0 10px;">Installing Google Chrome</h2>
+                <p style="color: #666; margin-bottom: 30px;">Please wait while we download and install Chrome...</p>
+            </div>
+            <div class="chrome-download-info">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span id="chrome-download-status">Downloading...</span>
+                    <span id="chrome-download-percent">0%</span>
+                </div>
+                <div class="chrome-progress-bar">
+                    <div class="chrome-progress-fill" id="chrome-progress-fill"></div>
+                </div>
+                <div style="margin-top: 15px; color: #666; font-size: 12px;">
+                    <div id="chrome-download-speed">Speed: 0 MB/s</div>
+                    <div id="chrome-download-size">Downloaded: 0 MB / 89.2 MB</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function startChromeDownload() {
+    let progress = 0;
+    let downloaded = 0;
+    const totalSize = 89.2;
+    
+    const interval = setInterval(() => {
+        const speed = (Math.random() * 5 + 2).toFixed(1);
+        const increment = parseFloat(speed) * 0.3;
+        downloaded = Math.min(downloaded + increment, totalSize);
+        progress = (downloaded / totalSize) * 100;
+        
+        const progressFill = document.getElementById('chrome-progress-fill');
+        const percentText = document.getElementById('chrome-download-percent');
+        const statusText = document.getElementById('chrome-download-status');
+        const speedText = document.getElementById('chrome-download-speed');
+        const sizeText = document.getElementById('chrome-download-size');
+        
+        if (progressFill) progressFill.style.width = progress + '%';
+        if (percentText) percentText.textContent = Math.floor(progress) + '%';
+        if (speedText) speedText.textContent = 'Speed: ' + speed + ' MB/s';
+        if (sizeText) sizeText.textContent = 'Downloaded: ' + downloaded.toFixed(1) + ' MB / ' + totalSize + ' MB';
+        
+        if (progress >= 100) {
+            clearInterval(interval);
+            if (statusText) statusText.textContent = 'Installing...';
+            
+            setTimeout(() => {
+                if (statusText) statusText.textContent = 'Installation complete!';
+                setTimeout(() => {
+                    closeWindow('google_setup');
+                    openApp('chrome');
+                }, 1000);
+            }, 1500);
+        }
+    }, 300);
+}
+
+function createChrome() {
+    setTimeout(() => {
+        const urlInput = document.getElementById('chrome-url-input');
+        const goBtn = document.getElementById('chrome-go-btn');
+        
+        if (urlInput && goBtn) {
+            goBtn.addEventListener('click', () => navigateChrome());
+            urlInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') navigateChrome();
+            });
+        }
+    }, 100);
+    
+    return `
+        <div class="chrome-browser">
+            <div class="chrome-toolbar">
+                <button class="chrome-nav-btn" onclick="chromeBack()">←</button>
+                <button class="chrome-nav-btn" onclick="chromeForward()">→</button>
+                <button class="chrome-nav-btn" onclick="chromeRefresh()">↻</button>
+                <div class="chrome-url-bar">
+                    <span style="color: #5f6368; margin-right: 8px;">🔒</span>
+                    <input type="text" id="chrome-url-input" value="https://www.google.com" placeholder="Search Google or type a URL">
+                </div>
+                <button class="chrome-nav-btn" id="chrome-go-btn">Go</button>
+            </div>
+            <div class="chrome-content" id="chrome-content">
+                <div class="chrome-google-page">
+                    <div class="google-logo">
+                        <span style="color: #4285f4; font-size: 72px; font-weight: 400;">G</span>
+                        <span style="color: #ea4335; font-size: 72px; font-weight: 400;">o</span>
+                        <span style="color: #fbbc05; font-size: 72px; font-weight: 400;">o</span>
+                        <span style="color: #4285f4; font-size: 72px; font-weight: 400;">g</span>
+                        <span style="color: #34a853; font-size: 72px; font-weight: 400;">l</span>
+                        <span style="color: #ea4335; font-size: 72px; font-weight: 400;">e</span>
+                    </div>
+                    <div class="google-search-box">
+                        <input type="text" placeholder="Search Google or type a URL" style="width: 100%; padding: 12px 20px; border: 1px solid #dfe1e5; border-radius: 24px; font-size: 16px; outline: none;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function navigateChrome() {
+    const urlInput = document.getElementById('chrome-url-input');
+    const contentArea = document.getElementById('chrome-content');
+    
+    if (!urlInput || !contentArea) return;
+    
+    let url = urlInput.value.trim();
+    
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        if (url.includes('.') && !url.includes(' ')) {
+            url = 'https://' + url;
+        } else {
+            url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
+        }
+        urlInput.value = url;
+    }
+    
+    contentArea.innerHTML = `
+        <div style="width: 100%; height: 100%; display: flex; flex-direction: column;">
+            <iframe src="${url}" style="width: 100%; flex: 1; border: none;" 
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                onload="this.style.background='white'"
+                onerror="this.parentElement.innerHTML='<div style=\\'text-align: center; padding: 50px;\\'><h2>Cannot load this page</h2><p>The website may have blocked embedding.</p></div>'">
+            </iframe>
+        </div>
+    `;
+}
+
+function chromeBack() {
+    const contentArea = document.getElementById('chrome-content');
+    const urlInput = document.getElementById('chrome-url-input');
+    if (contentArea && urlInput) {
+        urlInput.value = 'https://www.google.com';
+        contentArea.innerHTML = `
+            <div class="chrome-google-page">
+                <div class="google-logo">
+                    <span style="color: #4285f4; font-size: 72px; font-weight: 400;">G</span>
+                    <span style="color: #ea4335; font-size: 72px; font-weight: 400;">o</span>
+                    <span style="color: #fbbc05; font-size: 72px; font-weight: 400;">o</span>
+                    <span style="color: #4285f4; font-size: 72px; font-weight: 400;">g</span>
+                    <span style="color: #34a853; font-size: 72px; font-weight: 400;">l</span>
+                    <span style="color: #ea4335; font-size: 72px; font-weight: 400;">e</span>
+                </div>
+                <div class="google-search-box">
+                    <input type="text" placeholder="Search Google or type a URL" style="width: 100%; padding: 12px 20px; border: 1px solid #dfe1e5; border-radius: 24px; font-size: 16px; outline: none;">
+                </div>
+            </div>
+        `;
+    }
+}
+
+function chromeForward() {}
+
+function chromeRefresh() {
+    navigateChrome();
 }
