@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "build": "node build.js",
     "start": "npm run build",
     "dev": "npm run build"
   },
