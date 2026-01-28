@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "start": "dev",
+    "dev": "dev",
+    "install": "npm install"
+  },
   "dependencies": {
     "discord.js": "^14.25.1",
     "web": "^0.0.2",
