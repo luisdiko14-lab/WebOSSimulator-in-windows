@@ -56,14 +56,22 @@ jobs:
       - name: 🖥️ Run Website (optional)
         run: npm run dev || echo "No dev script is inputted!"
 
+  # =========================
+  # 🧪 TEST JOB
+  # =========================
+  test:
+    name: 🔍 Find Files
+    runs-on: ubuntu-latest
 
-# ==========#
-# test#
-# ========= #
-test:
- name: find the files.
- run: find . && echo Found file {file.name}
- 
+    steps:
+      - name: 📥 Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: 🗂️ List All Files
+        run: |
+          find .
+          echo "Files listed above."
+
   # =========================
   # 🚀 DEPLOY JOB
   # =========================
