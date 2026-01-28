@@ -72,23 +72,23 @@ jobs:
           find .
           echo "Files listed above."
 
-
   # =========================
-  # 🧪 TEST JOB
+  # 🧩 SETUP JOB
   # =========================
-
   setup:
-    name: 🔍 Setup node.js and other stuff,  and check for issues.
+    name: ⚙️ Setup Node & Check Issues
     runs-on: ubuntu-latest
 
-steps:
-  - name: 📥 Check the packages.
-    run: npm install
+    steps:
+      - name: 📥 Checkout Repo
+        uses: actions/checkout@v4
 
-  - name: Check code issues.
-    run: echo "Coming soon..."
+      - name: 📦 Install Packages
+        run: npm install
 
-  
+      - name: 🛠️ Check Code Issues
+        run: echo "Coming soon..."
+
   # =========================
   # 🚀 DEPLOY JOB
   # =========================
