@@ -82,9 +82,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Check issues and stuff.
-        run: npm install || echo "hmm. seems like no errors found.
-      
+      - name: 📥 Check the packages.
+        run: npm install
+
+      - name: Check code issues.
+      run: echo "Comming soon..."
         
   
   # =========================
