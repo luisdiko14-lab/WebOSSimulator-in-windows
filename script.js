@@ -276,6 +276,18 @@ function updateLockTime() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const savedUserData = localStorage.getItem('windowsUserData');
+    if (!savedUserData) {
+        window.location.href = 'setup_1.html';
+        return;
+    }
+    
+    const parsed = JSON.parse(savedUserData);
+    userData.username = parsed.username || 'User';
+    userData.password = parsed.password || '';
+    userData.email = parsed.email || '';
+    userData.accountType = parsed.accountType || 'local';
+    
     document.getElementById('screen-lock')?.addEventListener('click', () => {
         showScreen('screen-login');
         document.getElementById('login-username').textContent = userData.username;
@@ -285,6 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') attemptLogin();
     });
     
+    updateLockTime();
     updateClock();
     setInterval(updateClock, 1000);
     

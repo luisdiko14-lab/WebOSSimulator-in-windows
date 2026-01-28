@@ -7,9 +7,53 @@
 
 body {
     overflow: hidden;
-    background: #000;
+    background: #f0f4f8;
     width: 100vw;
     height: 100vh;
+}
+
+.loading-circle {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(0, 120, 212, 0.2);
+    border-top: 4px solid #0078d4;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 30px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.restart-animation {
+    text-align: center;
+    color: #333;
+}
+
+.restart-animation p {
+    font-size: 18px;
+    font-weight: 300;
+    margin-top: 20px;
+    color: #333;
+}
+
+.windows-logo-large {
+    margin-bottom: 20px;
+}
+
+.windows-logo-large .windows-squares {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto;
+}
+
+.windows-logo-large .windows-squares .square {
+    background: #0078d4;
 }
 
 .screen {
@@ -23,12 +67,18 @@ body {
     display: block !important;
 }
 
-#screen-setup {
-    background: linear-gradient(135deg, #0078d4 0%, #0053a6 100%);
-    color: white;
+#screen-setup,
+#setup-screen,
+#restart-screen,
+#boot-screen {
+    background: #f0f4f8;
+    color: #333;
 }
 
-#screen-setup.active {
+#screen-setup.active,
+#setup-screen.active,
+#restart-screen.active,
+#boot-screen.active {
     display: flex !important;
     align-items: center;
     justify-content: center;
@@ -38,6 +88,12 @@ body {
     text-align: center;
     max-width: 600px;
     width: 90%;
+    margin: 0 auto;
+}
+
+.container {
+    width: 100%;
+    height: 100%;
 }
 
 .setup-logo {
@@ -54,7 +110,11 @@ body {
 }
 
 .logo-square {
-    background: white;
+    background: #0078d4;
+}
+
+.windows-logo .square {
+    background: #0078d4;
 }
 
 .setup-title {
@@ -972,7 +1032,7 @@ body {
 }
 
 #screen-shutdown {
-    background: #000;
+    background: #f0f4f8;
 }
 
 #screen-shutdown.active {
@@ -983,13 +1043,19 @@ body {
 
 .shutdown-screen {
     text-align: center;
-    color: white;
+    color: #333;
 }
 
 .shutdown-screen h2 {
-    margin-top: 40px;
+    margin-top: 20px;
     font-size: 24px;
     font-weight: 300;
+    color: #333;
+}
+
+.shutdown-screen .loading-circle {
+    width: 50px;
+    height: 50px;
 }
 
 .calculator-grid {
