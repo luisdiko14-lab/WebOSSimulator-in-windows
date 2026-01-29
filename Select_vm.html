@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Select VM</title>
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #0f172a, #020617);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+  }
+
+  .vm-box {
+    background: #020617;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 30px;
+    width: 420px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  }
+
+  .vm-box h1 {
+    text-align: center;
+    margin-bottom: 25px;
+  }
+
+  .vm-option {
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .vm-option:hover {
+    background: #020617;
+    border-color: #38bdf8;
+  }
+
+  .vm-option.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .status {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #16a34a;
+  }
+
+  .status.soon {
+    background: #ca8a04;
+  }
+
+  .loading {
+    margin-top: 20px;
+    display: none;
+  }
+
+  .loading-text {
+    text-align: center;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #38bdf8;
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 10px;
+    background: #020617;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid #334155;
+  }
+
+  .progress {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #38bdf8, #22c55e);
+    transition: width 0.1s linear;
+  }
+</style>
+</head>
+<body>
+
+<div class="vm-box">
+  <h1>Select VM</h1>
+
+  <div class="vm-option" id="windowsVM">
+    <div>
+      <strong>🪟 Windows 10</strong><br>
+      <small>Virtual Machine</small>
+    </div>
+    <span class="status">Available</span>
+  </div>
+
+  <div class="vm-option disabled">
+    <div>
+      <strong>📱 iPhone</strong><br>
+      <small>Virtual Device</small>
+    </div>
+    <span class="status soon">Coming Soon</span>
+  </div>
+
+  <div class="loading" id="loadingBox">
+    <div class="loading-text" id="loadingText">Starting Windows VM...</div>
+    <div class="progress-bar">
+      <div class="progress" id="progressBar"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const windowsVM = document.getElementById('windowsVM');
+  const loadingBox = document.getElementById('loadingBox');
+  const progressBar = document.getElementById('progressBar');
+  const loadingText = document.getElementById('loadingText');
+
+  windowsVM.addEventListener('click', () => {
+    windowsVM.style.pointerEvents = 'none';
+    loadingBox.style.display = 'block';
+
+    let progress = 0;
+    const messages = [
+      "Initializing VM...",
+      "Loading Windows kernel...",
+      "Starting services...",
+      "Preparing desktop...",
+      "Almost ready..."
+    ];
+
+    let msgIndex = 0;
+
+    const interval = setInterval(() => {
+      progress += Math.random() * 8 + 4; // random speed
+      if (progress >= 100) progress = 100;
+
+      progressBar.style.width = progress + '%';
+
+      if (progress > (msgIndex + 1) * 20 && msgIndex < messages.length) {
+        loadingText.textContent = messages[msgIndex];
+        msgIndex++;
+      }
+
+      if (progress >= 100) {
+        clearInterval(interval);
+        loadingText.textContent = "Windows VM Ready!";
+        setTimeout(() => {
+          window.location.href = "/index.html";
+        }, 600);
+      }
+    }, 120);
+  });
+</script>
+
+</body>
+</html>
