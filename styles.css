@@ -693,10 +693,16 @@ body {
 }
 
 .windows-icon {
-    width: 24px;
-    height: 24px;
-    background: linear-gradient(45deg, transparent 48%, white 48%, white 52%, transparent 52%),
-                linear-gradient(-45deg, transparent 48%, white 48%, white 52%, transparent 52%);
+    width: 16px;
+    height: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 2px;
+}
+
+.win-square {
+    background: white;
 }
 
 .search-box {
