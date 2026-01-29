@@ -949,16 +949,16 @@ function createSettings() {
                     case 'Update & Security':
                         content = `
                             <h2>Windows Update</h2>
-                            <div style="background: #f0f0f0; padding: 20px; border-radius: 4px; margin-bottom: 20px;">
-                                <div style="font-size: 18px; margin-bottom: 8px;">✓ You're up to date</div>
-                                <div style="font-size: 14px; color: #666;">Last checked: Today, ${new Date().toLocaleTimeString()}</div>
+                            <div style="background: #fff3cd; padding: 20px; border-radius: 4px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+                                <div style="font-size: 18px; margin-bottom: 8px;">⚠️ Updates available</div>
+                                <div style="font-size: 14px; color: #666;">Feature Update to Windows 10, version 22H2</div>
                             </div>
                             <div class="setting-item">
                                 <div>
-                                    <div class="setting-label">Check for updates</div>
+                                    <div class="setting-label">Download and install</div>
                                     <div class="setting-description">Get the latest features and security improvements</div>
                                 </div>
-                                <button style="padding: 8px 16px; border-radius: 4px; background: #0078d4; color: white; border: none; cursor: pointer;">Check for updates</button>
+                                <button onclick="window.location.href='updater.html'" style="padding: 10px 24px; border-radius: 4px; background: #0078d4; color: white; border: none; cursor: pointer; font-size: 14px;">Install now</button>
                             </div>
                             <div class="setting-item">
                                 <div>
