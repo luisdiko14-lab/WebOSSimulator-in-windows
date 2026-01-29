@@ -38,7 +38,7 @@ jobs:
       - name: 🛠️ Build Project
         run: |
           if [ -f package.json ]; then
-            npm run build || echo "No build script found, skipping build..."
+            npm run build || echo "⚠️ No build script found, skipping build..."
           fi
 
       - name: ⚙️ Setup GitHub Pages
@@ -47,14 +47,13 @@ jobs:
       - name: 📤 Upload Site Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # CHANGE THIS IF NEEDED:
           # Static HTML: '.'
           # Vite/React: './dist'
           # Next.js export: './out'
           path: '.'
 
       - name: 🖥️ Run Website (optional)
-        run: npm run dev || echo "No dev script is inputted!"
+        run: npm run dev || echo "ℹ️ No dev script is defined."
 
   # =========================
   # 🧪 TEST JOB
@@ -70,13 +69,13 @@ jobs:
       - name: 🗂️ List All Files
         run: |
           find .
-          echo "Files listed above."
+          echo "✅ Files listed above."
 
   # =========================
   # 🧩 SETUP JOB
   # =========================
   setup:
-    name: ⚙️ Setup Node & Check Issues
+    name: ⚙️ Setup Node & Check index.html
     runs-on: ubuntu-latest
 
     steps:
@@ -86,8 +85,19 @@ jobs:
       - name: 📦 Install Packages
         run: npm install
 
-      - name: 🛠️ Check Code Issues
-        run: echo "Coming soon..."
+      - name: 🛠️ Check index.html (Show All Lines)
+        run: |
+          if [ -f index.html ]; then
+            echo "✅ index.html found. Showing all lines with numbers:"
+            echo "----------------------------------------------"
+            nl -ba index.html
+            echo "----------------------------------------------"
+          else
+            echo "❌ ERROR: index.html NOT FOUND in repo!"
+            echo "📁 Files in repo root:"
+            ls -la
+            exit 1
+          fi
 
   # =========================
   # 🚀 DEPLOY JOB
