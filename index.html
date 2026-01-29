@@ -152,6 +152,22 @@
                                 <span class="app-icon">🌐</span>
                                 <span>Microsoft Edge</span>
                             </div>
+                            <div class="app-item" onclick="openApp('cmd'); toggleStartMenu()">
+                                <span class="app-icon">⬛</span>
+                                <span>Command Prompt</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('paint'); toggleStartMenu()">
+                                <span class="app-icon">🎨</span>
+                                <span>Paint</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('weather'); toggleStartMenu()">
+                                <span class="app-icon">🌤️</span>
+                                <span>Weather</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('snipping'); toggleStartMenu()">
+                                <span class="app-icon">✂️</span>
+                                <span>Snipping Tool</span>
+                            </div>
                         </div>
                     </div>
                     <div class="start-power">
@@ -166,10 +182,32 @@
                 </div>
             </div>
 
+            <div class="context-menu" id="context-menu">
+                <div class="context-item" onclick="refreshDesktop()">🔄 Refresh</div>
+                <div class="context-divider"></div>
+                <div class="context-item" onclick="openApp('notepad')">📝 New Text Document</div>
+                <div class="context-item" onclick="createFolder()">📁 New Folder</div>
+                <div class="context-divider"></div>
+                <div class="context-item" onclick="openApp('settings')">⚙️ Display settings</div>
+                <div class="context-item" onclick="openApp('settings')">🎨 Personalize</div>
+            </div>
+
             <div class="notification-center" id="notification-center">
                 <div class="notification-header">
                     <h3>Notifications</h3>
                     <button onclick="toggleNotifications()">✕</button>
+                </div>
+                <div class="quick-actions">
+                    <div class="quick-action active" onclick="toggleQuickAction(this)">🌙 Night light</div>
+                    <div class="quick-action" onclick="toggleQuickAction(this)">📍 Location</div>
+                    <div class="quick-action active" onclick="toggleQuickAction(this)">📶 Wi-Fi</div>
+                    <div class="quick-action active" onclick="toggleQuickAction(this)">🔵 Bluetooth</div>
+                    <div class="quick-action" onclick="toggleQuickAction(this)">✈️ Airplane mode</div>
+                    <div class="quick-action" onclick="toggleQuickAction(this)">🔋 Battery saver</div>
+                </div>
+                <div class="brightness-slider">
+                    <span>☀️</span>
+                    <input type="range" min="0" max="100" value="80">
                 </div>
                 <div class="notification-content">
                     <div class="notification">

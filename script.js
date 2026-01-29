@@ -481,7 +481,11 @@ function createWindow(appName) {
         trash: { title: '🗑️ Recycle Bin', content: '<p>Recycle Bin is empty</p>' },
         search: { title: '🔍 Search', content: '<p>Type to search your PC...</p>' },
         google_setup: { title: '🌐 Google Chrome Setup', content: createGoogleSetup() },
-        chrome: { title: '🔵 Google Chrome', content: createChrome() }
+        chrome: { title: '🔵 Google Chrome', content: createChrome() },
+        cmd: { title: '⬛ Command Prompt', content: createCMD() },
+        paint: { title: '🎨 Paint', content: createPaint() },
+        weather: { title: '🌤️ Weather', content: createWeather() },
+        snipping: { title: '✂️ Snipping Tool', content: createSnipping() }
     };
     
     const appData = apps[appName] || { title: 'Window', content: '<p>App content</p>' };
@@ -1329,4 +1333,375 @@ function chromeForward() {}
 
 function chromeRefresh() {
     navigateChrome();
+}
+
+// Command Prompt
+let cmdHistory = [];
+let cmdHistoryIndex = -1;
+
+function createCMD() {
+    setTimeout(() => {
+        const input = document.getElementById('cmd-input');
+        if (input) {
+            input.focus();
+            input.addEventListener('keydown', handleCMDInput);
+        }
+    }, 100);
+    
+    return `
+        <div class="cmd-window" onclick="document.getElementById('cmd-input')?.focus()">
+            <div class="cmd-output" id="cmd-output">Microsoft Windows [Version 10.0.19045.3803]
+(c) Microsoft Corporation. All rights reserved.
+
+</div>
+            <div class="cmd-input-line">
+                <span class="cmd-prompt">C:\\Users\\${userData.username}></span>
+                <input type="text" class="cmd-input" id="cmd-input" autofocus>
+            </div>
+        </div>
+    `;
+}
+
+function handleCMDInput(e) {
+    if (e.key === 'Enter') {
+        const input = document.getElementById('cmd-input');
+        const output = document.getElementById('cmd-output');
+        const command = input.value.trim();
+        
+        if (command) {
+            cmdHistory.push(command);
+            cmdHistoryIndex = cmdHistory.length;
+        }
+        
+        output.textContent += `C:\\Users\\${userData.username}>${command}\n`;
+        
+        const result = executeCMDCommand(command);
+        if (result) output.textContent += result + '\n';
+        output.textContent += '\n';
+        
+        input.value = '';
+        output.scrollTop = output.scrollHeight;
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (cmdHistoryIndex > 0) {
+            cmdHistoryIndex--;
+            document.getElementById('cmd-input').value = cmdHistory[cmdHistoryIndex];
+        }
+    } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (cmdHistoryIndex < cmdHistory.length - 1) {
+            cmdHistoryIndex++;
+            document.getElementById('cmd-input').value = cmdHistory[cmdHistoryIndex];
+        } else {
+            cmdHistoryIndex = cmdHistory.length;
+            document.getElementById('cmd-input').value = '';
+        }
+    }
+}
+
+function executeCMDCommand(cmd) {
+    const parts = cmd.toLowerCase().split(' ');
+    const command = parts[0];
+    
+    switch(command) {
+        case 'help':
+            return `Available commands:
+  help      - Show this help message
+  dir       - List directory contents
+  cls       - Clear screen
+  echo      - Display message
+  date      - Display current date
+  time      - Display current time
+  whoami    - Display current user
+  hostname  - Display computer name
+  ver       - Display Windows version
+  color     - Change console colors (0-9, a-f)
+  title     - Change window title
+  exit      - Close command prompt`;
+        case 'dir':
+            return ` Volume in drive C has no label.
+ Volume Serial Number is 1234-5678
+
+ Directory of C:\\Users\\${userData.username}
+
+01/29/2026  10:00 AM    <DIR>          .
+01/29/2026  10:00 AM    <DIR>          ..
+01/29/2026  10:00 AM    <DIR>          Desktop
+01/29/2026  10:00 AM    <DIR>          Documents
+01/29/2026  10:00 AM    <DIR>          Downloads
+01/29/2026  10:00 AM    <DIR>          Pictures
+               0 File(s)              0 bytes
+               6 Dir(s)  237,000,000,000 bytes free`;
+        case 'cls':
+            document.getElementById('cmd-output').textContent = '';
+            return '';
+        case 'echo':
+            return parts.slice(1).join(' ');
+        case 'date':
+            return `The current date is: ${new Date().toLocaleDateString()}`;
+        case 'time':
+            return `The current time is: ${new Date().toLocaleTimeString()}`;
+        case 'whoami':
+            return `${window.location.hostname}\\${userData.username}`;
+        case 'hostname':
+            return 'DESKTOP-WIN10SIM';
+        case 'ver':
+            return 'Microsoft Windows [Version 10.0.19045.3803]';
+        case 'exit':
+            closeWindow('cmd');
+            return '';
+        case 'color':
+            const colors = {'0':'#000','1':'#000080','2':'#008000','3':'#008080','4':'#800000','5':'#800080','6':'#808000','7':'#c0c0c0','8':'#808080','9':'#0000ff','a':'#00ff00','b':'#00ffff','c':'#ff0000','d':'#ff00ff','e':'#ffff00','f':'#fff'};
+            if (parts[1] && parts[1].length === 2) {
+                const bg = colors[parts[1][0]] || '#0c0c0c';
+                const fg = colors[parts[1][1]] || '#cccccc';
+                document.querySelector('.cmd-window').style.background = bg;
+                document.querySelector('.cmd-window').style.color = fg;
+            }
+            return '';
+        case 'title':
+            return '';
+        case 'ipconfig':
+            return `Windows IP Configuration
+
+Ethernet adapter Ethernet:
+
+   Connection-specific DNS Suffix  . : 
+   IPv4 Address. . . . . . . . . . . : 192.168.1.${Math.floor(Math.random()*200)+10}
+   Subnet Mask . . . . . . . . . . . : 255.255.255.0
+   Default Gateway . . . . . . . . . : 192.168.1.1`;
+        case 'ping':
+            if (parts[1]) {
+                return `Pinging ${parts[1]} with 32 bytes of data:
+Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*50)+10}ms TTL=64
+Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*50)+10}ms TTL=64
+Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*50)+10}ms TTL=64
+Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*50)+10}ms TTL=64
+
+Ping statistics for ${parts[1]}:
+    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss)`;
+            }
+            return 'Usage: ping <hostname>';
+        case 'systeminfo':
+            return `Host Name:                 DESKTOP-WIN10SIM
+OS Name:                   Microsoft Windows 10 Pro
+OS Version:                10.0.19045 Build 19045
+System Manufacturer:       Replit
+System Model:              Virtual Machine
+Processor(s):              1 Processor(s) Installed.
+Total Physical Memory:     8,192 MB
+Available Physical Memory: 4,096 MB`;
+        default:
+            if (command) return `'${command}' is not recognized as an internal or external command,
+operable program or batch file.`;
+            return '';
+    }
+}
+
+// Paint App
+let paintColor = '#000000';
+let paintSize = 5;
+let paintTool = 'brush';
+let isDrawing = false;
+
+function createPaint() {
+    setTimeout(() => initPaintCanvas(), 100);
+    
+    return `
+        <div class="paint-app">
+            <div class="paint-toolbar">
+                <div class="paint-colors">
+                    <div class="paint-color active" style="background:#000" onclick="setPaintColor('#000', this)"></div>
+                    <div class="paint-color" style="background:#fff" onclick="setPaintColor('#fff', this)"></div>
+                    <div class="paint-color" style="background:#ff0000" onclick="setPaintColor('#ff0000', this)"></div>
+                    <div class="paint-color" style="background:#00ff00" onclick="setPaintColor('#00ff00', this)"></div>
+                    <div class="paint-color" style="background:#0000ff" onclick="setPaintColor('#0000ff', this)"></div>
+                    <div class="paint-color" style="background:#ffff00" onclick="setPaintColor('#ffff00', this)"></div>
+                    <div class="paint-color" style="background:#ff00ff" onclick="setPaintColor('#ff00ff', this)"></div>
+                    <div class="paint-color" style="background:#00ffff" onclick="setPaintColor('#00ffff', this)"></div>
+                    <div class="paint-color" style="background:#ff8000" onclick="setPaintColor('#ff8000', this)"></div>
+                    <div class="paint-color" style="background:#8000ff" onclick="setPaintColor('#8000ff', this)"></div>
+                </div>
+                <div class="paint-tools">
+                    <button class="paint-tool active" onclick="setPaintTool('brush', this)">🖌️ Brush</button>
+                    <button class="paint-tool" onclick="setPaintTool('eraser', this)">🧹 Eraser</button>
+                    <button class="paint-tool" onclick="clearCanvas()">🗑️ Clear</button>
+                </div>
+                <label>Size: <input type="range" class="paint-size" min="1" max="50" value="5" onchange="paintSize=this.value"></label>
+            </div>
+            <div class="paint-canvas-container">
+                <canvas id="paint-canvas" class="paint-canvas" width="600" height="400"></canvas>
+            </div>
+        </div>
+    `;
+}
+
+function initPaintCanvas() {
+    const canvas = document.getElementById('paint-canvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    canvas.addEventListener('mousedown', (e) => {
+        isDrawing = true;
+        draw(e);
+    });
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', () => isDrawing = false);
+    canvas.addEventListener('mouseout', () => isDrawing = false);
+}
+
+function draw(e) {
+    if (!isDrawing) return;
+    const canvas = document.getElementById('paint-canvas');
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    
+    ctx.beginPath();
+    ctx.arc(e.clientX - rect.left, e.clientY - rect.top, paintSize/2, 0, Math.PI * 2);
+    ctx.fillStyle = paintTool === 'eraser' ? 'white' : paintColor;
+    ctx.fill();
+}
+
+function setPaintColor(color, el) {
+    paintColor = color;
+    document.querySelectorAll('.paint-color').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+}
+
+function setPaintTool(tool, el) {
+    paintTool = tool;
+    document.querySelectorAll('.paint-tool').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+}
+
+function clearCanvas() {
+    const canvas = document.getElementById('paint-canvas');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+}
+
+// Weather App
+function createWeather() {
+    const temps = [68, 72, 65, 70, 75, 62, 78];
+    const conditions = ['☀️', '⛅', '☁️', '🌧️', '⛈️'];
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    
+    return `
+        <div class="weather-app">
+            <h2>📍 Current Location</h2>
+            <div class="weather-icon">☀️</div>
+            <div class="weather-temp">72°F</div>
+            <p>Sunny</p>
+            <div class="weather-details">
+                <div class="weather-detail">
+                    <div class="weather-detail-value">💨 8 mph</div>
+                    <div>Wind</div>
+                </div>
+                <div class="weather-detail">
+                    <div class="weather-detail-value">💧 45%</div>
+                    <div>Humidity</div>
+                </div>
+                <div class="weather-detail">
+                    <div class="weather-detail-value">👁️ 10 mi</div>
+                    <div>Visibility</div>
+                </div>
+            </div>
+            <div class="weather-forecast">
+                ${days.map((day, i) => `
+                    <div class="forecast-day">
+                        <div>${day}</div>
+                        <div style="font-size: 24px">${conditions[i % conditions.length]}</div>
+                        <div>${temps[i]}°</div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+// Snipping Tool
+function createSnipping() {
+    return `
+        <div class="snipping-app">
+            <div class="snipping-toolbar">
+                <button class="snipping-btn" onclick="takeSnip()">+ New</button>
+                <select style="padding: 6px;">
+                    <option>Rectangular Snip</option>
+                    <option>Free-form Snip</option>
+                    <option>Window Snip</option>
+                    <option>Full-screen Snip</option>
+                </select>
+            </div>
+            <div class="snipping-content" id="snipping-content">
+                <div style="text-align: center">
+                    <p style="font-size: 48px">✂️</p>
+                    <p>Click "New" to take a screenshot</p>
+                    <p style="font-size: 12px; margin-top: 10px">Press Windows + Shift + S for quick snip</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function takeSnip() {
+    const content = document.getElementById('snipping-content');
+    if (content) {
+        content.innerHTML = `
+            <div style="text-align: center">
+                <p style="font-size: 48px">📸</p>
+                <p>Screenshot captured!</p>
+                <p style="font-size: 12px; margin-top: 10px; color: #0078d4">Saved to clipboard</p>
+            </div>
+        `;
+    }
+}
+
+// Context Menu
+document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('contextmenu', (e) => {
+        const desktop = document.getElementById('screen-desktop');
+        if (desktop && desktop.classList.contains('active')) {
+            const contextMenu = document.getElementById('context-menu');
+            if (contextMenu && e.target.closest('.desktop-icons')) {
+                e.preventDefault();
+                contextMenu.style.left = e.pageX + 'px';
+                contextMenu.style.top = e.pageY + 'px';
+                contextMenu.classList.add('active');
+            }
+        }
+    });
+    
+    document.addEventListener('click', () => {
+        const contextMenu = document.getElementById('context-menu');
+        if (contextMenu) contextMenu.classList.remove('active');
+    });
+});
+
+function refreshDesktop() {
+    const icons = document.querySelector('.desktop-icons');
+    if (icons) {
+        icons.style.opacity = '0.5';
+        setTimeout(() => icons.style.opacity = '1', 300);
+    }
+}
+
+function createFolder() {
+    const icons = document.querySelector('.desktop-icons');
+    if (icons) {
+        const folder = document.createElement('div');
+        folder.className = 'desktop-icon';
+        folder.innerHTML = '<div class="icon">📁</div><div class="icon-label">New folder</div>';
+        folder.ondblclick = () => openApp('explorer');
+        icons.appendChild(folder);
+    }
+}
+
+function toggleQuickAction(el) {
+    el.classList.toggle('active');
 }
