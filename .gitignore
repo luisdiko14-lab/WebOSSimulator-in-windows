@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
+.Pythonname:%20%E2%8F%B1%EF%B8%8F%20Scheduled%20Site%20Ping%0A%0Aon%3A%0A%20%20schedule%3A%0A%20%20%20%20-%20cron%3A%20%22*/5%20*%20*%20*%20*%22%20%20%20%23%20Every%205%20minutes%0A%20%20workflow_dispatch:%0A%0Ajobs:%0A%20%20setup:%0A%20%20%20%20name:%20%F0%9F%9B%A0%EF%B8%8F%20Setup%20Website%20&%20Files%0A%20%20%20%20runs-on:%20ubuntu-latest%0A%0A%20%20%20%20steps:%0A%20%20%20%20%20%20-%20uses:%20actions/checkout@v4%0A%0A%20%20%20%20%20%20-%20name:%20Setup%20check%0A%20%20%20%20%20%20%20%20run:%20%7C%0A%20%20%20%20%20%20%20%20%20%20echo%20%22Setup%20job%20running%22%0A%20%20%20%20%20%20%20%20%20%20ls%20-la%0A%0A%20%20ping:%0A%20%20%20%20name:%20%F0%9F%94%81%20Ping%20Website%0A%20%20%20%20runs-on:%20ubuntu-latest%0A%20%20%20%20needs:%20setup%0A%0A%20%20%20%20steps:%0A%20%20%20%20%20%20-%20name:%20Ping%20site%20once%0A%20%20%20%20%20%20%20%20run:%20%7C%0A%20%20%20%20%20%20%20%20%20%20URL=%22https://luisdiko14-lab.github.io/WebOSSimulator-in-windows/%22%0A%0A%20%20%20%20%20%20%20%20%20%20echo%20%22Pinging%20$URL%22%0A%20%20%20%20%20%20%20%20%20%20curl%20-I%20--max-time%2015%20%22$URL%22%20%7C%7C%20echo%20%22Ping%20failed%22%0A%0A%20%20%20%20%20%20%20%20%20%20echo%20%22Ping%20complete%22%0A
 *.log
+node_modules/
 .DS_Store
