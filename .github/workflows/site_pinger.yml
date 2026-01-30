@@ -1,9 +1,12 @@
 name: 🌐 Site Setup + Ping + Deploy
 
 on:
+  push:
+    branches:
+      - main   # Only run on push to main
   schedule:
-    - cron: "*/5 * * * *" # Every 5 minutes
-  workflow_dispatch:
+    - cron: "*/5 * * * *"  # Every 5 minutes
+  workflow_dispatch:        # Manual trigger
 
 jobs:
   setup:
@@ -14,7 +17,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup files
+      - name: Setup website files
         run: |
           echo "Creating website files..."
           mkdir -p website
@@ -43,11 +46,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-
-      - name: Setup Node.js (optional, only if building)
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
 
       - name: Deploy website folder
         uses: peaceiris/actions-gh-pages@v7
