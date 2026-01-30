@@ -3,11 +3,11 @@ name: 🌐 Site Setup + Ping + Deploy
 on:
   push:
     branches:
-      - main   # Only run on push to main
+      - main
   schedule:
-    - cron: "*/5 * * * *"  # Every 5 minutes
-  workflow_dispatch:        # Manual trigger
-  
+    - cron: "*/5 * * * *" # Runs every 5 minutes
+  workflow_dispatch:
+
 permissions:
   contents: read
   pages: write
@@ -16,48 +16,37 @@ permissions:
 concurrency:
   group: "pages"
   cancel-in-progress: false
-  
-jobs:
-  setup:
-    name: 🛠️ Setup Website & Files
-    runs-on: ubuntu-latest
 
+jobs:
+  build-and-deploy:
+    name: 🛠️ Build & 🚀 Deploy
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Setup website files
         run: |
-          echo "Creating website files..."
           mkdir -p website
           echo "<html><body><h1>WebOS Simulator Test</h1></body></html>" > website/index.html
-          ls -la website
-          echo "Setup complete!"
+          
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './website'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
   loop_ping:
-    name: 🔁 Ping Website
+    name: 🔄 Ping Website
     runs-on: ubuntu-latest
-    needs: setup
-
+    needs: build-and-deploy # Wait until deployment is finished
     steps:
       - name: Ping live site
         run: |
           URL="https://luisdiko14-lab.github.io/WebOSSimulator-in-windows/"
           echo "Pinging $URL..."
-          curl -I --max-time 15 "$URL" || echo "Ping failed"
-          echo "Ping complete"
-
-  deploy:
-    name: 🚀 Deploy to GitHub Pages
-    runs-on: ubuntu-latest
-    needs: setup  # or [setup, loop_ping] if you want ping to run first
-
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Deploy website folder
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./website
+          # Added -L to follow redirects and -s for silent output
+          curl -IsL --max-time 15 "$URL" | grep "HTTP/" || echo "Ping failed"
