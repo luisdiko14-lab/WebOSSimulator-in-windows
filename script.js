@@ -468,7 +468,7 @@ function restart() {
     closeAllWindows();
     showScreen('screen-shutdown');
     document.getElementById('shutdown-text').textContent = 'Restarting...';
-    
+    window.close();
     setTimeout(() => {
         showScreen('screen-lock');
         updateLockTime();
