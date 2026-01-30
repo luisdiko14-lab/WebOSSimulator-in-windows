@@ -312,6 +312,11 @@ function playSound(soundName) {
             if (iframe) {
                 iframe.src = 'https://www.myinstants.com/instant/windows-10-startup-sound-tune-93817/embed/';
             }
+        } else if (soundName === 'boot') {
+            const iframe = document.getElementById('boot-sound');
+            if (iframe) {
+                iframe.src = 'https://www.myinstants.com/instant/windows-10-boot-8293/embed/';
+            }
         } else {
             const audio = document.getElementById(soundName + '-sound');
             if (audio) {
@@ -324,6 +329,8 @@ function playSound(soundName) {
 }
 
 function startBootSequence() {
+    playSound('boot');
+    
     const bootStatus = document.getElementById('boot-status');
     const bootMessages = [
         'Loading Windows...',
