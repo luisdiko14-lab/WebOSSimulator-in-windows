@@ -50,7 +50,7 @@ jobs:
   deploy:
     name: 🚀 Deploy to GitHub Pages
     runs-on: ubuntu-latest
-    needs: setup
+    needs: setup  # or [setup, loop_ping] if you want ping to run first
 
     steps:
       - name: Checkout repo
