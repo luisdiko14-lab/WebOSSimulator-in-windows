@@ -468,7 +468,7 @@ function restart() {
     closeAllWindows();
     showScreen('screen-shutdown');
     document.getElementById('shutdown-text').textContent = 'Restarting...';
-    window.close();
+    
     setTimeout(() => {
         showScreen('screen-lock');
         updateLockTime();
@@ -480,7 +480,7 @@ function shutdown() {
     closeAllWindows();
     showScreen('screen-shutdown');
     document.getElementById('shutdown-text').textContent = 'Shutting down...';
-    
+    window.close();
     setTimeout(() => {
         document.body.style.background = '#000';
         document.getElementById('screen-shutdown').style.display = 'none';
