@@ -7,6 +7,18 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div id="sound-container" style="display: none; position: absolute; left: -9999px;">
+        <iframe id="startup-sound" width="1" height="1" src="" frameborder="0"></iframe>
+        <audio id="error-sound" preload="auto">
+            <source src="https://www.myinstants.com/media/sounds/erro.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="notification-sound" preload="auto">
+            <source src="https://www.myinstants.com/media/sounds/facebook-notification-sound-effect.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="shutdown-sound" preload="auto">
+            <source src="https://www.myinstants.com/media/sounds/windows-xp-shutdown.mp3" type="audio/mpeg">
+        </audio>
+    </div>
     <div id="screen-boot" class="screen active">
         <div class="boot-screen">
             <div class="windows-logo-large">

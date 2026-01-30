@@ -305,6 +305,24 @@ document.addEventListener('DOMContentLoaded', () => {
     startPerformanceMonitoring();
 });
 
+function playSound(soundName) {
+    try {
+        if (soundName === 'startup') {
+            const iframe = document.getElementById('startup-sound');
+            if (iframe) {
+                iframe.src = 'https://www.myinstants.com/instant/windows-10-startup-sound-tune-93817/embed/';
+            }
+        } else {
+            const audio = document.getElementById(soundName + '-sound');
+            if (audio) {
+                audio.currentTime = 0;
+                audio.volume = 0.5;
+                audio.play().catch(() => {});
+            }
+        }
+    } catch (e) {}
+}
+
 function startBootSequence() {
     const bootStatus = document.getElementById('boot-status');
     const bootMessages = [
@@ -325,6 +343,7 @@ function startBootSequence() {
         clearInterval(messageInterval);
         showScreen('screen-lock');
         updateLockTime();
+        playSound('startup');
     }, 2500);
 }
 
@@ -349,6 +368,7 @@ function startLoginSequence() {
     setTimeout(() => {
         showScreen('screen-desktop');
         document.getElementById('start-username').textContent = userData.username;
+        playSound('notification');
     }, 5000);
 }
 
@@ -363,6 +383,7 @@ function attemptLogin() {
     } else {
         errorElement.textContent = 'Incorrect password. Please try again.';
         document.getElementById('login-password').value = '';
+        playSound('error');
     }
 }
 
@@ -426,6 +447,7 @@ function restart() {
 }
 
 function shutdown() {
+    playSound('shutdown');
     closeAllWindows();
     showScreen('screen-shutdown');
     document.getElementById('shutdown-text').textContent = 'Shutting down...';
