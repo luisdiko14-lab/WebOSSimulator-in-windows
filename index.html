@@ -123,8 +123,8 @@
                 <div class="taskbar-right">
                     <div class="system-tray">
                         <span class="tray-icon" onclick="openApp('taskmgr')">📊</span>
-                        <span class="tray-icon">🔊</span>
-                        <span class="tray-icon">📶</span>
+                        <span class="tray-icon" onclick="toggleVolumeMenu()">🔊</span>
+                        <span class="tray-icon" onclick="toggleWifiMenu()">📶</span>
                         <span class="tray-icon">🔋</span>
                         <div class="clock" id="taskbar-clock">12:00 PM<br>1/1/2024</div>
                         <button class="notification-button" onclick="toggleNotifications()">💬</button>
@@ -181,6 +181,26 @@
                                 <span class="app-icon">✂️</span>
                                 <span>Snipping Tool</span>
                             </div>
+                            <div class="app-item" onclick="openApp('photos'); toggleStartMenu()">
+                                <span class="app-icon">🖼️</span>
+                                <span>Photos</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('calendar'); toggleStartMenu()">
+                                <span class="app-icon">📅</span>
+                                <span>Calendar</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('clock'); toggleStartMenu()">
+                                <span class="app-icon">⏰</span>
+                                <span>Alarms & Clock</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('maps'); toggleStartMenu()">
+                                <span class="app-icon">🗺️</span>
+                                <span>Maps</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('store'); toggleStartMenu()">
+                                <span class="app-icon">🛍️</span>
+                                <span>Microsoft Store</span>
+                            </div>
                         </div>
                     </div>
                     <div class="start-power">
@@ -192,6 +212,57 @@
                     <div class="power-option" onclick="lockScreen()">Lock</div>
                     <div class="power-option" onclick="restart()">Restart</div>
                     <div class="power-option" onclick="shutdown()">Shut down</div>
+                </div>
+            </div>
+
+            <div class="wifi-menu" id="wifi-menu">
+                <div class="wifi-header">
+                    <span>📶 Wi-Fi</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" checked onchange="toggleWifiState(this)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="wifi-list" id="wifi-list">
+                    <div class="wifi-network connected" onclick="selectWifi(this)">
+                        <div class="wifi-info">
+                            <span class="wifi-name">Home_WiFi_5G</span>
+                            <span class="wifi-status">Connected, secured</span>
+                        </div>
+                        <span class="wifi-strength">📶</span>
+                    </div>
+                    <div class="wifi-network" onclick="selectWifi(this)">
+                        <div class="wifi-info">
+                            <span class="wifi-name">Neighbors_Network</span>
+                            <span class="wifi-status">Secured</span>
+                        </div>
+                        <span class="wifi-strength">📶</span>
+                    </div>
+                    <div class="wifi-network" onclick="selectWifi(this)">
+                        <div class="wifi-info">
+                            <span class="wifi-name">Coffee_Shop_Free</span>
+                            <span class="wifi-status">Open</span>
+                        </div>
+                        <span class="wifi-strength">📶</span>
+                    </div>
+                    <div class="wifi-network" onclick="selectWifi(this)">
+                        <div class="wifi-info">
+                            <span class="wifi-name">Office_Guest</span>
+                            <span class="wifi-status">Secured</span>
+                        </div>
+                        <span class="wifi-strength">📶</span>
+                    </div>
+                </div>
+                <div class="wifi-footer">
+                    <a href="#" onclick="openApp('wifi'); toggleWifiMenu();">Network & Internet settings</a>
+                </div>
+            </div>
+
+            <div class="volume-menu" id="volume-menu">
+                <div class="volume-header">🔊 Volume</div>
+                <div class="volume-slider">
+                    <input type="range" min="0" max="100" value="75" id="volume-slider">
+                    <span id="volume-value">75%</span>
                 </div>
             </div>
 

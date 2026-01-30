@@ -303,7 +303,29 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateClock, 1000);
     
     startPerformanceMonitoring();
+    
+    checkUrlParams();
 });
+
+function checkUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    const openedApp = params.get('opened');
+    if (openedApp) {
+        setTimeout(() => {
+            openApp(openedApp);
+        }, 5500);
+    }
+}
+
+function updateUrlParam(appName) {
+    const url = new URL(window.location);
+    if (appName) {
+        url.searchParams.set('opened', appName);
+    } else {
+        url.searchParams.delete('opened');
+    }
+    window.history.replaceState({}, '', url);
+}
 
 function playSound(soundName) {
     try {
@@ -485,6 +507,7 @@ function openApp(appName) {
     const windowData = createWindow(appName);
     openWindows.push(windowData);
     updateTaskbar();
+    updateUrlParam(appName);
     
     const startMenu = document.getElementById('start-menu');
     if (startMenu.classList.contains('active')) {
@@ -514,7 +537,13 @@ function createWindow(appName) {
         cmd: { title: '⬛ Command Prompt', content: createCMD() },
         paint: { title: '🎨 Paint', content: createPaint() },
         weather: { title: '🌤️ Weather', content: createWeather() },
-        snipping: { title: '✂️ Snipping Tool', content: createSnipping() }
+        snipping: { title: '✂️ Snipping Tool', content: createSnipping() },
+        photos: { title: '🖼️ Photos', content: createPhotos() },
+        calendar: { title: '📅 Calendar', content: createCalendar() },
+        clock: { title: '⏰ Alarms & Clock', content: createClockApp() },
+        maps: { title: '🗺️ Maps', content: createMaps() },
+        store: { title: '🛍️ Microsoft Store', content: createStore() },
+        wifi: { title: '📶 Network & Internet', content: createWifiSettings() }
     };
     
     const appData = apps[appName] || { title: 'Window', content: '<p>App content</p>' };
@@ -1733,4 +1762,209 @@ function createFolder() {
 
 function toggleQuickAction(el) {
     el.classList.toggle('active');
+}
+
+// WiFi and Volume Menus
+function toggleWifiMenu() {
+    const menu = document.getElementById('wifi-menu');
+    const volumeMenu = document.getElementById('volume-menu');
+    if (volumeMenu) volumeMenu.classList.remove('active');
+    if (menu) menu.classList.toggle('active');
+}
+
+function toggleVolumeMenu() {
+    const menu = document.getElementById('volume-menu');
+    const wifiMenu = document.getElementById('wifi-menu');
+    if (wifiMenu) wifiMenu.classList.remove('active');
+    if (menu) menu.classList.toggle('active');
+    
+    const slider = document.getElementById('volume-slider');
+    const value = document.getElementById('volume-value');
+    if (slider && value) {
+        slider.oninput = () => value.textContent = slider.value + '%';
+    }
+}
+
+function toggleWifiState(checkbox) {
+    const wifiList = document.getElementById('wifi-list');
+    if (wifiList) {
+        wifiList.style.opacity = checkbox.checked ? '1' : '0.5';
+        wifiList.style.pointerEvents = checkbox.checked ? 'auto' : 'none';
+    }
+}
+
+function selectWifi(el) {
+    document.querySelectorAll('.wifi-network').forEach(n => {
+        n.classList.remove('connected');
+        n.querySelector('.wifi-status').textContent = n.querySelector('.wifi-status').textContent.replace('Connected, ', '');
+    });
+    el.classList.add('connected');
+    const status = el.querySelector('.wifi-status');
+    status.textContent = 'Connected, ' + status.textContent;
+    playSound('notification');
+}
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.wifi-menu') && !e.target.closest('.tray-icon')) {
+        const wifiMenu = document.getElementById('wifi-menu');
+        if (wifiMenu) wifiMenu.classList.remove('active');
+    }
+    if (!e.target.closest('.volume-menu') && !e.target.closest('.tray-icon')) {
+        const volumeMenu = document.getElementById('volume-menu');
+        if (volumeMenu) volumeMenu.classList.remove('active');
+    }
+});
+
+// Photos App
+function createPhotos() {
+    const photos = ['🌅', '🏔️', '🌊', '🌸', '🌆', '🎨', '🌈', '🦋', '🌺', '🍂', '⭐', '🌙'];
+    return `
+        <div class="photos-app">
+            <div class="photos-header">
+                <h2>📷 Collection</h2>
+            </div>
+            <div class="photos-grid">
+                ${photos.map(p => `<div class="photo-item">${p}</div>`).join('')}
+            </div>
+        </div>
+    `;
+}
+
+// Calendar App
+function createCalendar() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const today = now.getDate();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    let daysHtml = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div class="calendar-day header">${d}</div>`).join('');
+    
+    for (let i = 0; i < firstDay; i++) {
+        daysHtml += '<div class="calendar-day"></div>';
+    }
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+        const isToday = day === today ? 'today' : '';
+        daysHtml += `<div class="calendar-day ${isToday}">${day}</div>`;
+    }
+    
+    return `
+        <div class="calendar-app">
+            <div class="calendar-header">
+                <button onclick="changeMonth(-1)" style="padding: 8px 16px; cursor: pointer;">←</button>
+                <h2>${monthNames[month]} ${year}</h2>
+                <button onclick="changeMonth(1)" style="padding: 8px 16px; cursor: pointer;">→</button>
+            </div>
+            <div class="calendar-grid">
+                ${daysHtml}
+            </div>
+        </div>
+    `;
+}
+
+// Clock App
+function createClockApp() {
+    setTimeout(() => {
+        updateClockApp();
+        setInterval(updateClockApp, 1000);
+    }, 100);
+    
+    return `
+        <div class="clock-app">
+            <div class="clock-display" id="clock-app-time">00:00:00</div>
+            <div class="clock-date" id="clock-app-date">Loading...</div>
+        </div>
+    `;
+}
+
+function updateClockApp() {
+    const now = new Date();
+    const timeEl = document.getElementById('clock-app-time');
+    const dateEl = document.getElementById('clock-app-date');
+    if (timeEl) timeEl.textContent = now.toLocaleTimeString();
+    if (dateEl) dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+// Maps App
+function createMaps() {
+    return `
+        <div class="maps-app">
+            <div class="maps-search">
+                <input type="text" placeholder="Search for a place...">
+            </div>
+            <div class="maps-content">🗺️</div>
+        </div>
+    `;
+}
+
+// Microsoft Store App
+function createStore() {
+    const apps = [
+        { icon: '🎮', name: 'Xbox', rating: '★★★★☆' },
+        { icon: '🎵', name: 'Spotify', rating: '★★★★★' },
+        { icon: '📺', name: 'Netflix', rating: '★★★★☆' },
+        { icon: '💬', name: 'WhatsApp', rating: '★★★★☆' },
+        { icon: '📷', name: 'Instagram', rating: '★★★★☆' },
+        { icon: '🎥', name: 'TikTok', rating: '★★★★☆' },
+        { icon: '📝', name: 'OneNote', rating: '★★★★☆' },
+        { icon: '🎨', name: 'Canva', rating: '★★★★★' },
+        { icon: '🔐', name: '1Password', rating: '★★★★★' }
+    ];
+    
+    return `
+        <div class="store-app">
+            <div class="store-header">
+                <h1>🛍️ Microsoft Store</h1>
+                <p>Discover apps, games, and more</p>
+            </div>
+            <div class="store-apps">
+                ${apps.map(app => `
+                    <div class="store-app-item">
+                        <div class="store-app-icon">${app.icon}</div>
+                        <div class="store-app-name">${app.name}</div>
+                        <div class="store-app-rating">${app.rating}</div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+// WiFi Settings App
+function createWifiSettings() {
+    return `
+        <div style="padding: 20px; height: 100%; background: white;">
+            <h2 style="margin-bottom: 20px;">📶 Network & Internet</h2>
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 18px; font-weight: 500;">Wi-Fi</div>
+                        <div style="color: #666;">Connected to Home_WiFi_5G</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <h3 style="margin-bottom: 10px;">Available networks</h3>
+            <div style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                <div style="padding: 12px 16px; border-bottom: 1px solid #e0e0e0; background: #e3f2fd;">
+                    <strong>Home_WiFi_5G</strong> - Connected, secured 📶
+                </div>
+                <div style="padding: 12px 16px; border-bottom: 1px solid #e0e0e0;">
+                    Neighbors_Network - Secured 📶
+                </div>
+                <div style="padding: 12px 16px; border-bottom: 1px solid #e0e0e0;">
+                    Coffee_Shop_Free - Open 📶
+                </div>
+                <div style="padding: 12px 16px;">
+                    Office_Guest - Secured 📶
+                </div>
+            </div>
+        </div>
+    `;
 }
