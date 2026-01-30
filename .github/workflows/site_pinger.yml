@@ -2,7 +2,7 @@ name: ⏱️ Scheduled Site Ping
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/5 * * * *" # Every 5 minutes
   workflow_dispatch:
 
 jobs:
@@ -11,24 +11,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - name: Setup check
+      - name: Setup files
         run: |
-          echo "Setup job running"
-          ls -la
+          echo "Setting up website files..."
+          mkdir -p website
+          echo "<html><body><h1>Site Ping Test</h1></body></html>" > website/index.html
+          ls -la website
+          echo "Setup complete!"
 
-  ping:
-    name: 🔁 Ping Website
+  loop_ping:
+    name: 🔁 Loop Ping
     runs-on: ubuntu-latest
     needs: setup
 
     steps:
-      - name: Ping site once
+      - name: Ping site
         run: |
           URL="https://luisdiko14-lab.github.io/WebOSSimulator-in-windows/"
-
-          echo "Pinging $URL"
+          echo "Pinging $URL..."
+          # Ping once per run (safe)
           curl -I --max-time 15 "$URL" || echo "Ping failed"
-
-          echo "Ping complete"
+          echo "Ping finished"
