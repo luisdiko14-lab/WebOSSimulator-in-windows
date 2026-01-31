@@ -489,7 +489,6 @@ jobs:
     name: 📣 Notify (Slack) - optional
     runs-on: ubuntu-latest
     needs: deploy
-    if: ${{ secrets.SLACK_WEBHOOK != '' }}
     steps:
       - name: 📨 Send Slack notification (optional)
         uses: 8398a7/action-slack@v3
