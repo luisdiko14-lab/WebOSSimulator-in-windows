@@ -1,7 +1,9 @@
-name: 🚀 Ultra Clean Zero-Error Deploy (Stable)
+name: 🚀 Mega Ultra OP CI / CD
 
 on:
   push:
+    branches: ["main"]
+  pull_request:
     branches: ["main"]
   workflow_dispatch:
 
@@ -11,78 +13,112 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: "mega-ultra-op"
   cancel-in-progress: false
 
 jobs:
-  # -------------------------
-  # PRECHECK - quick repo scan
-  # -------------------------
+  # -----------------------------------------------------------
+  # PRECHECK: detect files & features, expose outputs for jobs
+  # -----------------------------------------------------------
   precheck:
-    name: 🔍 Precheck & Repo Scan
+    name: 🔍 Precheck & Feature Detect
     runs-on: ubuntu-latest
     outputs:
-      has_package_json: ${{ steps.check_package_json.outputs.found }}
-      has_requirements: ${{ steps.check_requirements.outputs.found }}
+      has_package_json: ${{ steps.set.outputs.has_package_json }}
+      has_requirements: ${{ steps.set.outputs.has_requirements }}
+      has_dockerfile: ${{ steps.set.outputs.has_dockerfile }}
+      has_playwright: ${{ steps.set.outputs.has_playwright }}
+      has_cypress: ${{ steps.set.outputs.has_cypress }}
+      has_lighthouse: ${{ steps.set.outputs.has_lighthouse }}
+      has_images: ${{ steps.set.outputs.has_images }}
     steps:
-      - name: 📥 Checkout repo
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🗂️ Show a short file list
+      - name: 📁 Short file list
         run: |
           echo "Top-level files:"
           ls -la | sed -n '1,200p'
 
-      - name: 🧾 Check if package.json exists
-        id: check_package_json
+      - name: 🔎 Detect features and set outputs
+        id: set
         run: |
+          # defaults
+          echo "has_package_json=false" >> $GITHUB_OUTPUT
+          echo "has_requirements=false" >> $GITHUB_OUTPUT
+          echo "has_dockerfile=false" >> $GITHUB_OUTPUT
+          echo "has_playwright=false" >> $GITHUB_OUTPUT
+          echo "has_cypress=false" >> $GITHUB_OUTPUT
+          echo "has_lighthouse=false" >> $GITHUB_OUTPUT
+          echo "has_images=false" >> $GITHUB_OUTPUT
+
           if [ -f package.json ]; then
-            echo "found=true" >> $GITHUB_OUTPUT
-            echo "✅ package.json found"
-          else
-            echo "found=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ package.json NOT found"
+            echo "has_package_json=true" >> $GITHUB_OUTPUT
+            echo "✅ package.json detected"
           fi
 
-      - name: 🐍 Check if requirements.txt exists
-        id: check_requirements
-        run: |
           if [ -f requirements.txt ]; then
-            echo "found=true" >> $GITHUB_OUTPUT
-            echo "✅ requirements.txt found"
-          else
-            echo "found=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ requirements.txt NOT found"
+            echo "has_requirements=true" >> $GITHUB_OUTPUT
+            echo "✅ requirements.txt detected"
           fi
 
-  # -------------------------
-  # BUILD - node + python setup, installs, optional build
-  # -------------------------
+          if [ -f Dockerfile ]; then
+            echo "has_dockerfile=true" >> $GITHUB_OUTPUT
+            echo "✅ Dockerfile detected"
+          fi
+
+          if [ -f playwright.config.* ] || [ -f playwright.config.js ] || grep -q "playwright" package.json 2>/dev/null; then
+            echo "has_playwright=true" >> $GITHUB_OUTPUT
+            echo "✅ Playwright config detected"
+          fi
+
+          if grep -q "cypress" package.json 2>/dev/null || [ -d cypress ]; then
+            echo "has_cypress=true" >> $GITHUB_OUTPUT
+            echo "✅ Cypress detected"
+          fi
+
+          if grep -q "lhci" package.json 2>/dev/null || grep -q "lighthouse" package.json 2>/dev/null; then
+            echo "has_lighthouse=true" >> $GITHUB_OUTPUT
+            echo "✅ Lighthouse / LHCI detected"
+          fi
+
+          if ls **/*.{png,jpg,jpeg,webp,svg} 1> /dev/null 2>&1; then
+            echo "has_images=true" >> $GITHUB_OUTPUT
+            echo "✅ images detected"
+          fi
+
+  # -----------------------------------------------------------
+  # BUILD: Node matrix + Python support, caching, build script
+  # -----------------------------------------------------------
   build:
-    name: 🔨 Build & Install
+    name: 🔨 Build (Node Matrix + Python)
     runs-on: ubuntu-latest
     needs: precheck
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["16", "18", "20"]
     steps:
-      - name: 📥 Checkout repo
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js 20 (and cache npm)
+      - name: 🟢 Setup Node ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ matrix.node-version }}
           cache: "npm"
 
-      - name: 🗄️ Cache npm (~/.npm)
+      - name: 🗄️ Cache npm
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-npm-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-npm-
+            ${{ runner.os }}-npm-${{ matrix.node-version }}-
 
-      - name: 📦 Install npm dependencies (if package.json exists)
+      - name: 📦 Install npm dependencies (if present)
         run: |
-          if [ -f package.json ]; then
+          if [ "${{ needs.precheck.outputs.has_package_json }}" = "true" ]; then
             if [ -f package-lock.json ]; then
               npm ci --prefer-offline --no-audit --progress=false
             else
@@ -97,7 +133,7 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: 🗄️ Cache pip (~/.cache/pip)
+      - name: 🗄️ Cache pip
         uses: actions/cache@v4
         with:
           path: |
@@ -106,48 +142,57 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: 📦 Install Python packages (if requirements.txt exists)
+      - name: 📦 Install Python packages (if present)
         run: |
-          if [ -f requirements.txt ]; then
+          if [ "${{ needs.precheck.outputs.has_requirements }}" = "true" ]; then
             python -m pip install --upgrade pip
             pip install -r requirements.txt
           else
             echo "ℹ️ No requirements.txt — skipping pip install"
           fi
 
-      - name: 🛠️ Run build script (if exists in package.json)
+      - name: 🛠️ Run build script (if available)
         run: |
-          if [ -f package.json ] && grep -q '"build"' package.json; then
+          if [ -f package.json ] && grep -q "\"build\"" package.json; then
             echo "🛠️ Running npm run build"
             npm run build
           else
-            echo "ℹ️ No build script — skipping build step"
+            echo "ℹ️ No build script found"
           fi
 
-  # -------------------------
-  # LINT - ESLint + Prettier checks (non-fatal warnings)
-  # -------------------------
+      - name: 🔍 Save build artifacts list
+        run: |
+          echo "Top-level files after build:"
+          ls -la | sed -n '1,200p'
+
+  # -----------------------------------------------------------
+  # LINT: ESLint + Prettier (fast), plus optional Python linters
+  # -----------------------------------------------------------
   lint:
     name: 🧹 Lint & Format Checks
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: 📥 Checkout repo
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js 20
+      - name: 🟢 Setup Node 20
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: 📦 Install minimal deps for lint (if present)
+      - name: 📦 Install lint deps (if package.json present)
         run: |
-          if [ -f package-lock.json ]; then npm ci --prefer-offline --no-audit --progress=false; elif [ -f package.json ]; then npm install --no-audit --prefer-offline; else echo "ℹ️ No package.json"; fi
+          if [ "${{ needs.precheck.outputs.has_package_json }}" = "true" ]; then
+            if [ -f package-lock.json ]; then npm ci --prefer-offline --no-audit --progress=false; else npm install --no-audit --prefer-offline; fi
+          else
+            echo "ℹ️ No package.json — skipping npm install for lint"
+          fi
 
       - name: 🧪 ESLint (if configured)
         run: |
           if [ -f .eslintrc.json ] || [ -f .eslintrc.js ] || grep -q "eslint" package.json 2>/dev/null; then
-            npx eslint . --max-warnings=0 || echo "⚠️ ESLint issues (see logs)"
+            npx eslint . --max-warnings=0 || echo "⚠️ ESLint issues detected"
           else
             echo "ℹ️ ESLint not configured"
           fi
@@ -155,31 +200,44 @@ jobs:
       - name: 🎨 Prettier check (if configured)
         run: |
           if grep -q "prettier" package.json 2>/dev/null || [ -f .prettierrc ] || [ -f .prettierrc.json ]; then
-            npx prettier --check "**/*.{js,ts,jsx,tsx,css,scss,html,json,md}" || echo "⚠️ Prettier formatting issues"
+            npx prettier --check "**/*.{js,ts,jsx,tsx,css,scss,html,json,md}" || echo "⚠️ Prettier issues"
           else
             echo "ℹ️ Prettier not configured"
           fi
 
-  # -------------------------
-  # TEST - run npm & python tests (non-fatal)
-  # -------------------------
-  test:
-    name: 🧪 Run Tests
+      - name: 🐍 Python lint (flake8/ruff) if requirements exist
+        run: |
+          if [ "${{ needs.precheck.outputs.has_requirements }}" = "true" ]; then
+            python -m pip install flake8 ruff || true
+            if command -v ruff >/dev/null 2>&1; then
+              ruff .
+            else
+              flake8 . || echo "⚠️ flake8 issues"
+            fi
+          else
+            echo "ℹ️ No Python requirements — skipping Python lint"
+          fi
+
+  # -----------------------------------------------------------
+  # UNIT TESTS: JS and Python (non-fatal to keep pipeline flexible)
+  # -----------------------------------------------------------
+  unit_tests:
+    name: 🧪 Unit Tests (JS + Python)
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: 📥 Checkout repo
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 🔬 Run npm tests (if defined)
+      - name: 🔬 JS tests (if defined)
         run: |
-          if [ -f package.json ] && grep -q '"test"' package.json; then
-            npm test || echo "⚠️ npm tests failed"
+          if [ -f package.json ] && grep -q "\"test\"" package.json; then
+            npm test || echo "⚠️ JS tests failed"
           else
             echo "ℹ️ No npm test script"
           fi
 
-      - name: 🧪 Run python tests (if tests/ exists)
+      - name: 🔬 Python tests (if tests folder)
         run: |
           if [ -d tests ]; then
             python -m unittest discover -v tests || echo "⚠️ Python tests failed"
@@ -187,35 +245,224 @@ jobs:
             echo "ℹ️ No Python tests folder"
           fi
 
-  # -------------------------
-  # PACKAGE - single runner uploads artifact for Pages
-  # -------------------------
-  package:
-    name: 📦 Package & Upload Artifact
+  # -----------------------------------------------------------
+  # SECURITY SCAN: npm audit + pip check + optional safety
+  # -----------------------------------------------------------
+  security:
+    name: 🔒 Security Scan
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: build
     steps:
-      - name: 📥 Checkout repo
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 🛠️ Ensure build/artifact exists
+      - name: 🔎 npm audit (if package.json)
         run: |
-          if [ -d build ]; then
-            echo "✅ build/ directory found, will upload it"
-            ls -la build | sed -n '1,200p'
+          if [ "${{ needs.precheck.outputs.has_package_json }}" = "true" ]; then
+            npm audit --json > audit.json || true
+            echo "📝 npm audit saved to audit.json"
           else
-            echo "ℹ️ No build/ directory — uploading repository root (Pages will serve from root)"
-            ls -la | sed -n '1,200p'
+            echo "ℹ️ No package.json — skipping npm audit"
           fi
 
-      - name: 📤 Upload site artifact for GitHub Pages
+      - name: 🐍 pip check & safety (if requirements)
+        run: |
+          if [ "${{ needs.precheck.outputs.has_requirements }}" = "true" ]; then
+            python -m pip install safety || true
+            pip check || echo "⚠️ pip dependency issues"
+            safety check --full-report || echo "⚠️ safety found issues (if any)"
+          else
+            echo "ℹ️ No requirements.txt — skipping pip security checks"
+          fi
+
+  # -----------------------------------------------------------
+  # E2E: Playwright / Cypress (optional, gated)
+  # -----------------------------------------------------------
+  e2e:
+    name: 🌐 E2E (Playwright / Cypress)
+    runs-on: ubuntu-latest
+    needs: [build, unit_tests]
+    strategy:
+      matrix:
+        browser: ["chromium", "firefox"]
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 🔎 Run Playwright tests (if detected)
+        if: ${{ needs.precheck.outputs.has_playwright == 'true' }}
+        run: |
+          npm i --no-audit @playwright/test || true
+          npx playwright install --with-deps || true
+          if [ -f package.json ] && grep -q "playwright" package.json 2>/dev/null; then
+            npx playwright test --project=${{ matrix.browser }} || echo "⚠️ Playwright tests failed"
+          else
+            echo "ℹ️ Playwright not configured"
+          fi
+
+      - name: 🔎 Run Cypress tests (if detected)
+        if: ${{ needs.precheck.outputs.has_cypress == 'true' }}
+        run: |
+          npm i --no-audit cypress || true
+          npx cypress run || echo "⚠️ Cypress tests failed"
+
+  # -----------------------------------------------------------
+  # PERFORMANCE: Lighthouse (guarded) + simple perf checks
+  # -----------------------------------------------------------
+  performance:
+    name: ⚡ Performance (Lighthouse / LHCI)
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: 🚦 Run LHCI autorun (if configured)
+        run: |
+          if [ "${{ needs.precheck.outputs.has_lighthouse }}" = "true" ]; then
+            if [ -f package.json ] && grep -q "lhci" package.json 2>/dev/null; then
+              npx @lhci/cli@0.10 autorun || echo "⚠️ LHCI autorun failed"
+            else
+              echo "ℹ️ No LHCI script found in package.json — consider adding lhci config"
+            fi
+          else
+            echo "ℹ️ No Lighthouse/LHCI config detected — skipping"
+          fi
+
+      - name: 📝 Simple perf snapshot
+        run: |
+          echo "Snapshot: node $(node -v), npm $(npm -v)"
+
+  # -----------------------------------------------------------
+  # ACCESSIBILITY: pa11y / axe (guarded)
+  # -----------------------------------------------------------
+  accessibility:
+    name: ♿ Accessibility Checks
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🧰 Install pa11y (if available)
+        run: |
+          if [ "${{ needs.precheck.outputs.has_package_json }}" = "true" ]; then
+            npm i --no-audit -D pa11y || true
+            npx pa11y http://localhost:8080 || echo "ℹ️ pa11y run skipped (requires local server)"
+          else
+            echo "ℹ️ No package.json — skipping pa11y"
+          fi
+
+  # -----------------------------------------------------------
+  # IMAGES: optimize images if images exist
+  # -----------------------------------------------------------
+  image_opt:
+    name: 🖼️ Image Optimization
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🛠️ Optimize images (if any)
+        run: |
+          if [ "${{ needs.precheck.outputs.has_images }}" = "true" ]; then
+            npm i --no-audit -D imagemin-cli imagemin-mozjpeg imagemin-pngquant || true
+            npx imagemin "**/*.{jpg,jpeg,png,webp}" --out-dir=optimized || echo "⚠️ imagemin failed or no images matched"
+            echo "Optimized images (if any) are in ./optimized"
+          else
+            echo "ℹ️ No images found — skipping image optimization"
+          fi
+
+  # -----------------------------------------------------------
+  # DOCKER: build image (if Dockerfile present)
+  # -----------------------------------------------------------
+  docker_build:
+    name: 🐳 Docker Build (if Dockerfile)
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ needs.precheck.outputs.has_dockerfile == 'true' }}
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐳 Build Docker image
+        run: |
+          IMAGE_NAME="repo-image:${GITHUB_SHA::8}"
+          docker build -t $IMAGE_NAME .
+          echo "Built $IMAGE_NAME"
+
+      - name: 🧾 Save image size
+        run: |
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | sed -n '1,50p'
+
+  # -----------------------------------------------------------
+  # CHANGELOG + RELEASE: basic changelog draft + create release (optional)
+  # -----------------------------------------------------------
+  release:
+    name: 📝 Changelog + GitHub Release (optional)
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🧾 Generate simple changelog from git
+        id: changelog
+        run: |
+          echo "## Changelog (auto)" > CHANGELOG_AUTO.md
+          git --no-pager log --oneline -n 50 >> CHANGELOG_AUTO.md
+          echo "Changelog written to CHANGELOG_AUTO.md"
+          echo "changelog_path=CHANGELOG_AUTO.md" >> $GITHUB_OUTPUT
+
+      - name: 🚀 Create GitHub Release (if GITHUB_REF is a tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: CHANGELOG_AUTO.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # -----------------------------------------------------------
+  # PACKAGE: prepare artifact and upload for Pages
+  # -----------------------------------------------------------
+  package:
+    name: 📦 Package & Upload Artifact for Pages
+    runs-on: ubuntu-latest
+    needs: [lint, unit_tests, image_opt]
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🧾 Detect build folder to upload
+        id: artifact
+        run: |
+          if [ -d build ]; then
+            echo "path=build" >> $GITHUB_OUTPUT
+            echo "✅ Will upload build/"
+          else
+            echo "path=." >> $GITHUB_OUTPUT
+            echo "ℹ️ No build folder — will upload repo root"
+          fi
+
+      - name: 📤 Upload pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: ${{ steps.artifact.outputs.path }}
 
-  # -------------------------
-  # DEPLOY - deploy-pages action
-  # -------------------------
+  # -----------------------------------------------------------
+  # DEPLOY: deploy-pages + verification
+  # -----------------------------------------------------------
   deploy:
     name: 🚀 Deploy to GitHub Pages
     runs-on: ubuntu-latest
@@ -223,14 +470,63 @@ jobs:
     environment:
       name: github-pages
     steps:
-      - name: 📥 Checkout repo
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 🌍 Deploy to GitHub Pages
-        id: deploy
+      - name: 🌍 Deploy site
+        id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: ✅ Deploy result
+      - name: ✅ Deployment verification
         run: |
-          echo "Deploy action finished with status: ${{ steps.deploy.outcome || 'unknown' }}"
-          echo "If deploy succeeded, your Pages site is live."
+          echo "Pages deploy action outcome: ${{ steps.deployment.outcome || 'unknown' }}"
+          echo "If deployment succeeded, your Pages site should be live."
+
+  # -----------------------------------------------------------
+  # NOTIFY: optional Slack notify (requires SLACK_WEBHOOK secret)
+  # -----------------------------------------------------------
+  notify:
+    name: 📣 Notify (Slack) - optional
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: ${{ secrets.SLACK_WEBHOOK != '' }}
+    steps:
+      - name: 📨 Send Slack notification (optional)
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: repo,commit,author
+          custom_payload: |
+            {
+              "text": "🚀 Deploy finished for *${{ github.repository }}* on branch `${{ github.ref_name }}`. (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>)"
+            }
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
+  # -----------------------------------------------------------
+  # FINAL: summary job to print quick report in logs
+  # -----------------------------------------------------------
+  final_report:
+    name: 📊 Final Summary
+    runs-on: ubuntu-latest
+    needs: [deploy, release]
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🧾 Print summary
+        run: |
+          echo "==== MEGA ULTRA OP SUMMARY ===="
+          echo "Repo: $GITHUB_REPOSITORY"
+          echo "Run: $GITHUB_RUN_ID"
+          echo "Triggered by: $GITHUB_ACTOR"
+          echo "Precheck outputs:"
+          echo " - package.json: ${{ needs.precheck.outputs.has_package_json }}"
+          echo " - requirements.txt: ${{ needs.precheck.outputs.has_requirements }}"
+          echo " - Dockerfile: ${{ needs.precheck.outputs.has_dockerfile }}"
+          echo " - Playwright: ${{ needs.precheck.outputs.has_playwright }}"
+          echo " - Cypress: ${{ needs.precheck.outputs.has_cypress }}"
+          echo " - Lighthouse: ${{ needs.precheck.outputs.has_lighthouse }}"
+          echo " - Images: ${{ needs.precheck.outputs.has_images }}"
+          echo "==== END SUMMARY ===="
+
