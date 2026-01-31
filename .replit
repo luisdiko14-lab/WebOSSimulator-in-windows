@@ -38,6 +38,15 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "cd bot && python bot.py"
 
+[[workflows.workflow]]
+name = "Run webhook"
+mode = "sequential"
+author = 45837744
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node discord-webhook.js"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
