@@ -515,18 +515,5 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🧾 Print summary
-        run: |
-          echo "==== MEGA ULTRA OP SUMMARY ===="
-          echo "Repo: $GITHUB_REPOSITORY"
-          echo "Run: $GITHUB_RUN_ID"
-          echo "Triggered by: $GITHUB_ACTOR"
-          echo "Precheck outputs:"
-          echo " - package.json: ${{ needs.precheck.outputs.has_package_json }}"
-          echo " - requirements.txt: ${{ needs.precheck.outputs.has_requirements }}"
-          echo " - Dockerfile: ${{ needs.precheck.outputs.has_dockerfile }}"
-          echo " - Playwright: ${{ needs.precheck.outputs.has_playwright }}"
-          echo " - Cypress: ${{ needs.precheck.outputs.has_cypress }}"
-          echo " - Lighthouse: ${{ needs.precheck.outputs.has_lighthouse }}"
-          echo " - Images: ${{ needs.precheck.outputs.has_images }}"
-          echo "==== END SUMMARY ===="
+        run: echo "Finished"
 
