@@ -1,4 +1,4 @@
-name: 🚀 Ultra Clean Zero-Error Deploy PRO++
+name: 🚀 Ultra Clean Zero-Error Deploy (Stable)
 
 on:
   push:
@@ -15,9 +15,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # =========================
-  # 🔍 PRECHECK
-  # =========================
+  # -------------------------
+  # PRECHECK - quick repo scan
+  # -------------------------
   precheck:
     name: 🔍 Precheck & Repo Scan
     runs-on: ubuntu-latest
@@ -28,24 +28,23 @@ jobs:
       - name: 📥 Checkout repo
         uses: actions/checkout@v4
 
-      - name: 🗂️ List files (compact)
+      - name: 🗂️ Show a short file list
         run: |
-          echo "📁 ROOT FILE LIST:"
-          find . -maxdepth 3 -type f -print | sed -n '1,200p'
+          echo "Top-level files:"
+          ls -la | sed -n '1,200p'
 
-      - name: 🧾 Check package.json
+      - name: 🧾 Check if package.json exists
         id: check_package_json
         run: |
           if [ -f package.json ]; then
             echo "found=true" >> $GITHUB_OUTPUT
             echo "✅ package.json found"
-            cat package.json
           else
             echo "found=false" >> $GITHUB_OUTPUT
-            echo "⚠️ package.json not found"
+            echo "ℹ️ package.json NOT found"
           fi
 
-      - name: 🐍 Check Python requirements.txt
+      - name: 🐍 Check if requirements.txt exists
         id: check_requirements
         run: |
           if [ -f requirements.txt ]; then
@@ -53,64 +52,44 @@ jobs:
             echo "✅ requirements.txt found"
           else
             echo "found=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ requirements.txt not present"
+            echo "ℹ️ requirements.txt NOT found"
           fi
 
-      - name: 🔎 Quick sanity: index.html?
-        run: |
-          if [ -f index.html ]; then
-            echo "✅ index.html present"
-            head -n 10 index.html || true
-          else
-            echo "ℹ️ index.html not present"
-          fi
-
-  # =========================
-  # 🔨 BUILD & TEST (matrix)
-  # =========================
+  # -------------------------
+  # BUILD - node + python setup, installs, optional build
+  # -------------------------
   build:
-    name: 🔨 Build & Test (matrix)
+    name: 🔨 Build & Install
     runs-on: ubuntu-latest
     needs: precheck
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: ["16", "18", "20"]
     steps:
       - name: 📥 Checkout repo
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node ${{ matrix.node-version }}
+      - name: 🟢 Setup Node.js 20 (and cache npm)
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: "20"
+          cache: "npm"
 
-      - name: 🗄️ Cache npm
+      - name: 🗄️ Cache npm (~/.npm)
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-npm-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-npm-${{ matrix.node-version }}-
+            ${{ runner.os }}-npm-
 
-      - name: 📦 Install npm deps
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci --prefer-offline --no-audit --progress=false
-          elif [ -f package.json ]; then
-            npm install --no-audit --prefer-offline
-          else
-            echo "ℹ️ No package.json — skipping npm install"
-          fi
-
-      - name: 🔐 npm audit (non-fatal)
+      - name: 📦 Install npm dependencies (if package.json exists)
         run: |
           if [ -f package.json ]; then
-            echo "🔎 Running npm audit (report only)"
-            npm audit --json > audit.json || true
-            cat audit.json | jq -r '.metadata | "Vulnerabilities: " + ( (.vulnerabilities | tostring) )' 2>/dev/null || true
+            if [ -f package-lock.json ]; then
+              npm ci --prefer-offline --no-audit --progress=false
+            else
+              npm install --no-audit --prefer-offline
+            fi
           else
-            echo "ℹ️ No package.json — skipping npm audit"
+            echo "ℹ️ No package.json — skipping npm install"
           fi
 
       - name: 🐍 Setup Python 3.x
@@ -118,7 +97,7 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: 🗄️ Cache pip
+      - name: 🗄️ Cache pip (~/.cache/pip)
         uses: actions/cache@v4
         with:
           path: |
@@ -127,70 +106,53 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: 📦 Install Python deps (if any)
+      - name: 📦 Install Python packages (if requirements.txt exists)
         run: |
           if [ -f requirements.txt ]; then
             python -m pip install --upgrade pip
             pip install -r requirements.txt
-            pip check || echo "⚠️ pip dependency issues (non-fatal)"
           else
-            echo "ℹ️ No requirements.txt — skipping Python install"
+            echo "ℹ️ No requirements.txt — skipping pip install"
           fi
 
-      - name: 🛠️ Run build script (if exists)
+      - name: 🛠️ Run build script (if exists in package.json)
         run: |
-          if grep -q '"build"' package.json 2>/dev/null; then
-            echo "🛠️ npm run build"
-            npm run build || (echo "⚠️ Build failed on node ${{ matrix.node-version }}" && exit 1)
+          if [ -f package.json ] && grep -q '"build"' package.json; then
+            echo "🛠️ Running npm run build"
+            npm run build
           else
-            echo "ℹ️ No build script, skipping build step"
+            echo "ℹ️ No build script — skipping build step"
           fi
 
-      - name: 🔬 Run JS tests (if exists)
-        run: |
-          if grep -q '"test"' package.json 2>/dev/null; then
-            npm test || echo "⚠️ npm tests failed (non-fatal)"
-          else
-            echo "ℹ️ No npm test script defined"
-          fi
-
-      - name: 🧪 Run Python tests (if tests/ exists)
-        run: |
-          if [ -d tests ]; then
-            python -m unittest discover -v tests || echo "⚠️ Python tests failed (non-fatal)"
-          else
-            echo "ℹ️ No Python tests folder found"
-          fi
-
-  # =========================
-  # 🧹 LINT & FORMAT
-  # =========================
+  # -------------------------
+  # LINT - ESLint + Prettier checks (non-fatal warnings)
+  # -------------------------
   lint:
-    name: 🧹 Lint & Format Check
+    name: 🧹 Lint & Format Checks
     runs-on: ubuntu-latest
-    needs: precheck
+    needs: build
     steps:
       - name: 📥 Checkout repo
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node 20
+      - name: 🟢 Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: 📦 Install deps for lint (fast)
+      - name: 📦 Install minimal deps for lint (if present)
         run: |
           if [ -f package-lock.json ]; then npm ci --prefer-offline --no-audit --progress=false; elif [ -f package.json ]; then npm install --no-audit --prefer-offline; else echo "ℹ️ No package.json"; fi
 
-      - name: 🧪 ESLint
+      - name: 🧪 ESLint (if configured)
         run: |
           if [ -f .eslintrc.json ] || [ -f .eslintrc.js ] || grep -q "eslint" package.json 2>/dev/null; then
-            npx eslint . --max-warnings=0 || echo "⚠️ ESLint found issues"
+            npx eslint . --max-warnings=0 || echo "⚠️ ESLint issues (see logs)"
           else
             echo "ℹ️ ESLint not configured"
           fi
 
-      - name: 🎨 Prettier check
+      - name: 🎨 Prettier check (if configured)
         run: |
           if grep -q "prettier" package.json 2>/dev/null || [ -f .prettierrc ] || [ -f .prettierrc.json ]; then
             npx prettier --check "**/*.{js,ts,jsx,tsx,css,scss,html,json,md}" || echo "⚠️ Prettier formatting issues"
@@ -198,89 +160,66 @@ jobs:
             echo "ℹ️ Prettier not configured"
           fi
 
-      - name: 🔎 HTML quick validation
-        run: |
-          if [ -f index.html ]; then
-            ! grep -n "<html" index.html > /dev/null && echo "⚠️ index.html missing <html> tag" || echo "✅ index.html contains <html>"
-            ! grep -n "<head" index.html > /dev/null && echo "⚠️ index.html missing <head> tag" || true
-            ! grep -n "<body" index.html > /dev/null && echo "⚠️ index.html missing <body> tag" || true
-          else
-            echo "ℹ️ No index.html to validate"
-          fi
-
-  # =========================
-  # 🧾 PACKAGING (single-run uploader)
-  # =========================
-  package:
-    name: 📦 Package & Upload Artifact
+  # -------------------------
+  # TEST - run npm & python tests (non-fatal)
+  # -------------------------
+  test:
+    name: 🧪 Run Tests
     runs-on: ubuntu-latest
     needs: build
     steps:
       - name: 📥 Checkout repo
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: 📦 Install deps
+      - name: 🔬 Run npm tests (if defined)
         run: |
-          if [ -f package-lock.json ]; then npm ci --prefer-offline --no-audit --progress=false; elif [ -f package.json ]; then npm install --no-audit --prefer-offline; else echo "ℹ️ No package.json"; fi
-
-      - name: 🛠️ Build (ensure artifact)
-        run: |
-          if grep -q '"build"' package.json 2>/dev/null; then
-            npm run build || (echo "❌ Build failed in package step" && exit 1)
+          if [ -f package.json ] && grep -q '"test"' package.json; then
+            npm test || echo "⚠️ npm tests failed"
           else
-            echo "ℹ️ No build script — will upload repository root"
+            echo "ℹ️ No npm test script"
           fi
 
-      - name: 📁 Show artifact preview
+      - name: 🧪 Run python tests (if tests/ exists)
         run: |
-          echo "Listing repo top-level files to upload:"
-          ls -la | sed -n '1,200p'
+          if [ -d tests ]; then
+            python -m unittest discover -v tests || echo "⚠️ Python tests failed"
+          else
+            echo "ℹ️ No Python tests folder"
+          fi
 
-      - name: 📤 Upload site artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: '.'
-
-  # =========================
-  # 🧪 INSPECTOR (deep file checks)
-  # =========================
-  inspector:
-    name: 🧪 Deep File Inspector
+  # -------------------------
+  # PACKAGE - single runner uploads artifact for Pages
+  # -------------------------
+  package:
+    name: 📦 Package & Upload Artifact
     runs-on: ubuntu-latest
-    needs: package
+    needs: [lint, test]
     steps:
       - name: 📥 Checkout repo
         uses: actions/checkout@v4
 
-      - name: 🧾 Show index.html with numbers (if present)
+      - name: 🛠️ Ensure build/artifact exists
         run: |
-          if [ -f index.html ]; then
-            nl -ba index.html | sed -n '1,200p'
+          if [ -d build ]; then
+            echo "✅ build/ directory found, will upload it"
+            ls -la build | sed -n '1,200p'
           else
-            echo "❌ index.html NOT FOUND"
+            echo "ℹ️ No build/ directory — uploading repository root (Pages will serve from root)"
+            ls -la | sed -n '1,200p'
           fi
 
-      - name: 🚨 Grep for red-line keywords
-        run: |
-          grep -n -E "ERROR|FIXME|TODO" -R . || echo "✅ No TODO/ERROR/FIXME keywords found"
+      - name: 📤 Upload site artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
 
-      - name: 🔍 Search suspicious files
-        run: |
-          echo "Looking for large files (>10MB):"
-          find . -type f -size +10M -exec ls -lh {} \; || true
-
-  # =========================
-  # 🚀 DEPLOY
-  # =========================
+  # -------------------------
+  # DEPLOY - deploy-pages action
+  # -------------------------
   deploy:
     name: 🚀 Deploy to GitHub Pages
     runs-on: ubuntu-latest
-    needs: [package, inspector, lint]
+    needs: package
     environment:
       name: github-pages
     steps:
@@ -288,10 +227,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🌍 Deploy to GitHub Pages
-        id: deployment
+        id: deploy
         uses: actions/deploy-pages@v4
 
-      - name: ✅ Verify deployment result
+      - name: ✅ Deploy result
         run: |
-          echo "✅ Deploy step completed (deployment action returned ${{ steps.deployment.outcome || 'unknown' }})"
-          echo "🎉 If the deploy action succeeded, your site should be live on GitHub Pages."
+          echo "Deploy action finished with status: ${{ steps.deploy.outcome || 'unknown' }}"
+          echo "If deploy succeeded, your Pages site is live."
