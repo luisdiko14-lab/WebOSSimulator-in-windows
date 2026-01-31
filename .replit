@@ -26,6 +26,18 @@ waitForPort = 5000
 [workflows.workflow.metadata]
 outputType = "webview"
 
+[[workflows.workflow]]
+name = "Discord bot"
+mode = "sequential"
+author = 45837744
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd bot && python bot.py"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
