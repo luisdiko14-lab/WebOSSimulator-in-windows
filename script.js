@@ -1934,6 +1934,97 @@ function createStore() {
 }
 
 // WiFi Settings App
+// Night Light
+function toggleNightLight(el) {
+    el.classList.toggle('active');
+    const overlay = document.getElementById('night-light-overlay');
+    if (overlay) overlay.classList.toggle('active');
+    playSound('notification');
+}
+
+// Brightness control
+function changeBrightness(value) {
+    document.getElementById('brightness-value').textContent = value + '%';
+    document.body.style.filter = `brightness(${value / 100})`;
+}
+
+// Focus Assist
+function toggleFocusAssist(el) {
+    el.classList.toggle('active');
+    document.body.classList.toggle('focus-assist-active');
+    playSound('notification');
+}
+
+// Clear notifications
+function clearNotifications() {
+    const list = document.getElementById('notification-list');
+    if (list) {
+        list.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No new notifications</p>';
+    }
+}
+
+// Battery popup
+function toggleBatteryPopup() {
+    const popup = document.getElementById('battery-popup');
+    const wifiMenu = document.getElementById('wifi-menu');
+    const volumeMenu = document.getElementById('volume-menu');
+    if (wifiMenu) wifiMenu.classList.remove('active');
+    if (volumeMenu) volumeMenu.classList.remove('active');
+    if (popup) popup.classList.toggle('active');
+}
+
+// Close battery popup when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.battery-popup') && !e.target.closest('.tray-icon[onclick*="Battery"]')) {
+        const popup = document.getElementById('battery-popup');
+        if (popup) popup.classList.remove('active');
+    }
+});
+
+// Loading cursor effect when opening apps
+function showLoadingCursor() {
+    document.body.classList.add('loading-cursor');
+    setTimeout(() => document.body.classList.remove('loading-cursor'), 500);
+}
+
+// Add notification dynamically
+function addNotification(icon, title, body) {
+    const list = document.getElementById('notification-list');
+    if (list) {
+        const noNotif = list.querySelector('p');
+        if (noNotif) noNotif.remove();
+        
+        const notif = document.createElement('div');
+        notif.className = 'notification';
+        notif.onclick = () => notif.remove();
+        notif.innerHTML = `
+            <div class="notification-icon">${icon}</div>
+            <div class="notification-text">
+                <div class="notification-title">${title}</div>
+                <div class="notification-body">${body}</div>
+                <div class="notification-time">Just now</div>
+            </div>
+        `;
+        list.insertBefore(notif, list.firstChild);
+        playSound('notification');
+    }
+}
+
+// Random notifications every 30 seconds
+setInterval(() => {
+    const notifications = [
+        { icon: '📧', title: 'Mail', body: 'New message from John Doe' },
+        { icon: '🔔', title: 'Reminder', body: 'Meeting in 15 minutes' },
+        { icon: '💬', title: 'Teams', body: 'Sarah: Are you available?' },
+        { icon: '📅', title: 'Calendar', body: 'Event starting soon' },
+        { icon: '⬇️', title: 'Downloads', body: 'Download complete' }
+    ];
+    const random = notifications[Math.floor(Math.random() * notifications.length)];
+    if (document.getElementById('screen-desktop')?.classList.contains('active')) {
+        addNotification(random.icon, random.title, random.body);
+    }
+}, 60000);
+
 function createWifiSettings() {
     return `
         <div style="padding: 20px; height: 100%; background: white;">

@@ -37,6 +37,44 @@ Preferred communication style: Simple, everyday language.
 - `script.js` - Core application logic and interactivity
 - Utility pages: `updater.html`, `windows_defender.html`, `Select_vm.html`
 
+## Features
+
+### Desktop Experience
+- 8 desktop shortcuts (This PC, Recycle Bin, Edge, Chrome Setup, Documents, Notes.txt, Terminal, Microsoft Store)
+- Desktop icon hover effects and animations
+- Right-click context menu with Refresh, New Folder, Personalize options
+- Smooth window open/close animations
+
+### System Tray
+- WiFi menu with network list, toggle switch, and connection simulation
+- Volume menu with slider control
+- Battery popup showing charge status and estimated time
+- Action Center with quick toggles (Night light, Wi-Fi, Bluetooth, Location, Airplane mode, Battery saver, Game mode, Focus assist)
+- Brightness slider that actually dims the screen
+- Night light mode with warm orange overlay
+
+### Applications
+- Calculator, Notepad, File Explorer, Settings, Task Manager
+- Edge browser, Command Prompt (with working commands)
+- Paint (drawing app), Weather, Snipping Tool
+- Photos, Calendar, Clock, Maps, Microsoft Store
+- Network & Internet settings
+- Google Chrome installer with download simulation and functional browser
+
+### Boot Sequence
+- Multi-stage boot: Boot screen → Lock screen → Login → "Logging in" → "Getting ready" → Desktop
+- All stages have spinning circle animations
+- Sound effects for startup, error, notification, shutdown
+
+### URL Parameters
+- Deep linking support (?opened=appname) to auto-open apps
+- URL updates when apps are opened
+
+### Notifications
+- Dynamic notifications that appear randomly
+- Click to dismiss notifications
+- Clear all button
+
 ## External Dependencies
 
 ### NPM Packages (package.json)

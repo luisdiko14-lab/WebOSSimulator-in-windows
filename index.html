@@ -98,9 +98,29 @@
                     <div class="icon-img">🗑️</div>
                     <div class="icon-label">Recycle Bin</div>
                 </div>
-                <div class="desktop-icon" ondblclick="openApp('google_setup')">
+                <div class="desktop-icon" ondblclick="openApp('edge')">
                     <div class="icon-img">🌐</div>
-                    <div class="icon-label">Google_setup.exe</div>
+                    <div class="icon-label">Microsoft Edge</div>
+                </div>
+                <div class="desktop-icon" ondblclick="openApp('google_setup')">
+                    <div class="icon-img" style="font-size: 28px;">🔵</div>
+                    <div class="icon-label">Chrome Setup</div>
+                </div>
+                <div class="desktop-icon" ondblclick="openApp('explorer')">
+                    <div class="icon-img">📁</div>
+                    <div class="icon-label">Documents</div>
+                </div>
+                <div class="desktop-icon" ondblclick="openApp('notepad')">
+                    <div class="icon-img">📝</div>
+                    <div class="icon-label">Notes.txt</div>
+                </div>
+                <div class="desktop-icon" ondblclick="openApp('cmd')">
+                    <div class="icon-img">⬛</div>
+                    <div class="icon-label">Terminal</div>
+                </div>
+                <div class="desktop-icon" ondblclick="openApp('store')">
+                    <div class="icon-img">🛍️</div>
+                    <div class="icon-label">Microsoft Store</div>
                 </div>
             </div>
 
@@ -125,7 +145,7 @@
                         <span class="tray-icon" onclick="openApp('taskmgr')">📊</span>
                         <span class="tray-icon" onclick="toggleVolumeMenu()">🔊</span>
                         <span class="tray-icon" onclick="toggleWifiMenu()">📶</span>
-                        <span class="tray-icon">🔋</span>
+                        <span class="tray-icon" onclick="toggleBatteryPopup()">🔋</span>
                         <div class="clock" id="taskbar-clock">12:00 PM<br>1/1/2024</div>
                         <button class="notification-button" onclick="toggleNotifications()">💬</button>
                     </div>
@@ -279,32 +299,67 @@
             <div class="notification-center" id="notification-center">
                 <div class="notification-header">
                     <h3>Notifications</h3>
+                    <button onclick="clearNotifications()">Clear all</button>
                     <button onclick="toggleNotifications()">✕</button>
                 </div>
                 <div class="quick-actions">
-                    <div class="quick-action active" onclick="toggleQuickAction(this)">🌙 Night light</div>
+                    <div class="quick-action" onclick="toggleNightLight(this)">🌙 Night light</div>
                     <div class="quick-action" onclick="toggleQuickAction(this)">📍 Location</div>
                     <div class="quick-action active" onclick="toggleQuickAction(this)">📶 Wi-Fi</div>
                     <div class="quick-action active" onclick="toggleQuickAction(this)">🔵 Bluetooth</div>
                     <div class="quick-action" onclick="toggleQuickAction(this)">✈️ Airplane mode</div>
                     <div class="quick-action" onclick="toggleQuickAction(this)">🔋 Battery saver</div>
+                    <div class="quick-action" onclick="toggleQuickAction(this)">🎮 Game mode</div>
+                    <div class="quick-action" onclick="toggleFocusAssist(this)">🔕 Focus assist</div>
                 </div>
                 <div class="brightness-slider">
                     <span>☀️</span>
-                    <input type="range" min="0" max="100" value="80">
+                    <input type="range" min="20" max="100" value="80" id="brightness-slider" oninput="changeBrightness(this.value)">
+                    <span id="brightness-value">80%</span>
                 </div>
-                <div class="notification-content">
-                    <div class="notification">
-                        <div class="notification-icon">ℹ️</div>
+                <div class="notification-content" id="notification-list">
+                    <div class="notification" onclick="this.remove()">
+                        <div class="notification-icon">🛡️</div>
                         <div class="notification-text">
-                            <div class="notification-title">Windows Update</div>
-                            <div class="notification-body">Your device is up to date</div>
+                            <div class="notification-title">Windows Security</div>
+                            <div class="notification-body">No threats found - Your device is protected</div>
+                            <div class="notification-time">Just now</div>
+                        </div>
+                    </div>
+                    <div class="notification" onclick="this.remove()">
+                        <div class="notification-icon">📧</div>
+                        <div class="notification-text">
+                            <div class="notification-title">Mail</div>
+                            <div class="notification-body">You have 3 unread messages</div>
+                            <div class="notification-time">2 minutes ago</div>
+                        </div>
+                    </div>
+                    <div class="notification" onclick="this.remove()">
+                        <div class="notification-icon">⬇️</div>
+                        <div class="notification-text">
+                            <div class="notification-title">Microsoft Store</div>
+                            <div class="notification-body">App update available</div>
+                            <div class="notification-time">5 minutes ago</div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div id="windows-container"></div>
+
+            <div class="battery-popup" id="battery-popup">
+                <div class="battery-icon-large">🔋</div>
+                <div class="battery-percentage">87%</div>
+                <div class="battery-status">Plugged in, charging</div>
+                <div class="battery-time">Fully charged in 45 minutes</div>
+                <div style="margin-top: 16px; display: flex; gap: 8px;">
+                    <button onclick="openApp('settings'); toggleBatteryPopup();" style="flex: 1; padding: 8px; cursor: pointer;">Battery settings</button>
+                </div>
+            </div>
+
+            <div class="night-light-overlay" id="night-light-overlay"></div>
+            
+            <div class="snap-preview" id="snap-preview"></div>
         </div>
     </div>
 

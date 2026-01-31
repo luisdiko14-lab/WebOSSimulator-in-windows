@@ -2051,3 +2051,253 @@ body {
     color: #ffc107;
     font-size: 12px;
 }
+
+/* Enhanced Notifications */
+.notification-time {
+    font-size: 11px;
+    color: #999;
+    margin-top: 4px;
+}
+
+.notification {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.notification:hover {
+    background: #e8e8e8;
+    transform: translateX(4px);
+}
+
+/* Night light overlay */
+.night-light-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 180, 100, 0.15);
+    pointer-events: none;
+    z-index: 99999;
+    opacity: 0;
+    transition: opacity 0.5s;
+}
+
+.night-light-overlay.active {
+    opacity: 1;
+}
+
+/* Desktop icon hover effects */
+.desktop-icon {
+    transition: all 0.15s ease;
+}
+
+.desktop-icon:hover {
+    background: rgba(0, 120, 215, 0.2);
+    transform: scale(1.05);
+}
+
+.desktop-icon:active {
+    transform: scale(0.95);
+}
+
+/* Window animations */
+.window {
+    animation: windowOpen 0.2s ease-out;
+}
+
+@keyframes windowOpen {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Taskbar app bounce effect */
+.taskbar-app {
+    transition: transform 0.1s;
+}
+
+.taskbar-app:active {
+    transform: scale(0.9);
+}
+
+/* Loading cursor */
+.loading-cursor {
+    cursor: wait !important;
+}
+
+.loading-cursor * {
+    cursor: wait !important;
+}
+
+/* Snap preview */
+.snap-preview {
+    position: fixed;
+    background: rgba(0, 120, 215, 0.3);
+    border: 2px solid #0078d7;
+    border-radius: 8px;
+    z-index: 9998;
+    pointer-events: none;
+    display: none;
+}
+
+/* Tooltip */
+.tooltip {
+    position: absolute;
+    background: #1a1a1a;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 10000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+}
+
+.tooltip.visible {
+    opacity: 1;
+}
+
+/* Battery indicator styles */
+.battery-popup {
+    display: none;
+    position: fixed;
+    bottom: 48px;
+    right: 60px;
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 16px;
+    width: 280px;
+    z-index: 9999;
+}
+
+.battery-popup.active {
+    display: block;
+}
+
+.battery-icon-large {
+    font-size: 48px;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.battery-percentage {
+    font-size: 24px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.battery-status {
+    text-align: center;
+    color: #666;
+    margin-top: 8px;
+}
+
+.battery-time {
+    text-align: center;
+    font-size: 14px;
+    margin-top: 8px;
+    color: #0078d4;
+}
+
+/* Improved quick actions grid */
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 12px;
+}
+
+.quick-action {
+    padding: 12px 8px;
+    text-align: center;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #f0f0f0;
+    transition: all 0.2s;
+}
+
+.quick-action:hover {
+    background: #e0e0e0;
+}
+
+.quick-action.active {
+    background: #0078d4;
+    color: white;
+}
+
+/* Brightness slider enhancement */
+.brightness-slider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #f5f5f5;
+    margin: 8px 12px;
+    border-radius: 4px;
+}
+
+.brightness-slider input {
+    flex: 1;
+}
+
+#brightness-value {
+    min-width: 40px;
+    text-align: right;
+    font-size: 12px;
+}
+
+/* Focus assist indicator */
+.focus-assist-active::before {
+    content: '🔕';
+    position: fixed;
+    bottom: 52px;
+    right: 10px;
+    font-size: 14px;
+    z-index: 9999;
+}
+
+/* Taskbar preview windows */
+.taskbar-preview {
+    display: none;
+    position: fixed;
+    bottom: 52px;
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    border-radius: 8px;
+    padding: 8px;
+    z-index: 9998;
+}
+
+.taskbar-preview.visible {
+    display: block;
+}
+
+.taskbar-preview-content {
+    width: 200px;
+    height: 120px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+}
+
+.taskbar-preview-title {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 500;
+}
