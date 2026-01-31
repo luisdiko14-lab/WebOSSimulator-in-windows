@@ -482,25 +482,6 @@ jobs:
           echo "Pages deploy action outcome: ${{ steps.deployment.outcome || 'unknown' }}"
           echo "If deployment succeeded, your Pages site should be live."
 
-  # -----------------------------------------------------------
-  # NOTIFY: optional Slack notify (requires SLACK_WEBHOOK secret)
-  # -----------------------------------------------------------
-  notify:
-    name: 📣 Notify (Slack) - optional
-    runs-on: ubuntu-latest
-    needs: deploy
-    steps:
-      - name: 📨 Send Slack notification (optional)
-        uses: 8398a7/action-slack@v3
-        with:
-          status: custom
-          fields: repo,commit,author
-          custom_payload: |
-            {
-              "text": "🚀 Deploy finished for *${{ github.repository }}* on branch `${{ github.ref_name }}`. (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>)"
-            }
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
   # -----------------------------------------------------------
   # FINAL: summary job to print quick report in logs
