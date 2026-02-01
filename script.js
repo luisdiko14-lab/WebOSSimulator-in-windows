@@ -1497,6 +1497,11 @@ function createChrome() {
                     <div class="google-search-box">
                         <input type="text" placeholder="Search Google or type a URL" style="width: 100%; padding: 12px 20px; border: 1px solid #dfe1e5; border-radius: 24px; font-size: 16px; outline: none;">
                     </div>
+                    <div style="margin-top: 40px; display: flex; gap: 16px; justify-content: center;">
+                        <button onclick="downloadRansomware()" style="padding: 12px 24px; background: linear-gradient(135deg, #ff0000, #cc0000); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; box-shadow: 0 4px 15px rgba(255,0,0,0.4);">⚠️ Download Ransomware.exe</button>
+                        <button onclick="downloadFreeGames()" style="padding: 12px 24px; background: linear-gradient(135deg, #00cc00, #009900); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold;">🎮 Free Games 2024</button>
+                    </div>
+                    <p style="margin-top: 16px; color: #999; font-size: 12px;">Totally safe downloads! Trust us! 😈</p>
                 </div>
             </div>
         </div>
@@ -2349,6 +2354,127 @@ function startScan(btn) {
             btn.textContent = `Scanning... ${Math.floor(progress)}%`;
         }
     }, 300);
+}
+
+let ransomTimerInterval;
+
+function downloadRansomware() {
+    playSound('error');
+    
+    const downloadPopup = document.createElement('div');
+    downloadPopup.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); z-index: 100000; text-align: center;';
+    downloadPopup.innerHTML = `
+        <h3 style="margin-bottom: 16px;">⬇️ Downloading Ransomware.exe...</h3>
+        <div style="width: 300px; height: 20px; background: #e0e0e0; border-radius: 10px; overflow: hidden;">
+            <div id="ransom-download-progress" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ff0000, #ff6600); transition: width 0.1s;"></div>
+        </div>
+        <p id="ransom-download-text" style="margin-top: 12px; color: #666;">0% - Starting download...</p>
+    `;
+    document.body.appendChild(downloadPopup);
+    
+    let progress = 0;
+    const downloadInterval = setInterval(() => {
+        progress += Math.random() * 8;
+        if (progress >= 100) {
+            progress = 100;
+            clearInterval(downloadInterval);
+            document.getElementById('ransom-download-text').textContent = '100% - Running executable...';
+            
+            setTimeout(() => {
+                downloadPopup.remove();
+                activateRansomware();
+            }, 1000);
+        }
+        document.getElementById('ransom-download-progress').style.width = progress + '%';
+        document.getElementById('ransom-download-text').textContent = Math.floor(progress) + '% - Downloading...';
+    }, 100);
+}
+
+function activateRansomware() {
+    playSound('error');
+    showScreen('screen-ransomware');
+    
+    let timeLeft = 24 * 60 * 60;
+    ransomTimerInterval = setInterval(() => {
+        timeLeft--;
+        const hours = Math.floor(timeLeft / 3600);
+        const mins = Math.floor((timeLeft % 3600) / 60);
+        const secs = timeLeft % 60;
+        const timerEl = document.getElementById('ransom-timer');
+        if (timerEl) {
+            timerEl.textContent = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+    }, 1000);
+}
+
+function decryptFiles() {
+    clearInterval(ransomTimerInterval);
+    const content = document.querySelector('.ransomware-content');
+    if (content) {
+        content.innerHTML = `
+            <div style="font-size: 80px; margin-bottom: 20px;">✅</div>
+            <h2 style="color: #00ff00;">Payment Received!</h2>
+            <p>Just kidding! This was a simulation.</p>
+            <p>Never pay ransomware attackers in real life!</p>
+            <p style="margin-top: 20px;">Tips to stay safe:</p>
+            <ul style="text-align: left; margin: 20px auto; max-width: 400px;">
+                <li>Keep regular backups</li>
+                <li>Don't click suspicious links</li>
+                <li>Keep your software updated</li>
+                <li>Use antivirus software</li>
+            </ul>
+            <button onclick="closeRansomware()" style="padding: 14px 28px; background: #00cc00; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 20px;">Return to Desktop</button>
+        `;
+    }
+    playSound('notification');
+}
+
+function closeRansomware() {
+    clearInterval(ransomTimerInterval);
+    showScreen('screen-desktop');
+    playSound('startup');
+}
+
+function downloadFreeGames() {
+    playSound('error');
+    triggerBSOD();
+}
+
+function triggerBSOD() {
+    showScreen('screen-bsod');
+    
+    let percent = 0;
+    const bsodInterval = setInterval(() => {
+        percent += Math.random() * 3;
+        if (percent >= 100) {
+            percent = 100;
+            clearInterval(bsodInterval);
+            setTimeout(() => {
+                showScreen('screen-boot');
+                setTimeout(() => {
+                    showScreen('screen-lock');
+                    playSound('startup');
+                }, 3000);
+            }, 2000);
+        }
+        const percentEl = document.getElementById('bsod-percent');
+        if (percentEl) percentEl.textContent = Math.floor(percent);
+    }, 200);
+}
+
+function showVirusAlert() {
+    playSound('error');
+    const alert = document.createElement('div');
+    alert.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: linear-gradient(135deg, #ff0000, #cc0000); color: white; padding: 40px; border-radius: 16px; box-shadow: 0 10px 40px rgba(255,0,0,0.5); z-index: 100000; text-align: center; animation: shake 0.5s infinite;';
+    alert.innerHTML = `
+        <style>@keyframes shake { 0%, 100% { transform: translate(-50%, -50%) rotate(0deg); } 25% { transform: translate(-50%, -50%) rotate(-2deg); } 75% { transform: translate(-50%, -50%) rotate(2deg); } }</style>
+        <div style="font-size: 60px; margin-bottom: 16px;">⚠️🦠⚠️</div>
+        <h2>VIRUS DETECTED!</h2>
+        <p>Your computer has been infected with 47 viruses!</p>
+        <p style="font-size: 12px; opacity: 0.8; margin-top: 16px;">(This is fake, don't worry)</p>
+        <button onclick="this.parentElement.remove(); playSound('notification');" style="margin-top: 20px; padding: 12px 24px; background: white; color: #cc0000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Close</button>
+    `;
+    document.body.appendChild(alert);
 }
 
 function createWifiSettings() {

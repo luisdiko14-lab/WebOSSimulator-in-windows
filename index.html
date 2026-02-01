@@ -378,6 +378,52 @@
         </div>
     </div>
 
+    <div id="screen-ransomware" class="screen">
+        <div class="ransomware-screen">
+            <div class="ransomware-skull">💀</div>
+            <h1 class="ransomware-title">YOUR FILES HAVE BEEN ENCRYPTED!</h1>
+            <div class="ransomware-content">
+                <p>All your important files (documents, photos, videos, databases) have been encrypted with military-grade encryption.</p>
+                <p>You cannot decrypt your files without our special decryption key.</p>
+                <div class="ransomware-timer">
+                    <span>Time remaining to pay:</span>
+                    <div class="timer-display" id="ransom-timer">23:59:59</div>
+                </div>
+                <div class="ransomware-payment">
+                    <p>Send <strong>0.5 Bitcoin</strong> to the following address:</p>
+                    <code class="btc-address">1F4k3B1tC01nAdDr3sS123456789</code>
+                    <p style="color: #ff6666; font-size: 12px;">⚠️ DO NOT turn off your computer or your files will be permanently deleted!</p>
+                </div>
+                <div class="ransomware-buttons">
+                    <button onclick="decryptFiles()" class="ransom-btn pay-btn">💰 I Paid! Decrypt My Files</button>
+                    <button onclick="closeRansomware()" class="ransom-btn close-btn">❌ This is fake, let me out!</button>
+                </div>
+            </div>
+            <div class="ransomware-footer">
+                <p>🔒 CryptoLocker v3.0 - Your friendly neighborhood ransomware</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-bsod" class="screen">
+        <div class="bsod-screen">
+            <div class="bsod-content">
+                <div class="bsod-sad">:(</div>
+                <h1>Your PC ran into a problem and needs to restart.</h1>
+                <p>We're just collecting some error info, and then we'll restart for you.</p>
+                <div class="bsod-progress">
+                    <span id="bsod-percent">0</span>% complete
+                </div>
+                <div class="bsod-qr">
+                    <div style="width: 80px; height: 80px; background: white; display: flex; align-items: center; justify-content: center; font-size: 10px; color: black;">QR Code</div>
+                </div>
+                <p class="bsod-stop">Stop code: CRITICAL_PROCESS_DIED</p>
+                <p class="bsod-info">If you call a support person, give them this info:</p>
+                <p class="bsod-info">Stop code: SYSTEM_THREAD_EXCEPTION_NOT_HANDLED</p>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
