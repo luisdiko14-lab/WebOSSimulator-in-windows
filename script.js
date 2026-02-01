@@ -2394,7 +2394,7 @@ function activateRansomware() {
     playSound('error');
     showScreen('screen-ransomware');
     
-    let timeLeft = 24 * 60 * 60;
+    let timeLeft = 1 * 25;
     ransomTimerInterval = setInterval(() => {
         timeLeft--;
         const hours = Math.floor(timeLeft / 3600);
