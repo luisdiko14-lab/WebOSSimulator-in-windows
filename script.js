@@ -543,7 +543,8 @@ function createWindow(appName) {
         clock: { title: '⏰ Alarms & Clock', content: createClockApp() },
         maps: { title: '🗺️ Maps', content: createMaps() },
         store: { title: '🛍️ Microsoft Store', content: createStore() },
-        wifi: { title: '📶 Network & Internet', content: createWifiSettings() }
+        wifi: { title: '📶 Network & Internet', content: createWifiSettings() },
+        defender: { title: '🛡️ Windows Security', content: createDefender() }
     };
     
     const appData = apps[appName] || { title: 'Window', content: '<p>App content</p>' };
@@ -803,6 +804,9 @@ function createExplorer() {
     `;
 }
 
+let currentWallpaper = 'gradient1';
+let accentColor = '#0078d4';
+
 function createSettings() {
     setTimeout(() => {
         const menuItems = document.querySelectorAll('.settings-menu-item');
@@ -812,104 +816,197 @@ function createSettings() {
                 this.classList.add('active');
                 
                 const contentArea = this.closest('.window-content').querySelector('.settings-content');
-                const section = this.textContent;
+                const section = this.textContent.trim();
                 
                 let content = '';
                 
                 switch(section) {
                     case 'System':
                         content = `
-                            <h2>System</h2>
+                            <h2>⚙️ System</h2>
                             <div class="setting-item">
                                 <div>
                                     <div class="setting-label">Display brightness</div>
-                                    <div class="setting-description">Adjust the brightness level</div>
+                                    <div class="setting-description">Adjust screen brightness</div>
                                 </div>
-                                <input type="range" min="0" max="100" value="80" style="width: 200px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="range" min="20" max="100" value="80" style="width: 200px;" oninput="setSettingsBrightness(this.value)">
+                                    <span id="settings-brightness-val">80%</span>
+                                </div>
                             </div>
                             <div class="setting-item">
                                 <div>
                                     <div class="setting-label">Night light</div>
-                                    <div class="setting-description">Reduce blue light at night</div>
+                                    <div class="setting-description">Reduce blue light to help you sleep</div>
                                 </div>
-                                <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+                                <label class="toggle-switch"><input type="checkbox" onchange="toggleSettingsNightLight(this.checked)"><span class="toggle-slider"></span></label>
                             </div>
                             <div class="setting-item">
                                 <div>
-                                    <div class="setting-label">Sound</div>
-                                    <div class="setting-description">Volume: 70%</div>
+                                    <div class="setting-label">Sound volume</div>
+                                    <div class="setting-description" id="sound-vol-desc">Volume: 75%</div>
                                 </div>
-                                <input type="range" min="0" max="100" value="70" style="width: 200px;">
+                                <input type="range" min="0" max="100" value="75" style="width: 200px;" oninput="document.getElementById('sound-vol-desc').textContent='Volume: '+this.value+'%'">
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Notifications</div>
+                                    <div class="setting-description">Get notifications from apps</div>
+                                </div>
+                                <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Power & battery</div>
+                                    <div class="setting-description">87% - Plugged in</div>
+                                </div>
+                                <select style="padding: 8px; border-radius: 4px;">
+                                    <option>Balanced</option>
+                                    <option>Best performance</option>
+                                    <option>Best battery life</option>
+                                </select>
                             </div>
                             <div class="setting-item">
                                 <div>
                                     <div class="setting-label">Storage</div>
                                     <div class="setting-description">C: Drive - 237 GB free of 476 GB</div>
                                 </div>
+                                <div style="width: 200px; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
+                                    <div style="width: 50%; height: 100%; background: #0078d4;"></div>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">About</div>
+                                    <div class="setting-description">Windows 10 Pro - Version 22H2</div>
+                                </div>
+                                <button onclick="alert('Device name: DESKTOP-WIN10\\nProcessor: Intel Core i7\\nRAM: 16.0 GB\\nSystem type: 64-bit')" style="padding: 8px 16px; cursor: pointer; border-radius: 4px; border: 1px solid #ccc;">View specs</button>
                             </div>
                         `;
                         break;
                     case 'Personalization':
                         content = `
-                            <h2>Personalization</h2>
+                            <h2>🎨 Personalization</h2>
                             <div class="setting-item">
                                 <div>
                                     <div class="setting-label">Background</div>
-                                    <div class="setting-description">Choose your desktop background</div>
+                                    <div class="setting-description">Choose your desktop wallpaper</div>
                                 </div>
-                                <select style="padding: 8px; border-radius: 4px;">
-                                    <option>Picture</option>
-                                    <option>Solid color</option>
-                                    <option>Slideshow</option>
-                                </select>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0;">
+                                <div class="wallpaper-option ${currentWallpaper === 'gradient1' ? 'selected' : ''}" onclick="setWallpaper('gradient1', this)" style="height: 80px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'gradient1' ? '#0078d4' : 'transparent'};"></div>
+                                <div class="wallpaper-option ${currentWallpaper === 'gradient2' ? 'selected' : ''}" onclick="setWallpaper('gradient2', this)" style="height: 80px; background: linear-gradient(135deg, #11998e, #38ef7d); border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'gradient2' ? '#0078d4' : 'transparent'};"></div>
+                                <div class="wallpaper-option ${currentWallpaper === 'gradient3' ? 'selected' : ''}" onclick="setWallpaper('gradient3', this)" style="height: 80px; background: linear-gradient(135deg, #ee0979, #ff6a00); border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'gradient3' ? '#0078d4' : 'transparent'};"></div>
+                                <div class="wallpaper-option ${currentWallpaper === 'gradient4' ? 'selected' : ''}" onclick="setWallpaper('gradient4', this)" style="height: 80px; background: linear-gradient(135deg, #2193b0, #6dd5ed); border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'gradient4' ? '#0078d4' : 'transparent'};"></div>
+                                <div class="wallpaper-option ${currentWallpaper === 'solid1' ? 'selected' : ''}" onclick="setWallpaper('solid1', this)" style="height: 80px; background: #0078d4; border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'solid1' ? '#0078d4' : 'transparent'};"></div>
+                                <div class="wallpaper-option ${currentWallpaper === 'solid2' ? 'selected' : ''}" onclick="setWallpaper('solid2', this)" style="height: 80px; background: #1a1a2e; border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'solid2' ? '#0078d4' : 'transparent'};"></div>
+                                <div class="wallpaper-option ${currentWallpaper === 'solid3' ? 'selected' : ''}" onclick="setWallpaper('solid3', this)" style="height: 80px; background: #16213e; border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'solid3' ? '#0078d4' : 'transparent'};"></div>
+                                <div class="wallpaper-option ${currentWallpaper === 'nature' ? 'selected' : ''}" onclick="setWallpaper('nature', this)" style="height: 80px; background: linear-gradient(to bottom, #87ceeb, #228b22); border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'nature' ? '#0078d4' : 'transparent'};"></div>
                             </div>
                             <div class="setting-item">
                                 <div>
-                                    <div class="setting-label">Colors</div>
-                                    <div class="setting-description">Choose your accent color</div>
+                                    <div class="setting-label">Accent color</div>
+                                    <div class="setting-description">Used for highlights and buttons</div>
                                 </div>
-                                <div style="display: flex; gap: 8px;">
-                                    <div style="width: 30px; height: 30px; background: #0078d4; border-radius: 4px; cursor: pointer;"></div>
-                                    <div style="width: 30px; height: 30px; background: #e81123; border-radius: 4px; cursor: pointer;"></div>
-                                    <div style="width: 30px; height: 30px; background: #107c10; border-radius: 4px; cursor: pointer;"></div>
-                                    <div style="width: 30px; height: 30px; background: #ff8c00; border-radius: 4px; cursor: pointer;"></div>
-                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px; margin: 16px 0;">
+                                <div onclick="setAccentColor('#0078d4', this)" style="width: 40px; height: 40px; background: #0078d4; border-radius: 4px; cursor: pointer; border: 3px solid ${accentColor === '#0078d4' ? 'white' : 'transparent'};"></div>
+                                <div onclick="setAccentColor('#e81123', this)" style="width: 40px; height: 40px; background: #e81123; border-radius: 4px; cursor: pointer; border: 3px solid ${accentColor === '#e81123' ? 'white' : 'transparent'};"></div>
+                                <div onclick="setAccentColor('#107c10', this)" style="width: 40px; height: 40px; background: #107c10; border-radius: 4px; cursor: pointer; border: 3px solid ${accentColor === '#107c10' ? 'white' : 'transparent'};"></div>
+                                <div onclick="setAccentColor('#ff8c00', this)" style="width: 40px; height: 40px; background: #ff8c00; border-radius: 4px; cursor: pointer; border: 3px solid ${accentColor === '#ff8c00' ? 'white' : 'transparent'};"></div>
+                                <div onclick="setAccentColor('#881798', this)" style="width: 40px; height: 40px; background: #881798; border-radius: 4px; cursor: pointer; border: 3px solid ${accentColor === '#881798' ? 'white' : 'transparent'};"></div>
+                                <div onclick="setAccentColor('#00cc6a', this)" style="width: 40px; height: 40px; background: #00cc6a; border-radius: 4px; cursor: pointer; border: 3px solid ${accentColor === '#00cc6a' ? 'white' : 'transparent'};"></div>
                             </div>
                             <div class="setting-item">
                                 <div>
-                                    <div class="setting-label">Themes</div>
-                                    <div class="setting-description">Light, Dark, or Custom</div>
+                                    <div class="setting-label">Transparency effects</div>
+                                    <div class="setting-description">Add blur and transparency to windows</div>
                                 </div>
-                                <select style="padding: 8px; border-radius: 4px;">
-                                    <option>Light</option>
-                                    <option selected>Dark</option>
-                                    <option>Custom</option>
-                                </select>
+                                <label class="toggle-switch"><input type="checkbox" checked onchange="toggleTransparency(this.checked)"><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Animation effects</div>
+                                    <div class="setting-description">Animate windows and controls</div>
+                                </div>
+                                <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
                             </div>
                         `;
                         break;
                     case 'Apps':
                         content = `
-                            <h2>Apps & features</h2>
+                            <h2>📦 Apps & features</h2>
+                            <div style="margin-bottom: 16px;">
+                                <input type="text" placeholder="Search apps..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                            </div>
+                            <div class="setting-item">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <span style="font-size: 24px;">🧮</span>
+                                    <div>
+                                        <div class="setting-label">Calculator</div>
+                                        <div class="setting-description">125 MB • Microsoft</div>
+                                    </div>
+                                </div>
+                                <button onclick="uninstallApp('Calculator', this)" style="padding: 6px 16px; border-radius: 4px; background: #f0f0f0; border: 1px solid #ccc; cursor: pointer;">Uninstall</button>
+                            </div>
+                            <div class="setting-item">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <span style="font-size: 24px;">🌐</span>
+                                    <div>
+                                        <div class="setting-label">Microsoft Edge</div>
+                                        <div class="setting-description">1.2 GB • Microsoft</div>
+                                    </div>
+                                </div>
+                                <button onclick="uninstallApp('Edge', this)" style="padding: 6px 16px; border-radius: 4px; background: #f0f0f0; border: 1px solid #ccc; cursor: pointer;">Uninstall</button>
+                            </div>
+                            <div class="setting-item">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <span style="font-size: 24px;">📝</span>
+                                    <div>
+                                        <div class="setting-label">Notepad</div>
+                                        <div class="setting-description">45 MB • Microsoft</div>
+                                    </div>
+                                </div>
+                                <button onclick="uninstallApp('Notepad', this)" style="padding: 6px 16px; border-radius: 4px; background: #f0f0f0; border: 1px solid #ccc; cursor: pointer;">Uninstall</button>
+                            </div>
+                            <div class="setting-item">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <span style="font-size: 24px;">🎨</span>
+                                    <div>
+                                        <div class="setting-label">Paint</div>
+                                        <div class="setting-description">89 MB • Microsoft</div>
+                                    </div>
+                                </div>
+                                <button onclick="uninstallApp('Paint', this)" style="padding: 6px 16px; border-radius: 4px; background: #f0f0f0; border: 1px solid #ccc; cursor: pointer;">Uninstall</button>
+                            </div>
+                            <div class="setting-item">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <span style="font-size: 24px;">🛍️</span>
+                                    <div>
+                                        <div class="setting-label">Microsoft Store</div>
+                                        <div class="setting-description">256 MB • Microsoft</div>
+                                    </div>
+                                </div>
+                                <span style="color: #666; font-size: 12px;">System app</span>
+                            </div>
+                            <h3 style="margin-top: 24px;">Default apps</h3>
                             <div class="setting-item">
                                 <div>
-                                    <div class="setting-label">Calculator</div>
-                                    <div class="setting-description">Installed - 125 MB</div>
+                                    <div class="setting-label">Web browser</div>
                                 </div>
-                                <button style="padding: 6px 12px; border-radius: 4px; background: #0078d4; color: white; border: none; cursor: pointer;">Uninstall</button>
+                                <select style="padding: 8px 12px; border-radius: 4px; border: 1px solid #ccc;">
+                                    <option>Microsoft Edge</option>
+                                    <option>Google Chrome</option>
+                                </select>
                             </div>
                             <div class="setting-item">
                                 <div>
-                                    <div class="setting-label">Microsoft Edge</div>
-                                    <div class="setting-description">Installed - 1.2 GB</div>
+                                    <div class="setting-label">Email</div>
                                 </div>
-                                <button style="padding: 6px 12px; border-radius: 4px; background: #0078d4; color: white; border: none; cursor: pointer;">Uninstall</button>
-                            </div>
-                            <div class="setting-item">
-                                <div>
-                                    <div class="setting-label">Default apps</div>
-                                    <div class="setting-description">Choose default apps for file types</div>
-                                </div>
+                                <select style="padding: 8px 12px; border-radius: 4px; border: 1px solid #ccc;">
+                                    <option>Mail</option>
+                                    <option>Outlook</option>
+                                </select>
                             </div>
                         `;
                         break;
@@ -1006,30 +1103,93 @@ function createSettings() {
                         break;
                     case 'Update & Security':
                         content = `
-                            <h2>Windows Update</h2>
-                            <div style="background: #fff3cd; padding: 20px; border-radius: 4px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
-                                <div style="font-size: 18px; margin-bottom: 8px;">⚠️ Updates available</div>
-                                <div style="font-size: 14px; color: #666;">Feature Update to Windows 10, version 22H2</div>
+                            <h2>🔄 Windows Update</h2>
+                            <div style="background: #e6f4ea; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #34a853;">
+                                <div style="font-size: 18px; margin-bottom: 8px; color: #137333;">✅ You're up to date</div>
+                                <div style="font-size: 14px; color: #666;">Last checked: Today at ${new Date().toLocaleTimeString()}</div>
                             </div>
                             <div class="setting-item">
                                 <div>
-                                    <div class="setting-label">Download and install</div>
-                                    <div class="setting-description">Get the latest features and security improvements</div>
+                                    <div class="setting-label">Check for updates</div>
+                                    <div class="setting-description">Download and install the latest updates</div>
                                 </div>
-                                <button onclick="window.location.href='updater.html'" style="padding: 10px 24px; border-radius: 4px; background: #0078d4; color: white; border: none; cursor: pointer; font-size: 14px;">Install now</button>
+                                <button onclick="checkForUpdates(this)" style="padding: 10px 24px; border-radius: 4px; background: #0078d4; color: white; border: none; cursor: pointer; font-size: 14px;">Check now</button>
+                            </div>
+                            <h3 style="margin-top: 24px;">🛡️ Windows Security</h3>
+                            <div class="setting-item" style="background: #e8f5e9; border-radius: 8px; padding: 16px;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <span style="font-size: 32px;">🛡️</span>
+                                    <div>
+                                        <div class="setting-label" style="color: #2e7d32;">Your device is protected</div>
+                                        <div class="setting-description">No threats found</div>
+                                    </div>
+                                </div>
+                                <button onclick="openApp('defender')" style="padding: 8px 16px; border-radius: 4px; background: white; border: 1px solid #ccc; cursor: pointer;">Open Security</button>
                             </div>
                             <div class="setting-item">
                                 <div>
-                                    <div class="setting-label">Windows Security</div>
-                                    <div class="setting-description">Virus & threat protection</div>
+                                    <div class="setting-label">Virus & threat protection</div>
+                                    <div class="setting-description">Last scan: Today</div>
                                 </div>
-                                <button style="padding: 8px 16px; border-radius: 4px; background: white; border: 1px solid #d0d0d0; cursor: pointer;">Open Security</button>
+                                <button onclick="runQuickScan()" style="padding: 8px 16px; border-radius: 4px; background: #f0f0f0; border: 1px solid #ccc; cursor: pointer;">Quick scan</button>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Firewall & network</div>
+                                    <div class="setting-description">Protected</div>
+                                </div>
+                                <span style="color: #2e7d32;">✓ On</span>
                             </div>
                             <div class="setting-item">
                                 <div>
                                     <div class="setting-label">Backup</div>
-                                    <div class="setting-description">Back up your files with File History</div>
+                                    <div class="setting-description">Back up files to OneDrive</div>
                                 </div>
+                                <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Recovery</div>
+                                    <div class="setting-description">Reset this PC or advanced startup</div>
+                                </div>
+                                <button onclick="alert('Recovery options would reset your PC. This is a simulation.')" style="padding: 8px 16px; border-radius: 4px; background: #f0f0f0; border: 1px solid #ccc; cursor: pointer;">Get started</button>
+                            </div>
+                        `;
+                        break;
+                    case 'Gaming':
+                        content = `
+                            <h2>🎮 Gaming</h2>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Xbox Game Bar</div>
+                                    <div class="setting-description">Record clips, chat with friends, and get invites</div>
+                                </div>
+                                <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Game Mode</div>
+                                    <div class="setting-description">Optimize your PC for gaming</div>
+                                </div>
+                                <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Captures</div>
+                                    <div class="setting-description">Screenshots and game clips location</div>
+                                </div>
+                                <span style="color: #666;">C:\\Users\\${userData.username}\\Videos\\Captures</span>
+                            </div>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Graphics</div>
+                                    <div class="setting-description">Default graphics settings</div>
+                                </div>
+                                <select style="padding: 8px 12px; border-radius: 4px; border: 1px solid #ccc;">
+                                    <option>Let Windows decide</option>
+                                    <option>Power saving</option>
+                                    <option>High performance</option>
+                                </select>
                             </div>
                         `;
                         break;
@@ -1048,36 +1208,43 @@ function createSettings() {
                 <div class="settings-menu-item">Apps</div>
                 <div class="settings-menu-item">Accounts</div>
                 <div class="settings-menu-item">Time & Language</div>
+                <div class="settings-menu-item">Gaming</div>
                 <div class="settings-menu-item">Privacy</div>
                 <div class="settings-menu-item">Update & Security</div>
             </div>
             <div class="settings-content">
-                <h2>System</h2>
+                <h2>⚙️ System</h2>
                 <div class="setting-item">
                     <div>
                         <div class="setting-label">Display brightness</div>
-                        <div class="setting-description">Adjust the brightness level</div>
+                        <div class="setting-description">Adjust screen brightness</div>
                     </div>
-                    <input type="range" min="0" max="100" value="80" style="width: 200px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="range" min="20" max="100" value="80" style="width: 200px;" oninput="setSettingsBrightness(this.value)">
+                        <span id="settings-brightness-val">80%</span>
+                    </div>
                 </div>
                 <div class="setting-item">
                     <div>
                         <div class="setting-label">Night light</div>
-                        <div class="setting-description">Reduce blue light at night</div>
+                        <div class="setting-description">Reduce blue light to help you sleep</div>
                     </div>
-                    <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+                    <label class="toggle-switch"><input type="checkbox" onchange="toggleSettingsNightLight(this.checked)"><span class="toggle-slider"></span></label>
                 </div>
                 <div class="setting-item">
                     <div>
-                        <div class="setting-label">Sound</div>
-                        <div class="setting-description">Volume: 70%</div>
+                        <div class="setting-label">Sound volume</div>
+                        <div class="setting-description" id="sound-vol-desc">Volume: 75%</div>
                     </div>
-                    <input type="range" min="0" max="100" value="70" style="width: 200px;">
+                    <input type="range" min="0" max="100" value="75" style="width: 200px;" oninput="document.getElementById('sound-vol-desc').textContent='Volume: '+this.value+'%'">
                 </div>
                 <div class="setting-item">
                     <div>
                         <div class="setting-label">Storage</div>
                         <div class="setting-description">C: Drive - 237 GB free of 476 GB</div>
+                    </div>
+                    <div style="width: 200px; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
+                        <div style="width: 50%; height: 100%; background: #0078d4;"></div>
                     </div>
                 </div>
             </div>
@@ -2024,6 +2191,165 @@ setInterval(() => {
         addNotification(random.icon, random.title, random.body);
     }
 }, 60000);
+
+function setSettingsBrightness(value) {
+    document.getElementById('settings-brightness-val').textContent = value + '%';
+    document.body.style.filter = `brightness(${value / 100})`;
+}
+
+function toggleSettingsNightLight(checked) {
+    const overlay = document.getElementById('night-light-overlay');
+    if (overlay) {
+        if (checked) overlay.classList.add('active');
+        else overlay.classList.remove('active');
+    }
+}
+
+function setWallpaper(type, el) {
+    currentWallpaper = type;
+    const desktop = document.querySelector('.desktop');
+    const wallpapers = {
+        gradient1: 'linear-gradient(135deg, #667eea, #764ba2)',
+        gradient2: 'linear-gradient(135deg, #11998e, #38ef7d)',
+        gradient3: 'linear-gradient(135deg, #ee0979, #ff6a00)',
+        gradient4: 'linear-gradient(135deg, #2193b0, #6dd5ed)',
+        solid1: '#0078d4',
+        solid2: '#1a1a2e',
+        solid3: '#16213e',
+        nature: 'linear-gradient(to bottom, #87ceeb, #228b22)'
+    };
+    if (desktop) desktop.style.background = wallpapers[type];
+    document.querySelectorAll('.wallpaper-option').forEach(w => w.style.border = '3px solid transparent');
+    if (el) el.style.border = '3px solid #0078d4';
+    playSound('notification');
+}
+
+function setAccentColor(color, el) {
+    accentColor = color;
+    document.documentElement.style.setProperty('--accent-color', color);
+    document.querySelectorAll('.start-button, .calc-btn.equals, button[style*="0078d4"]').forEach(btn => {
+        if (btn.style.background) btn.style.background = color;
+    });
+    playSound('notification');
+}
+
+function toggleTransparency(enabled) {
+    if (enabled) {
+        document.querySelectorAll('.window, .start-menu, .notification-center').forEach(el => {
+            el.style.backdropFilter = 'blur(10px)';
+        });
+    } else {
+        document.querySelectorAll('.window, .start-menu, .notification-center').forEach(el => {
+            el.style.backdropFilter = 'none';
+        });
+    }
+}
+
+function uninstallApp(appName, btn) {
+    btn.textContent = 'Uninstalling...';
+    btn.disabled = true;
+    setTimeout(() => {
+        btn.closest('.setting-item').style.opacity = '0.5';
+        btn.textContent = 'Uninstalled';
+        playSound('notification');
+    }, 1500);
+}
+
+function checkForUpdates(btn) {
+    btn.textContent = 'Checking...';
+    btn.disabled = true;
+    setTimeout(() => {
+        btn.textContent = 'Up to date ✓';
+        btn.style.background = '#107c10';
+        playSound('notification');
+    }, 2000);
+}
+
+function runQuickScan() {
+    openApp('defender');
+}
+
+function createDefender() {
+    return `
+        <div style="height: 100%; background: #f5f5f5; padding: 20px; overflow-y: auto;">
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+                <span style="font-size: 48px;">🛡️</span>
+                <div>
+                    <h2 style="margin: 0;">Windows Security</h2>
+                    <p style="color: #666; margin: 4px 0;">Your device is being protected</p>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #107c10;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                        <span style="font-size: 24px;">🛡️</span>
+                        <strong>Virus & threat protection</strong>
+                    </div>
+                    <p style="color: #107c10; margin: 0;">✓ No threats found</p>
+                    <button onclick="startScan(this)" style="margin-top: 12px; padding: 8px 16px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer;">Quick scan</button>
+                </div>
+                
+                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #107c10;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                        <span style="font-size: 24px;">🔥</span>
+                        <strong>Firewall & network</strong>
+                    </div>
+                    <p style="color: #107c10; margin: 0;">✓ Firewall is on</p>
+                </div>
+                
+                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #107c10;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                        <span style="font-size: 24px;">🌐</span>
+                        <strong>App & browser control</strong>
+                    </div>
+                    <p style="color: #107c10; margin: 0;">✓ Protected</p>
+                </div>
+                
+                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #107c10;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                        <span style="font-size: 24px;">💻</span>
+                        <strong>Device security</strong>
+                    </div>
+                    <p style="color: #107c10; margin: 0;">✓ Standard hardware security</p>
+                </div>
+            </div>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin-top: 16px;">
+                <h3>Recent scans</h3>
+                <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee;">
+                    <span>Quick scan</span>
+                    <span style="color: #666;">Today at ${new Date().toLocaleTimeString()}</span>
+                    <span style="color: #107c10;">No threats</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee;">
+                    <span>Full scan</span>
+                    <span style="color: #666;">Yesterday</span>
+                    <span style="color: #107c10;">No threats</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function startScan(btn) {
+    const originalText = btn.textContent;
+    btn.textContent = 'Scanning...';
+    btn.disabled = true;
+    
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress >= 100) {
+            clearInterval(interval);
+            btn.textContent = 'No threats found ✓';
+            btn.style.background = '#107c10';
+            playSound('notification');
+        } else {
+            btn.textContent = `Scanning... ${Math.floor(progress)}%`;
+        }
+    }, 300);
+}
 
 function createWifiSettings() {
     return `
