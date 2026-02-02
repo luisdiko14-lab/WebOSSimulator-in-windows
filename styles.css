@@ -2427,6 +2427,24 @@ body {
     font-size: 12px;
 }
 
+/* Sign Out Screen */
+.signout-screen {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0078d4, #004e8c);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.signout-screen h2 {
+    margin-top: 30px;
+    font-weight: 300;
+    font-size: 24px;
+}
+
 /* BSOD Screen */
 .bsod-screen {
     width: 100%;

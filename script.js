@@ -460,8 +460,15 @@ function lockScreen() {
 
 function signOut() {
     closeAllWindows();
-    showScreen('screen-login');
-    document.getElementById('login-password').value = '';
+    toggleStartMenu(false);
+    
+    showScreen('screen-signout');
+    
+    setTimeout(() => {
+        showScreen('screen-lock');
+        updateLockTime();
+        document.getElementById('login-password').value = '';
+    }, 2500);
 }
 
 function restart() {
@@ -1042,7 +1049,7 @@ function createSettings() {
                                     <div class="setting-label">Set time automatically</div>
                                     <div class="setting-description">Sync with internet time servers</div>
                                 </div>
-                                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                                <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
                             </div>
                             <div class="setting-item">
                                 <div>
@@ -1073,21 +1080,21 @@ function createSettings() {
                                     <div class="setting-label">Location</div>
                                     <div class="setting-description">Let apps use your location</div>
                                 </div>
-                                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                                <label class="toggle-switch"><input type="checkbox" checked onchange="playSound('notification')"><span class="toggle-slider"></span></label>
                             </div>
                             <div class="setting-item">
                                 <div>
                                     <div class="setting-label">Camera</div>
                                     <div class="setting-description">Let apps use your camera</div>
                                 </div>
-                                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                                <label class="toggle-switch"><input type="checkbox" checked onchange="playSound('notification')"><span class="toggle-slider"></span></label>
                             </div>
                             <div class="setting-item">
                                 <div>
                                     <div class="setting-label">Microphone</div>
                                     <div class="setting-description">Let apps use your microphone</div>
                                 </div>
-                                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                                <label class="toggle-switch"><input type="checkbox" checked onchange="playSound('notification')"><span class="toggle-slider"></span></label>
                             </div>
                             <div class="setting-item">
                                 <div>
