@@ -787,28 +787,215 @@ function createNotepad() {
     return '<textarea class="notepad-textarea" placeholder="Start typing..."></textarea>';
 }
 
+let explorerPath = 'This PC';
+let explorerHistory = ['This PC'];
+let explorerHistoryIndex = 0;
+
+const fileSystem = {
+    'This PC': {
+        type: 'folder',
+        items: [
+            { name: 'Desktop', type: 'folder', icon: '🖥️', color: '#0078d4' },
+            { name: 'Documents', type: 'folder', icon: '📁', color: '#f4b400' },
+            { name: 'Downloads', type: 'folder', icon: '⬇️', color: '#34a853' },
+            { name: 'Pictures', type: 'folder', icon: '🖼️', color: '#ea4335' },
+            { name: 'Music', type: 'folder', icon: '🎵', color: '#9c27b0' },
+            { name: 'Videos', type: 'folder', icon: '🎬', color: '#ff5722' },
+            { name: 'Local Disk (C:)', type: 'drive', icon: '💾', color: '#607d8b', size: '237 GB free of 476 GB' },
+            { name: 'USB Drive (D:)', type: 'drive', icon: '🔌', color: '#795548', size: '14.2 GB free of 16 GB' }
+        ]
+    },
+    'Desktop': {
+        type: 'folder',
+        items: [
+            { name: 'This PC', type: 'shortcut', icon: '💻', color: '#0078d4' },
+            { name: 'Recycle Bin', type: 'shortcut', icon: '🗑️', color: '#666' },
+            { name: 'Notes.txt', type: 'file', icon: '📝', color: '#4caf50' },
+            { name: 'Project.docx', type: 'file', icon: '📄', color: '#2196f3' }
+        ]
+    },
+    'Documents': {
+        type: 'folder',
+        items: [
+            { name: 'Work', type: 'folder', icon: '💼', color: '#795548' },
+            { name: 'Personal', type: 'folder', icon: '👤', color: '#9c27b0' },
+            { name: 'Resume.pdf', type: 'file', icon: '📕', color: '#f44336' },
+            { name: 'Budget.xlsx', type: 'file', icon: '📊', color: '#4caf50' },
+            { name: 'Notes.txt', type: 'file', icon: '📝', color: '#ff9800' }
+        ]
+    },
+    'Downloads': {
+        type: 'folder',
+        items: [
+            { name: 'Setup.exe', type: 'file', icon: '⚙️', color: '#607d8b' },
+            { name: 'Photo.jpg', type: 'file', icon: '🖼️', color: '#e91e63' },
+            { name: 'Music.mp3', type: 'file', icon: '🎵', color: '#9c27b0' },
+            { name: 'Video.mp4', type: 'file', icon: '🎬', color: '#ff5722' }
+        ]
+    },
+    'Pictures': {
+        type: 'folder',
+        items: [
+            { name: 'Wallpapers', type: 'folder', icon: '🖼️', color: '#3f51b5' },
+            { name: 'Screenshots', type: 'folder', icon: '📸', color: '#009688' },
+            { name: 'vacation.jpg', type: 'file', icon: '🏖️', color: '#ff9800' },
+            { name: 'family.png', type: 'file', icon: '👨‍👩‍👧', color: '#e91e63' }
+        ]
+    },
+    'Music': {
+        type: 'folder',
+        items: [
+            { name: 'Playlists', type: 'folder', icon: '📋', color: '#673ab7' },
+            { name: 'song1.mp3', type: 'file', icon: '🎵', color: '#9c27b0' },
+            { name: 'song2.mp3', type: 'file', icon: '🎵', color: '#9c27b0' }
+        ]
+    },
+    'Videos': {
+        type: 'folder',
+        items: [
+            { name: 'Movies', type: 'folder', icon: '🎬', color: '#f44336' },
+            { name: 'Clips', type: 'folder', icon: '🎥', color: '#ff5722' }
+        ]
+    }
+};
+
 function createExplorer() {
+    setTimeout(() => setupExplorerEvents(), 100);
+    return renderExplorer();
+}
+
+function renderExplorer() {
+    const currentFolder = fileSystem[explorerPath] || fileSystem['This PC'];
+    const items = currentFolder.items || [];
+    
     return `
-        <div class="explorer-toolbar">
-            <button class="explorer-btn">← Back</button>
-            <button class="explorer-btn">→ Forward</button>
-            <button class="explorer-btn">↑ Up</button>
+        <div class="explorer-toolbar" style="background: linear-gradient(180deg, #f8f9fa, #e9ecef); padding: 8px 12px; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid #dee2e6;">
+            <button class="explorer-nav-btn" onclick="explorerBack()" style="padding: 6px 12px; border: 1px solid #ced4da; border-radius: 4px; background: white; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                <span style="font-size: 16px;">←</span>
+            </button>
+            <button class="explorer-nav-btn" onclick="explorerForward()" style="padding: 6px 12px; border: 1px solid #ced4da; border-radius: 4px; background: white; cursor: pointer;">
+                <span style="font-size: 16px;">→</span>
+            </button>
+            <button class="explorer-nav-btn" onclick="explorerUp()" style="padding: 6px 12px; border: 1px solid #ced4da; border-radius: 4px; background: white; cursor: pointer;">
+                <span style="font-size: 16px;">↑</span>
+            </button>
+            <div style="flex: 1; display: flex; align-items: center; background: white; border: 1px solid #ced4da; border-radius: 4px; padding: 6px 12px;">
+                <span style="color: #0078d4; margin-right: 8px;">📁</span>
+                <span id="explorer-path-display" style="color: #333;">${explorerPath}</span>
+            </div>
+            <input type="text" placeholder="🔍 Search" style="padding: 6px 12px; border: 1px solid #ced4da; border-radius: 4px; width: 200px;">
         </div>
-        <div class="explorer-content">
-            <div class="explorer-sidebar">
-                <div class="folder-item">📁 Desktop</div>
-                <div class="folder-item">📁 Documents</div>
-                <div class="folder-item">📁 Downloads</div>
-                <div class="folder-item">📁 Pictures</div>
-                <div class="folder-item">💻 This PC</div>
+        <div style="display: flex; flex: 1; overflow: hidden;">
+            <div class="explorer-sidebar" style="width: 200px; background: #f8f9fa; border-right: 1px solid #dee2e6; padding: 12px; overflow-y: auto;">
+                <div style="margin-bottom: 16px;">
+                    <div style="font-size: 12px; color: #666; margin-bottom: 8px; font-weight: 600;">Quick access</div>
+                    <div class="explorer-sidebar-item" onclick="navigateExplorer('Desktop')" style="padding: 8px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s;">
+                        <span style="font-size: 18px;">🖥️</span> Desktop
+                    </div>
+                    <div class="explorer-sidebar-item" onclick="navigateExplorer('Downloads')" style="padding: 8px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 18px;">⬇️</span> Downloads
+                    </div>
+                    <div class="explorer-sidebar-item" onclick="navigateExplorer('Documents')" style="padding: 8px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 18px;">📁</span> Documents
+                    </div>
+                    <div class="explorer-sidebar-item" onclick="navigateExplorer('Pictures')" style="padding: 8px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 18px;">🖼️</span> Pictures
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 12px; color: #666; margin-bottom: 8px; font-weight: 600;">This PC</div>
+                    <div class="explorer-sidebar-item" onclick="navigateExplorer('This PC')" style="padding: 8px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 18px;">💻</span> This PC
+                    </div>
+                </div>
             </div>
-            <div class="explorer-main">
-                <div class="file-item">📁 <strong>My Documents</strong></div>
-                <div class="file-item">📁 <strong>My Pictures</strong></div>
-                <div class="file-item">📄 <strong>example.txt</strong></div>
+            <div class="explorer-main" id="explorer-main" style="flex: 1; padding: 16px; overflow-y: auto; background: white;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 16px;">
+                    ${items.map(item => `
+                        <div class="explorer-item" onclick="${item.type === 'folder' ? `navigateExplorer('${item.name}')` : `openFile('${item.name}')`}" 
+                             style="padding: 16px; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; border: 2px solid transparent;">
+                            <div style="font-size: 48px; margin-bottom: 8px; filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.1));">${item.icon}</div>
+                            <div style="font-size: 13px; color: #333; word-break: break-word;">${item.name}</div>
+                            ${item.size ? `<div style="font-size: 11px; color: #666; margin-top: 4px;">${item.size}</div>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
             </div>
+        </div>
+        <div style="background: #f8f9fa; padding: 6px 12px; border-top: 1px solid #dee2e6; font-size: 12px; color: #666;">
+            ${items.length} items
         </div>
     `;
+}
+
+function setupExplorerEvents() {
+    document.querySelectorAll('.explorer-sidebar-item').forEach(item => {
+        item.addEventListener('mouseenter', () => item.style.background = '#e9ecef');
+        item.addEventListener('mouseleave', () => item.style.background = 'transparent');
+    });
+    document.querySelectorAll('.explorer-item').forEach(item => {
+        item.addEventListener('mouseenter', () => {
+            item.style.background = '#e3f2fd';
+            item.style.borderColor = '#90caf9';
+        });
+        item.addEventListener('mouseleave', () => {
+            item.style.background = 'transparent';
+            item.style.borderColor = 'transparent';
+        });
+    });
+}
+
+function navigateExplorer(path) {
+    if (fileSystem[path]) {
+        explorerPath = path;
+        explorerHistory = explorerHistory.slice(0, explorerHistoryIndex + 1);
+        explorerHistory.push(path);
+        explorerHistoryIndex = explorerHistory.length - 1;
+        updateExplorerView();
+    }
+}
+
+function explorerBack() {
+    if (explorerHistoryIndex > 0) {
+        explorerHistoryIndex--;
+        explorerPath = explorerHistory[explorerHistoryIndex];
+        updateExplorerView();
+    }
+}
+
+function explorerForward() {
+    if (explorerHistoryIndex < explorerHistory.length - 1) {
+        explorerHistoryIndex++;
+        explorerPath = explorerHistory[explorerHistoryIndex];
+        updateExplorerView();
+    }
+}
+
+function explorerUp() {
+    if (explorerPath !== 'This PC') {
+        navigateExplorer('This PC');
+    }
+}
+
+function updateExplorerView() {
+    const explorerWindow = document.querySelector('.window[data-app="explorer"] .window-content');
+    if (explorerWindow) {
+        explorerWindow.innerHTML = renderExplorer();
+        setTimeout(() => setupExplorerEvents(), 50);
+    }
+}
+
+function openFile(filename) {
+    if (filename.endsWith('.txt')) {
+        openApp('notepad');
+    } else if (filename.endsWith('.jpg') || filename.endsWith('.png')) {
+        openApp('photos');
+    } else if (filename.endsWith('.mp3')) {
+        playSound('notification');
+        alert('Now playing: ' + filename);
+    } else {
+        alert('Opening: ' + filename);
+    }
 }
 
 let currentWallpaper = 'gradient1';
@@ -901,14 +1088,27 @@ function createSettings() {
                                 </div>
                             </div>
                             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0;">
-                                <div class="wallpaper-option ${currentWallpaper === 'gradient1' ? 'selected' : ''}" onclick="setWallpaper('gradient1', this)" style="height: 80px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'gradient1' ? '#0078d4' : 'transparent'};"></div>
-                                <div class="wallpaper-option ${currentWallpaper === 'gradient2' ? 'selected' : ''}" onclick="setWallpaper('gradient2', this)" style="height: 80px; background: linear-gradient(135deg, #11998e, #38ef7d); border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'gradient2' ? '#0078d4' : 'transparent'};"></div>
-                                <div class="wallpaper-option ${currentWallpaper === 'gradient3' ? 'selected' : ''}" onclick="setWallpaper('gradient3', this)" style="height: 80px; background: linear-gradient(135deg, #ee0979, #ff6a00); border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'gradient3' ? '#0078d4' : 'transparent'};"></div>
-                                <div class="wallpaper-option ${currentWallpaper === 'gradient4' ? 'selected' : ''}" onclick="setWallpaper('gradient4', this)" style="height: 80px; background: linear-gradient(135deg, #2193b0, #6dd5ed); border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'gradient4' ? '#0078d4' : 'transparent'};"></div>
-                                <div class="wallpaper-option ${currentWallpaper === 'solid1' ? 'selected' : ''}" onclick="setWallpaper('solid1', this)" style="height: 80px; background: #0078d4; border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'solid1' ? '#0078d4' : 'transparent'};"></div>
-                                <div class="wallpaper-option ${currentWallpaper === 'solid2' ? 'selected' : ''}" onclick="setWallpaper('solid2', this)" style="height: 80px; background: #1a1a2e; border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'solid2' ? '#0078d4' : 'transparent'};"></div>
-                                <div class="wallpaper-option ${currentWallpaper === 'solid3' ? 'selected' : ''}" onclick="setWallpaper('solid3', this)" style="height: 80px; background: #16213e; border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'solid3' ? '#0078d4' : 'transparent'};"></div>
-                                <div class="wallpaper-option ${currentWallpaper === 'nature' ? 'selected' : ''}" onclick="setWallpaper('nature', this)" style="height: 80px; background: linear-gradient(to bottom, #87ceeb, #228b22); border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'nature' ? '#0078d4' : 'transparent'};"></div>
+                                <div class="wallpaper-option" onclick="setWallpaper('gradient1', this)" style="height: 80px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'gradient1' ? '#0078d4' : 'transparent'};"></div>
+                                <div class="wallpaper-option" onclick="setWallpaper('gradient2', this)" style="height: 80px; background: linear-gradient(135deg, #11998e, #38ef7d); border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'gradient2' ? '#0078d4' : 'transparent'};"></div>
+                                <div class="wallpaper-option" onclick="setWallpaper('gradient3', this)" style="height: 80px; background: linear-gradient(135deg, #ee0979, #ff6a00); border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'gradient3' ? '#0078d4' : 'transparent'};"></div>
+                                <div class="wallpaper-option" onclick="setWallpaper('gradient4', this)" style="height: 80px; background: linear-gradient(135deg, #2193b0, #6dd5ed); border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'gradient4' ? '#0078d4' : 'transparent'};"></div>
+                                <div class="wallpaper-option" onclick="setWallpaper('solid1', this)" style="height: 80px; background: #0078d4; border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'solid1' ? '#0078d4' : 'transparent'};"></div>
+                                <div class="wallpaper-option" onclick="setWallpaper('solid2', this)" style="height: 80px; background: #1a1a2e; border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'solid2' ? '#0078d4' : 'transparent'};"></div>
+                                <div class="wallpaper-option" onclick="setWallpaper('solid3', this)" style="height: 80px; background: #16213e; border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'solid3' ? '#0078d4' : 'transparent'};"></div>
+                                <div class="wallpaper-option" onclick="setWallpaper('nature', this)" style="height: 80px; background: linear-gradient(to bottom, #87ceeb, #228b22); border-radius: 8px; cursor: pointer; border: 3px solid ${currentWallpaper === 'nature' ? '#0078d4' : 'transparent'};"></div>
+                            </div>
+                            <div class="setting-item" style="background: #f0f8ff; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                                <div style="margin-bottom: 12px;">
+                                    <div class="setting-label">🌐 Custom wallpaper from URL</div>
+                                    <div class="setting-description">Paste an image URL to use as wallpaper</div>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="text" id="custom-wallpaper-url" placeholder="https://example.com/image.jpg" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                                    <button onclick="setCustomWallpaper()" style="padding: 10px 20px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply</button>
+                                </div>
+                                <div id="wallpaper-preview" style="margin-top: 12px; display: none;">
+                                    <img id="wallpaper-preview-img" style="max-width: 200px; max-height: 100px; border-radius: 8px; border: 2px solid #0078d4;">
+                                </div>
                             </div>
                             <div class="setting-item">
                                 <div>
@@ -1019,25 +1219,77 @@ function createSettings() {
                         break;
                     case 'Accounts':
                         content = `
-                            <h2>Your info</h2>
-                            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px;">
-                                <div style="width: 80px; height: 80px; background: #0078d4; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36px;">👤</div>
+                            <h2>👤 Your info</h2>
+                            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px; background: linear-gradient(135deg, #f0f8ff, #e6f3ff); padding: 24px; border-radius: 12px;">
+                                <div id="account-avatar" style="width: 100px; height: 100px; background: ${userData.avatarColor || '#0078d4'}; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 48px; cursor: pointer; transition: transform 0.2s; border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" onclick="changeAvatar()" title="Click to change avatar">
+                                    ${userData.avatar || '👤'}
+                                </div>
                                 <div>
-                                    <div style="font-size: 18px; font-weight: 500; margin-bottom: 4px;">${userData.username}</div>
+                                    <div style="font-size: 24px; font-weight: 600; margin-bottom: 4px;" id="display-username">${userData.username}</div>
                                     <div style="font-size: 14px; color: #666;">${userData.email || 'Local Account'}</div>
+                                    <div style="font-size: 12px; color: #0078d4; margin-top: 4px;">Administrator</div>
                                 </div>
+                            </div>
+                            
+                            <h3 style="margin: 24px 0 16px;">Edit profile</h3>
+                            <div class="setting-item" style="background: #f8f9fa; border-radius: 8px; padding: 16px;">
+                                <div style="width: 100%;">
+                                    <div class="setting-label" style="margin-bottom: 8px;">Username</div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" id="edit-username" value="${userData.username}" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                                        <button onclick="updateUsername()" style="padding: 10px 20px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer;">Save</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="setting-item" style="background: #f8f9fa; border-radius: 8px; padding: 16px; margin-top: 12px;">
+                                <div style="width: 100%;">
+                                    <div class="setting-label" style="margin-bottom: 8px;">Change Password</div>
+                                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                                        <input type="password" id="current-password" placeholder="Current password" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                                        <input type="password" id="new-password" placeholder="New password" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                                        <input type="password" id="confirm-password" placeholder="Confirm new password" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                                        <button onclick="updatePassword()" style="padding: 10px 20px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer; align-self: flex-start;">Update Password</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="setting-item" style="background: #f8f9fa; border-radius: 8px; padding: 16px; margin-top: 12px;">
+                                <div style="width: 100%;">
+                                    <div class="setting-label" style="margin-bottom: 8px;">Profile Picture</div>
+                                    <div class="setting-description" style="margin-bottom: 12px;">Choose an avatar or use a custom image</div>
+                                    <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
+                                        <div onclick="setAvatar('👤', '#0078d4')" style="width: 50px; height: 50px; background: #0078d4; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border: 3px solid ${(userData.avatar || '👤') === '👤' ? '#333' : 'transparent'};">👤</div>
+                                        <div onclick="setAvatar('😊', '#4caf50')" style="width: 50px; height: 50px; background: #4caf50; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border: 3px solid ${userData.avatar === '😊' ? '#333' : 'transparent'};">😊</div>
+                                        <div onclick="setAvatar('🎮', '#9c27b0')" style="width: 50px; height: 50px; background: #9c27b0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border: 3px solid ${userData.avatar === '🎮' ? '#333' : 'transparent'};">🎮</div>
+                                        <div onclick="setAvatar('🎨', '#ff5722')" style="width: 50px; height: 50px; background: #ff5722; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border: 3px solid ${userData.avatar === '🎨' ? '#333' : 'transparent'};">🎨</div>
+                                        <div onclick="setAvatar('💻', '#607d8b')" style="width: 50px; height: 50px; background: #607d8b; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border: 3px solid ${userData.avatar === '💻' ? '#333' : 'transparent'};">💻</div>
+                                        <div onclick="setAvatar('🚀', '#e91e63')" style="width: 50px; height: 50px; background: #e91e63; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border: 3px solid ${userData.avatar === '🚀' ? '#333' : 'transparent'};">🚀</div>
+                                        <div onclick="setAvatar('🌟', '#ffc107')" style="width: 50px; height: 50px; background: #ffc107; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border: 3px solid ${userData.avatar === '🌟' ? '#333' : 'transparent'};">🌟</div>
+                                        <div onclick="setAvatar('🐱', '#795548')" style="width: 50px; height: 50px; background: #795548; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border: 3px solid ${userData.avatar === '🐱' ? '#333' : 'transparent'};">🐱</div>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" id="custom-avatar-url" placeholder="Or enter image URL..." style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                                        <button onclick="setCustomAvatar()" style="padding: 10px 20px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h3 style="margin: 24px 0 16px;">Sign-in options</h3>
+                            <div class="setting-item">
+                                <div>
+                                    <div class="setting-label">Windows Hello</div>
+                                    <div class="setting-description">Sign in with face, fingerprint, or PIN</div>
+                                </div>
+                                <button style="padding: 8px 16px; border-radius: 4px; background: #f0f0f0; border: 1px solid #ccc; cursor: pointer;">Set up</button>
                             </div>
                             <div class="setting-item">
                                 <div>
-                                    <div class="setting-label">Sign-in options</div>
-                                    <div class="setting-description">Password, PIN, Windows Hello</div>
+                                    <div class="setting-label">Require sign-in</div>
+                                    <div class="setting-description">When should Windows require you to sign in again?</div>
                                 </div>
-                            </div>
-                            <div class="setting-item">
-                                <div>
-                                    <div class="setting-label">Family & other users</div>
-                                    <div class="setting-description">Add family members or other users</div>
-                                </div>
+                                <select style="padding: 8px 12px; border-radius: 4px; border: 1px solid #ccc;">
+                                    <option>When PC wakes from sleep</option>
+                                    <option>Never</option>
+                                </select>
                             </div>
                         `;
                         break;
@@ -2230,10 +2482,144 @@ function setWallpaper(type, el) {
         solid3: '#16213e',
         nature: 'linear-gradient(to bottom, #87ceeb, #228b22)'
     };
-    if (desktop) desktop.style.background = wallpapers[type];
+    if (desktop) {
+        desktop.style.background = wallpapers[type];
+        desktop.style.backgroundSize = 'cover';
+    }
     document.querySelectorAll('.wallpaper-option').forEach(w => w.style.border = '3px solid transparent');
     if (el) el.style.border = '3px solid #0078d4';
     playSound('notification');
+}
+
+function setCustomWallpaper() {
+    const urlInput = document.getElementById('custom-wallpaper-url');
+    const url = urlInput.value.trim();
+    
+    if (!url) {
+        alert('Please enter an image URL');
+        return;
+    }
+    
+    const desktop = document.querySelector('.desktop');
+    if (desktop) {
+        desktop.style.background = `url('${url}') center/cover no-repeat`;
+        currentWallpaper = 'custom';
+        
+        const preview = document.getElementById('wallpaper-preview');
+        const previewImg = document.getElementById('wallpaper-preview-img');
+        if (preview && previewImg) {
+            previewImg.src = url;
+            preview.style.display = 'block';
+        }
+        
+        document.querySelectorAll('.wallpaper-option').forEach(w => w.style.border = '3px solid transparent');
+        playSound('notification');
+    }
+}
+
+function updateUsername() {
+    const newUsername = document.getElementById('edit-username').value.trim();
+    if (newUsername && newUsername.length >= 2) {
+        userData.username = newUsername;
+        
+        const displayUsername = document.getElementById('display-username');
+        if (displayUsername) displayUsername.textContent = newUsername;
+        
+        const loginUsername = document.getElementById('login-username');
+        if (loginUsername) loginUsername.textContent = newUsername;
+        
+        const lockUsername = document.querySelector('.lock-username');
+        if (lockUsername) lockUsername.textContent = newUsername;
+        
+        document.querySelectorAll('.start-user-name').forEach(el => el.textContent = newUsername);
+        
+        playSound('notification');
+        alert('Username updated successfully!');
+    } else {
+        alert('Username must be at least 2 characters');
+    }
+}
+
+function updatePassword() {
+    const currentPw = document.getElementById('current-password').value;
+    const newPw = document.getElementById('new-password').value;
+    const confirmPw = document.getElementById('confirm-password').value;
+    
+    if (currentPw !== userData.password) {
+        alert('Current password is incorrect');
+        playSound('error');
+        return;
+    }
+    
+    if (newPw.length < 4) {
+        alert('New password must be at least 4 characters');
+        return;
+    }
+    
+    if (newPw !== confirmPw) {
+        alert('New passwords do not match');
+        return;
+    }
+    
+    userData.password = newPw;
+    document.getElementById('current-password').value = '';
+    document.getElementById('new-password').value = '';
+    document.getElementById('confirm-password').value = '';
+    
+    playSound('notification');
+    alert('Password updated successfully!');
+}
+
+function setAvatar(emoji, color) {
+    userData.avatar = emoji;
+    userData.avatarColor = color;
+    
+    const accountAvatar = document.getElementById('account-avatar');
+    if (accountAvatar) {
+        accountAvatar.innerHTML = emoji;
+        accountAvatar.style.background = color;
+    }
+    
+    document.querySelectorAll('.start-user-avatar').forEach(el => {
+        el.innerHTML = emoji;
+        el.style.background = color;
+    });
+    
+    const lockAvatar = document.querySelector('.lock-avatar');
+    if (lockAvatar) {
+        lockAvatar.innerHTML = emoji;
+        lockAvatar.style.background = color;
+    }
+    
+    playSound('notification');
+}
+
+function setCustomAvatar() {
+    const url = document.getElementById('custom-avatar-url').value.trim();
+    if (!url) {
+        alert('Please enter an image URL');
+        return;
+    }
+    
+    userData.avatar = '';
+    userData.avatarUrl = url;
+    
+    const avatarStyle = `background: url('${url}') center/cover no-repeat;`;
+    
+    const accountAvatar = document.getElementById('account-avatar');
+    if (accountAvatar) {
+        accountAvatar.innerHTML = '';
+        accountAvatar.style.cssText = `width: 100px; height: 100px; border-radius: 50%; ${avatarStyle} border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);`;
+    }
+    
+    playSound('notification');
+}
+
+function changeAvatar() {
+    const avatars = ['👤', '😊', '🎮', '🎨', '💻', '🚀', '🌟', '🐱', '🦊', '🐶'];
+    const colors = ['#0078d4', '#4caf50', '#9c27b0', '#ff5722', '#607d8b', '#e91e63', '#ffc107', '#795548', '#ff9800', '#3f51b5'];
+    const randomIndex = Math.floor(Math.random() * avatars.length);
+    setAvatar(avatars[randomIndex], colors[randomIndex]);
 }
 
 function setAccentColor(color, el) {
