@@ -2908,7 +2908,7 @@ function createWifiSettings() {
                     Neighbors_Network - Secured 📶
                 </div>
                 <div style="padding: 12px 16px; border-bottom: 1px solid #e0e0e0;">
-                    Coffee_Shop_Free - Open 📶
+                    Coffee_Shop_Free 5Ghz - Open 📶
                 </div>
                 <div style="padding: 12px 16px;">
                     Office_Guest - Secured 📶
