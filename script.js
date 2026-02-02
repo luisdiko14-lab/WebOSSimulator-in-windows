@@ -485,13 +485,26 @@ function restart() {
 function shutdown() {
     playSound('shutdown');
     closeAllWindows();
+    toggleStartMenu(false);
     showScreen('screen-shutdown');
     document.getElementById('shutdown-text').textContent = 'Shutting down...';
-    window.close();
+    
     setTimeout(() => {
-        document.body.style.background = '#000';
-        document.getElementById('screen-shutdown').style.display = 'none';
-    }, 3000);
+        showScreen('screen-off');
+        
+        setTimeout(() => {
+            window.close();
+            
+            if (!window.closed) {
+                document.body.innerHTML = `
+                    <div style="width: 100%; height: 100vh; background: #000; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #333;">
+                        <p style="font-size: 14px; color: #555;">Computer has been shut down</p>
+                        <button onclick="location.reload()" style="margin-top: 20px; padding: 12px 24px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">🔄 Power On</button>
+                    </div>
+                `;
+            }
+        }, 500);
+    }, 5000);
 }
 
 function closeAllWindows() {
