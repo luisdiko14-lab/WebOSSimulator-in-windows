@@ -67,6 +67,10 @@
     </div>
 
     <div id="screen-login" class="screen">
+        <div class="login-left-panel">
+            <div id="login-user-list"></div>
+            <button class="btn-add-user" onclick="createNewUser()">+ Add User</button>
+        </div>
         <div class="login-container">
             <div class="user-avatar">
                 <svg width="100" height="100" viewBox="0 0 100 100">
@@ -82,7 +86,7 @@
             </div>
             <div class="login-error" id="login-error"></div>
             <div class="login-options">
-                <button class="btn-text" onclick="switchUser()">Sign in to a different account</button>
+                <button class="btn-text" onclick="switchUser()">Sign in options</button>
             </div>
         </div>
     </div>
@@ -220,6 +224,14 @@
                             <div class="app-item" onclick="openApp('store'); toggleStartMenu()">
                                 <span class="app-icon">🛍️</span>
                                 <span>Microsoft Store</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('music'); toggleStartMenu()">
+                                <span class="app-icon">🎵</span>
+                                <span>Groove Music</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('solitaire'); toggleStartMenu()">
+                                <span class="app-icon">🃏</span>
+                                <span>Solitaire</span>
                             </div>
                         </div>
                     </div>

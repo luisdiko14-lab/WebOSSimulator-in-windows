@@ -1,12 +1,16 @@
 let currentSetupStep = 0;
-let userData = {
-    username: 'User',
-    password: '',
-    email: '',
-    accountType: 'local',
-    selectedDrive: -1,
-    wifiNetwork: ''
-};
+let users = [
+    {
+        username: 'User',
+        password: '',
+        email: '',
+        avatar: '👤',
+        avatarColor: '#0078d4',
+        accountType: 'local'
+    }
+];
+let currentUserIndex = 0;
+let userData = users[0];
 let openWindows = [];
 let nextWindowZ = 100;
 let calculatorDisplay = '0';
@@ -276,23 +280,24 @@ function updateLockTime() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const savedUsers = localStorage.getItem('windowsUsers');
+    if (savedUsers) {
+        users = JSON.parse(savedUsers);
+        userData = users[0];
+    }
+    
     const savedUserData = localStorage.getItem('windowsUserData');
-    if (!savedUserData) {
+    if (!savedUserData && !savedUsers) {
         window.location.href = 'setup_1.html';
         return;
     }
-    
-    const parsed = JSON.parse(savedUserData);
-    userData.username = parsed.username || 'User';
-    userData.password = parsed.password || '';
-    userData.email = parsed.email || '';
-    userData.accountType = parsed.accountType || 'local';
     
     startBootSequence();
     
     document.getElementById('screen-lock')?.addEventListener('click', () => {
         showScreen('screen-login');
         document.getElementById('login-username').textContent = userData.username;
+        renderUserList();
     });
     
     document.getElementById('login-password')?.addEventListener('keypress', (e) => {
@@ -564,7 +569,9 @@ function createWindow(appName) {
         maps: { title: '🗺️ Maps', content: createMaps() },
         store: { title: '🛍️ Microsoft Store', content: createStore() },
         wifi: { title: '📶 Network & Internet', content: createWifiSettings() },
-        defender: { title: '🛡️ Windows Security', content: createDefender() }
+        defender: { title: '🛡️ Windows Security', content: createDefender() },
+        music: { title: '🎵 Groove Music', content: createMusicPlayer() },
+        solitaire: { title: '🃏 Solitaire', content: createSolitaire() }
     };
     
     const appData = apps[appName] || { title: 'Window', content: '<p>App content</p>' };
@@ -2345,6 +2352,42 @@ function createMaps() {
 }
 
 // Microsoft Store App
+function createMusicPlayer() {
+    return `
+        <div style="padding: 20px; background: #111; color: white; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="font-size: 80px; margin-bottom: 20px;">🎵</div>
+            <h3>Now Playing</h3>
+            <p style="color: #888;">Windows 10 Remix.mp3</p>
+            <div style="width: 100%; height: 4px; background: #333; margin: 20px 0; border-radius: 2px;">
+                <div style="width: 45%; height: 100%; background: #0078d4; border-radius: 2px;"></div>
+            </div>
+            <div style="display: flex; gap: 20px; font-size: 24px;">
+                <span>⏮️</span>
+                <span style="font-size: 32px;">⏸️</span>
+                <span>⏭️</span>
+            </div>
+        </div>
+    `;
+}
+
+function createSolitaire() {
+    return `
+        <div style="padding: 20px; background: #0e4e2c; height: 100%; color: white;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                <div>Score: 1250</div>
+                <div>Time: 04:23</div>
+            </div>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <div style="width: 80px; height: 120px; background: white; border-radius: 5px; border: 1px solid #ccc; color: red; padding: 5px;">A ❤️</div>
+                <div style="width: 80px; height: 120px; background: white; border-radius: 5px; border: 1px solid #ccc; color: black; padding: 5px;">K ♠️</div>
+                <div style="width: 80px; height: 120px; background: white; border-radius: 5px; border: 1px solid #ccc; color: red; padding: 5px;">Q ♦️</div>
+                <div style="width: 80px; height: 120px; background: white; border-radius: 5px; border: 1px solid #ccc; color: black; padding: 5px;">J ♣️</div>
+            </div>
+            <div style="margin-top: 50px; text-align: center; opacity: 0.5;">[ Game in Progress ]</div>
+        </div>
+    `;
+}
+
 function createStore() {
     const apps = [
         { icon: '🎮', name: 'Xbox', rating: '★★★★☆' },
@@ -2534,6 +2577,7 @@ function updateUsername() {
     const newUsername = document.getElementById('edit-username').value.trim();
     if (newUsername && newUsername.length >= 2) {
         userData.username = newUsername;
+        users[currentUserIndex].username = newUsername;
         
         const displayUsername = document.getElementById('display-username');
         if (displayUsername) displayUsername.textContent = newUsername;
@@ -2546,6 +2590,7 @@ function updateUsername() {
         
         document.querySelectorAll('.start-user-name').forEach(el => el.textContent = newUsername);
         
+        saveUsers();
         playSound('notification');
         alert('Username updated successfully!');
     } else {
@@ -2553,39 +2598,59 @@ function updateUsername() {
     }
 }
 
-function updatePassword() {
-    const currentPw = document.getElementById('current-password').value;
-    const newPw = document.getElementById('new-password').value;
-    const confirmPw = document.getElementById('confirm-password').value;
+function saveUsers() {
+    localStorage.setItem('windowsUsers', JSON.stringify(users));
+}
+
+function createNewUser() {
+    const name = prompt('Enter new username:');
+    if (!name) return;
+    const password = prompt('Enter password:');
     
-    if (currentPw !== userData.password) {
-        alert('Current password is incorrect');
-        playSound('error');
-        return;
+    const newUser = {
+        username: name,
+        password: password || '',
+        email: '',
+        avatar: '👤',
+        avatarColor: '#' + Math.floor(Math.random()*16777215).toString(16),
+        accountType: 'local'
+    };
+    
+    users.push(newUser);
+    saveUsers();
+    alert('User created! You can switch from the login screen.');
+    renderUserList();
+}
+
+function renderUserList() {
+    const container = document.getElementById('login-user-list');
+    if (!container) return;
+    
+    container.innerHTML = users.map((user, index) => `
+        <div class="user-item ${index === currentUserIndex ? 'active' : ''}" onclick="selectLoginUser(${index})">
+            <div class="user-avatar-small" style="background: ${user.avatarColor}">${user.avatar}</div>
+            <div class="user-name-small">${user.username}</div>
+        </div>
+    `).join('');
+}
+
+function selectLoginUser(index) {
+    currentUserIndex = index;
+    userData = users[index];
+    document.getElementById('login-username').textContent = userData.username;
+    const loginAvatar = document.querySelector('#screen-login .user-avatar');
+    if (loginAvatar) {
+        loginAvatar.style.background = userData.avatarColor;
+        loginAvatar.innerHTML = `<span style="font-size: 50px">${userData.avatar}</span>`;
     }
-    
-    if (newPw.length < 4) {
-        alert('New password must be at least 4 characters');
-        return;
-    }
-    
-    if (newPw !== confirmPw) {
-        alert('New passwords do not match');
-        return;
-    }
-    
-    userData.password = newPw;
-    document.getElementById('current-password').value = '';
-    document.getElementById('new-password').value = '';
-    document.getElementById('confirm-password').value = '';
-    
-    playSound('notification');
-    alert('Password updated successfully!');
+    renderUserList();
 }
 
 function setAvatar(emoji, color) {
     userData.avatar = emoji;
     userData.avatarColor = color;
+    users[currentUserIndex].avatar = emoji;
+    users[currentUserIndex].avatarColor = color;
     
     const accountAvatar = document.getElementById('account-avatar');
     if (accountAvatar) {
@@ -2604,6 +2669,7 @@ function setAvatar(emoji, color) {
         lockAvatar.style.background = color;
     }
     
+    saveUsers();
     playSound('notification');
 }
 
@@ -2616,6 +2682,7 @@ function setCustomAvatar() {
     
     userData.avatar = '';
     userData.avatarUrl = url;
+    users[currentUserIndex].avatarUrl = url;
     
     const avatarStyle = `background: url('${url}') center/cover no-repeat;`;
     
@@ -2625,6 +2692,7 @@ function setCustomAvatar() {
         accountAvatar.style.cssText = `width: 100px; height: 100px; border-radius: 50%; ${avatarStyle} border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);`;
     }
     
+    saveUsers();
     playSound('notification');
 }
 
