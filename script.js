@@ -592,6 +592,10 @@ function createWindow(appName) {
     
     document.getElementById('windows-container').appendChild(windowEl);
     
+    if (appName === 'paint') {
+        setTimeout(setupPaint, 100);
+    }
+    
     windowEl.addEventListener('mousedown', () => focusWindow({ appName, element: windowEl }));
     
     makeDraggable(windowEl);
@@ -2388,7 +2392,84 @@ function createSolitaire() {
     `;
 }
 
-function createStore() {
+function createPaint() {
+    return `
+        <div class="paint-app" style="height: 100%; display: flex; flex-direction: column; background: #f0f0f0;">
+            <div class="paint-toolbar" style="padding: 10px; background: white; border-bottom: 1px solid #ccc; display: flex; gap: 15px; align-items: center;">
+                <div class="paint-tool-group" style="display: flex; gap: 5px;">
+                    <button onclick="setPaintTool('brush')" style="padding: 5px 10px; cursor: pointer;">🖌️</button>
+                    <button onclick="setPaintTool('eraser')" style="padding: 5px 10px; cursor: pointer;">🧽</button>
+                    <button onclick="clearCanvas()" style="padding: 5px 10px; cursor: pointer;">🗑️</button>
+                </div>
+                <div class="paint-color-group" style="display: flex; gap: 5px;">
+                    <div onclick="setPaintColor('#000000')" style="width: 20px; height: 20px; background: black; cursor: pointer; border: 1px solid #999;"></div>
+                    <div onclick="setPaintColor('#ff0000')" style="width: 20px; height: 20px; background: red; cursor: pointer; border: 1px solid #999;"></div>
+                    <div onclick="setPaintColor('#0000ff')" style="width: 20px; height: 20px; background: blue; cursor: pointer; border: 1px solid #999;"></div>
+                    <div onclick="setPaintColor('#008000')" style="width: 20px; height: 20px; background: green; cursor: pointer; border: 1px solid #999;"></div>
+                </div>
+                <input type="range" min="1" max="20" value="5" onchange="setPaintSize(this.value)" title="Brush Size">
+            </div>
+            <div class="paint-canvas-container" style="flex: 1; overflow: auto; padding: 20px; background: #adb5bd; display: flex; justify-content: center; align-items: center;">
+                <canvas id="paint-canvas" width="800" height="600" style="background: white; box-shadow: 0 0 10px rgba(0,0,0,0.2); cursor: crosshair;"></canvas>
+            </div>
+        </div>
+    `;
+}
+
+let paintColor = '#000000';
+let paintSize = 5;
+let isDrawing = false;
+let paintTool = 'brush';
+
+function setupPaint() {
+    const canvas = document.getElementById('paint-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    canvas.onmousedown = (e) => {
+        isDrawing = true;
+        ctx.beginPath();
+        ctx.moveTo(e.offsetX, e.offsetY);
+    };
+    
+    canvas.onmousemove = (e) => {
+        if (!isDrawing) return;
+        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.strokeStyle = paintTool === 'eraser' ? '#ffffff' : paintColor;
+        ctx.lineWidth = paintSize;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+    };
+    
+    canvas.onmouseup = () => isDrawing = false;
+    canvas.onmouseleave = () => isDrawing = false;
+}
+
+function setPaintTool(tool) { paintTool = tool; }
+function setPaintColor(color) { paintColor = color; paintTool = 'brush'; }
+function setPaintSize(size) { paintSize = size; }
+function clearCanvas() {
+    const canvas = document.getElementById('paint-canvas');
+    if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function createWeather() {
+    return `
+        <div style="height: 100%; background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 10px;">New York, NY</div>
+            <div style="font-size: 72px; font-weight: 300; margin: 20px 0;">72°</div>
+            <div style="font-size: 80px; margin-bottom: 20px;">🌤️</div>
+            <div style="font-size: 20px;">Partly Cloudy</div>
+            <div style="margin-top: 40px; display: flex; justify-content: space-around; background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px;">
+                <div>Mon<br>☀️<br>75°</div>
+                <div>Tue<br>⛅<br>70°</div>
+                <div>Wed<br>🌧️<br>65°</div>
+                <div>Thu<br>☁️<br>68°</div>
+                <div>Fri<br>☀️<br>74°</div>
+            </div>
+        </div>
+    `;
+}
     const apps = [
         { icon: '🎮', name: 'Xbox', rating: '★★★★☆' },
         { icon: '🎵', name: 'Spotify', rating: '★★★★★' },
