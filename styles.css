@@ -1946,27 +1946,78 @@ body {
     background: #2d2d2d;
 }
 
+/* Photos App Styling */
+.photos-app {
+    color: white;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
 .photos-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 4px;
-    padding: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 15px;
+    padding: 20px;
     flex: 1;
     overflow-y: auto;
 }
 
 .photo-item {
     aspect-ratio: 1;
-    background: linear-gradient(45deg, #667eea, #764ba2);
-    cursor: pointer;
+    background: #222;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
+    font-size: 40px;
+    cursor: pointer;
+    transition: 0.2s;
 }
 
 .photo-item:hover {
-    opacity: 0.8;
+    background: #333;
+    transform: scale(1.05);
+}
+
+/* Camera App Styling */
+.camera-app {
+    height: 100%;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    position: relative;
+}
+
+#camera-stream {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.camera-controls {
+    position: absolute;
+    bottom: 30px;
+    display: flex;
+    gap: 20px;
+}
+
+.camera-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 5px solid white;
+    background: rgba(255,255,255,0.2);
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.camera-btn:hover {
+    background: rgba(255,255,255,0.4);
+    transform: scale(1.1);
 }
 
 /* Calendar App */
@@ -1986,23 +2037,49 @@ body {
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
+    gap: 15px;
+    padding: 10px;
 }
 
 .calendar-day {
-    padding: 10px;
-    text-align: center;
-    border-radius: 4px;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
+    border-radius: 2px;
 }
 
 .calendar-day:hover {
-    background: #e3f2fd;
+    background: #f0f0f0;
+}
+
+.calendar-day.header {
+    font-weight: bold;
+    color: #666;
+    cursor: default;
 }
 
 .calendar-day.today {
     background: #0078d4;
     color: white;
+}
+
+.calendar-day.today:hover {
+    background: #006cc1;
+}
+
+.calendar-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 2px;
+}
+
+.calendar-day:hover {
+    background: #f0f0f0;
 }
 
 .calendar-day.header {

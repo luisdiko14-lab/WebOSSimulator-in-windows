@@ -282,21 +282,43 @@ function updateLockTime() {
 document.addEventListener('DOMContentLoaded', () => {
     const savedUsers = localStorage.getItem('windowsUsers');
     if (savedUsers) {
-        users = JSON.parse(savedUsers);
-        userData = users[0];
+        try {
+            users = JSON.parse(savedUsers);
+            userData = users[0];
+        } catch (e) {
+            console.error('Error parsing users:', e);
+        }
     }
     
     const savedUserData = localStorage.getItem('windowsUserData');
     if (!savedUserData && !savedUsers) {
-        window.location.href = 'setup_1.html';
-        return;
+        // Only redirect if we're not already on a setup page
+        if (!window.location.pathname.includes('setup')) {
+            window.location.href = 'setup_1.html';
+            return;
+        }
+    }
+    
+    // Ensure we have at least one user
+    if (!users || users.length === 0) {
+        users = [{
+            username: 'User',
+            password: '',
+            email: '',
+            avatar: '👤',
+            avatarColor: '#0078d4',
+            accountType: 'local'
+        }];
+        userData = users[0];
     }
     
     startBootSequence();
     
     document.getElementById('screen-lock')?.addEventListener('click', () => {
         showScreen('screen-login');
-        document.getElementById('login-username').textContent = userData.username;
+        if (userData) {
+            document.getElementById('login-username').textContent = userData.username;
+        }
         renderUserList();
     });
     
@@ -356,29 +378,42 @@ function playSound(soundName) {
 }
 
 function startBootSequence() {
-    playSound('boot');
-    
+    console.log('Boot sequence started');
     const bootStatus = document.getElementById('boot-status');
     const bootMessages = [
         'Loading Windows...',
         'Starting services...',
-        'Loading system files...'
+        'Loading system files...',
+        'Starting desktop environment...'
     ];
     
     let messageIndex = 0;
-    const messageInterval = setInterval(() => {
+    if (window.bootInterval) clearInterval(window.bootInterval);
+
+    // Immediate first message
+    if (bootStatus) bootStatus.textContent = bootMessages[0];
+
+    window.bootInterval = setInterval(() => {
         messageIndex++;
         if (messageIndex < bootMessages.length) {
             if (bootStatus) bootStatus.textContent = bootMessages[messageIndex];
+        } else {
+            clearInterval(window.bootInterval);
+            showScreen('screen-lock');
+            updateLockTime();
+            playSound('startup');
         }
-    }, 800);
-    
+    }, 1000);
+
+    // Safety fallback
     setTimeout(() => {
-        clearInterval(messageInterval);
-        showScreen('screen-lock');
-        updateLockTime();
-        playSound('startup');
-    }, 2500);
+        if (document.getElementById('screen-boot').classList.contains('active')) {
+            console.log('Boot safety trigger');
+            clearInterval(window.bootInterval);
+            showScreen('screen-lock');
+            updateLockTime();
+        }
+    }, 6000);
 }
 
 function startLoginSequence() {
@@ -401,7 +436,22 @@ function startLoginSequence() {
     
     setTimeout(() => {
         showScreen('screen-desktop');
-        document.getElementById('start-username').textContent = userData.username;
+        
+        // Update Desktop Profile Info
+        const startUsernameEl = document.getElementById('start-username');
+        if (startUsernameEl) startUsernameEl.textContent = userData.username;
+        
+        const startAvatarEl = document.querySelector('.start-avatar');
+        if (startAvatarEl) {
+            if (userData.avatarUrl) {
+                startAvatarEl.innerHTML = '';
+                startAvatarEl.style.background = `url('${userData.avatarUrl}') center/cover no-repeat`;
+            } else {
+                startAvatarEl.innerHTML = userData.avatar || '👤';
+                startAvatarEl.style.background = userData.avatarColor || '#0078d4';
+            }
+        }
+        
         playSound('notification');
     }, 5000);
 }
@@ -1928,6 +1978,7 @@ function executeCMDCommand(cmd) {
   whoami    - Display current user
   hostname  - Display computer name
   ver       - Display Windows version
+  ping      - Test network connection
   color     - Change console colors (0-9, a-f)
   title     - Change window title
   exit      - Close command prompt`;
@@ -1960,54 +2011,47 @@ function executeCMDCommand(cmd) {
             return 'DESKTOP-WIN10SIM';
         case 'ver':
             return 'Microsoft Windows [Version 10.0.19045.3803]';
+        case 'ping':
+            if (parts.length < 2) return 'Usage: ping <host>';
+            const host = parts[1];
+            return `Pinging ${host} with 32 bytes of data:
+Reply from ${host}: bytes=32 time=12ms TTL=54
+Reply from ${host}: bytes=32 time=15ms TTL=54
+Reply from ${host}: bytes=32 time=14ms TTL=54
+Reply from ${host}: bytes=32 time=11ms TTL=54
+
+Ping statistics for ${host}:
+    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss),
+Approximate round trip times in milli-seconds:
+    Minimum = 11ms, Maximum = 15ms, Average = 13ms`;
         case 'exit':
             closeWindow('cmd');
             return '';
         case 'color':
             const colors = {'0':'#000','1':'#000080','2':'#008000','3':'#008080','4':'#800000','5':'#800080','6':'#808000','7':'#c0c0c0','8':'#808080','9':'#0000ff','a':'#00ff00','b':'#00ffff','c':'#ff0000','d':'#ff00ff','e':'#ffff00','f':'#fff'};
             if (parts[1] && parts[1].length === 2) {
-                const bg = colors[parts[1][0]] || '#0c0c0c';
-                const fg = colors[parts[1][1]] || '#cccccc';
-                document.querySelector('.cmd-window').style.background = bg;
-                document.querySelector('.cmd-window').style.color = fg;
+                const bg = colors[parts[1][0]];
+                const fg = colors[parts[1][1]];
+                if (bg && fg) {
+                    const win = document.getElementById('window-content-cmd');
+                    if (win) {
+                        win.style.backgroundColor = bg;
+                        win.style.color = fg;
+                    }
+                    return '';
+                }
             }
-            return '';
+            return 'Invalid color attribute';
         case 'title':
-            return '';
-        case 'ipconfig':
-            return `Windows IP Configuration
-
-Ethernet adapter Ethernet:
-
-   Connection-specific DNS Suffix  . : 
-   IPv4 Address. . . . . . . . . . . : 192.168.1.${Math.floor(Math.random()*200)+10}
-   Subnet Mask . . . . . . . . . . . : 255.255.255.0
-   Default Gateway . . . . . . . . . : 192.168.1.1`;
-        case 'ping':
-            if (parts[1]) {
-                return `Pinging ${parts[1]} with 32 bytes of data:
-Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*50)+10}ms TTL=64
-Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*50)+10}ms TTL=64
-Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*50)+10}ms TTL=64
-Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*50)+10}ms TTL=64
-
-Ping statistics for ${parts[1]}:
-    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss)`;
+            const title = parts.slice(1).join(' ');
+            if (title) {
+                const win = document.querySelector('.window[data-app="cmd"] .window-title');
+                if (win) win.textContent = title;
+                return '';
             }
-            return 'Usage: ping <hostname>';
-        case 'systeminfo':
-            return `Host Name:                 DESKTOP-WIN10SIM
-OS Name:                   Microsoft Windows 10 Pro
-OS Version:                10.0.19045 Build 19045
-System Manufacturer:       Replit
-System Model:              Virtual Machine
-Processor(s):              1 Processor(s) Installed.
-Total Physical Memory:     8,192 MB
-Available Physical Memory: 4,096 MB`;
+            return 'Usage: title <string>';
         default:
-            if (command) return `'${command}' is not recognized as an internal or external command,
-operable program or batch file.`;
-            return '';
+            return `'${command}' is not recognized as an internal or external command, operable program or batch file.`;
     }
 }
 
@@ -2272,14 +2316,47 @@ document.addEventListener('click', (e) => {
 
 // Photos App
 function createPhotos() {
-    const photos = ['🌅', '🏔️', '🌊', '🌸', '🌆', '🎨', '🌈', '🦋', '🌺', '🍂', '⭐', '🌙'];
+    const images = [
+        'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=400&q=80',
+        'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=400&q=80',
+        'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=400&q=80',
+        'https://images.unsplash.com/photo-1433086966358-54859d0ed716?auto=format&fit=crop&w=400&q=80'
+    ];
     return `
-        <div class="photos-app">
-            <div class="photos-header">
-                <h2>📷 Collection</h2>
+        <div class="photos-app" style="height: 100%; background: #111; padding: 20px; overflow-y: auto;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px;">
+                ${images.map(src => `<img src="${src}" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; cursor: pointer; transition: 0.2s;" onclick="openImageFullScreen('${src}')">`).join('')}
             </div>
-            <div class="photos-grid">
-                ${photos.map(p => `<div class="photo-item">${p}</div>`).join('')}
+        </div>
+    `;
+}
+
+function openImageFullScreen(src) {
+    const viewer = document.createElement('div');
+    viewer.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100000; display: flex; align-items: center; justify-content: center; cursor: pointer;';
+    viewer.innerHTML = `<img src="${src}" style="max-width: 90%; max-height: 90%; box-shadow: 0 0 30px rgba(0,0,0,0.5);">`;
+    viewer.onclick = () => viewer.remove();
+    document.body.appendChild(viewer);
+}
+
+function createCamera() {
+    setTimeout(() => {
+        const video = document.getElementById('camera-stream');
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => { video.srcObject = stream; })
+                .catch(err => {
+                    const errEl = document.getElementById('camera-error');
+                    if (errEl) errEl.textContent = 'Camera not found or access denied.';
+                });
+        }
+    }, 100);
+    return `
+        <div style="height: 100%; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; position: relative;">
+            <video id="camera-stream" autoplay style="width: 100%; height: 100%; object-fit: cover;"></video>
+            <div id="camera-error" style="position: absolute; color: white; text-align: center; padding: 20px;"></div>
+            <div style="position: absolute; bottom: 30px; display: flex; gap: 20px;">
+                <button onclick="alert('Photo saved to Pictures!')" style="width: 60px; height: 60px; border-radius: 50%; border: 5px solid white; background: transparent; cursor: pointer;"></button>
             </div>
         </div>
     `;

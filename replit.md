@@ -55,11 +55,13 @@ Preferred communication style: Simple, everyday language.
 
 ### Applications
 - Calculator, Notepad, File Explorer, Settings, Task Manager
-- Edge browser, Command Prompt (with working commands)
+- Edge browser, Command Prompt (with ping, color, title commands)
 - Paint (drawing app), Weather, Snipping Tool
-- Photos, Calendar, Clock, Maps, Microsoft Store
+- Photos (with Unsplash images), Camera (requires webcam), Calendar, Clock
+- Maps, Microsoft Store, Solitaire, Groove Music
 - Network & Internet settings
 - Google Chrome installer with download simulation and functional browser
+- Ransomware and BSOD simulations for educational/demonstration purposes
 
 ### Boot Sequence
 - Multi-stage boot: Boot screen → Lock screen → Login → "Logging in" → "Getting ready" → Desktop
