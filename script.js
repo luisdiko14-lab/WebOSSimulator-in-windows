@@ -267,18 +267,6 @@ function showScreen(screenId) {
     document.getElementById(screenId).classList.add('active');
 }
 
-function updateLockTime() {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-    const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-    
-    const lockTime = document.getElementById('lock-time');
-    const lockDate = document.getElementById('lock-date');
-    
-    if (lockTime) lockTime.textContent = timeStr;
-    if (lockDate) lockDate.textContent = dateStr;
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     const savedUsers = localStorage.getItem('windowsUsers');
     if (savedUsers) {
@@ -389,6 +377,7 @@ function startBootSequence() {
     
     let messageIndex = 0;
     if (window.bootInterval) clearInterval(window.bootInterval);
+    if (window.bootTimeout) clearTimeout(window.bootTimeout);
 
     // Immediate first message
     if (bootStatus) bootStatus.textContent = bootMessages[0];
@@ -399,21 +388,29 @@ function startBootSequence() {
             if (bootStatus) bootStatus.textContent = bootMessages[messageIndex];
         } else {
             clearInterval(window.bootInterval);
-            showScreen('screen-lock');
-            updateLockTime();
-            playSound('startup');
+            finishBoot();
         }
     }, 1000);
 
     // Safety fallback
-    setTimeout(() => {
-        if (document.getElementById('screen-boot').classList.contains('active')) {
+    window.bootTimeout = setTimeout(() => {
+        const bootScreen = document.getElementById('screen-boot');
+        if (bootScreen && bootScreen.classList.contains('active')) {
             console.log('Boot safety trigger');
             clearInterval(window.bootInterval);
-            showScreen('screen-lock');
-            updateLockTime();
+            finishBoot();
         }
     }, 6000);
+}
+
+function finishBoot() {
+    console.log('Boot finished');
+    if (window.bootInterval) clearInterval(window.bootInterval);
+    if (window.bootTimeout) clearTimeout(window.bootTimeout);
+    
+    showScreen('screen-lock');
+    updateLockTime();
+    playSound('startup');
 }
 
 function startLoginSequence() {
@@ -485,6 +482,12 @@ function updateClock() {
     if (clockElement) {
         clockElement.innerHTML = `${timeStr}<br>${dateStr}`;
     }
+    
+    // Also update lock screen time if it's visible
+    const lockTime = document.getElementById('lock-time');
+    const lockDate = document.getElementById('lock-date');
+    if (lockTime) lockTime.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    if (lockDate) lockDate.textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
 function toggleStartMenu() {
@@ -1902,6 +1905,7 @@ function chromeRefresh() {
 let cmdHistory = [];
 let cmdHistoryIndex = -1;
 
+// Command Prompt Logic
 function createCMD() {
     setTimeout(() => {
         const input = document.getElementById('cmd-input');
@@ -1912,14 +1916,14 @@ function createCMD() {
     }, 100);
     
     return `
-        <div class="cmd-window" onclick="document.getElementById('cmd-input')?.focus()">
+        <div class="cmd-window" id="cmd-container" onclick="document.getElementById('cmd-input')?.focus()">
             <div class="cmd-output" id="cmd-output">Microsoft Windows [Version 10.0.19045.3803]
 (c) Microsoft Corporation. All rights reserved.
 
 </div>
             <div class="cmd-input-line">
                 <span class="cmd-prompt">C:\\Users\\${userData.username}></span>
-                <input type="text" class="cmd-input" id="cmd-input" autofocus>
+                <input type="text" class="cmd-input" id="cmd-input" autofocus autocomplete="off">
             </div>
         </div>
     `;
@@ -1963,7 +1967,7 @@ function handleCMDInput(e) {
 }
 
 function executeCMDCommand(cmd) {
-    const parts = cmd.toLowerCase().split(' ');
+    const parts = cmd.toLowerCase().trim().split(' ');
     const command = parts[0];
     
     switch(command) {
@@ -1979,7 +1983,7 @@ function executeCMDCommand(cmd) {
   hostname  - Display computer name
   ver       - Display Windows version
   ping      - Test network connection
-  color     - Change console colors (0-9, a-f)
+  color     - Change console colors (e.g. color 0a)
   title     - Change window title
   exit      - Close command prompt`;
         case 'dir':
@@ -1997,7 +2001,8 @@ function executeCMDCommand(cmd) {
                0 File(s)              0 bytes
                6 Dir(s)  237,000,000,000 bytes free`;
         case 'cls':
-            document.getElementById('cmd-output').textContent = '';
+            const out = document.getElementById('cmd-output');
+            if (out) out.textContent = '';
             return '';
         case 'echo':
             return parts.slice(1).join(' ');
@@ -2006,38 +2011,34 @@ function executeCMDCommand(cmd) {
         case 'time':
             return `The current time is: ${new Date().toLocaleTimeString()}`;
         case 'whoami':
-            return `${window.location.hostname}\\${userData.username}`;
+            return `DESKTOP-WIN10SIM\\${userData.username}`;
         case 'hostname':
             return 'DESKTOP-WIN10SIM';
         case 'ver':
             return 'Microsoft Windows [Version 10.0.19045.3803]';
         case 'ping':
-            if (parts.length < 2) return 'Usage: ping <host>';
-            const host = parts[1];
-            return `Pinging ${host} with 32 bytes of data:
-Reply from ${host}: bytes=32 time=12ms TTL=54
-Reply from ${host}: bytes=32 time=15ms TTL=54
-Reply from ${host}: bytes=32 time=14ms TTL=54
-Reply from ${host}: bytes=32 time=11ms TTL=54
+            if (!parts[1]) return 'Usage: ping <hostname>';
+            return `Pinging ${parts[1]} with 32 bytes of data:
+Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*20)+5}ms TTL=64
+Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*20)+5}ms TTL=64
+Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*20)+5}ms TTL=64
+Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*20)+5}ms TTL=64
 
-Ping statistics for ${host}:
-    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss),
-Approximate round trip times in milli-seconds:
-    Minimum = 11ms, Maximum = 15ms, Average = 13ms`;
-        case 'exit':
-            closeWindow('cmd');
-            return '';
+Ping statistics for ${parts[1]}:
+    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss)`;
         case 'color':
             const colors = {'0':'#000','1':'#000080','2':'#008000','3':'#008080','4':'#800000','5':'#800080','6':'#808000','7':'#c0c0c0','8':'#808080','9':'#0000ff','a':'#00ff00','b':'#00ffff','c':'#ff0000','d':'#ff00ff','e':'#ffff00','f':'#fff'};
             if (parts[1] && parts[1].length === 2) {
                 const bg = colors[parts[1][0]];
                 const fg = colors[parts[1][1]];
                 if (bg && fg) {
-                    const win = document.getElementById('window-content-cmd');
+                    const win = document.getElementById('cmd-container');
                     if (win) {
                         win.style.backgroundColor = bg;
                         win.style.color = fg;
                     }
+                    const input = document.getElementById('cmd-input');
+                    if (input) input.style.color = fg;
                     return '';
                 }
             }
@@ -2050,6 +2051,9 @@ Approximate round trip times in milli-seconds:
                 return '';
             }
             return 'Usage: title <string>';
+        case 'exit':
+            closeWindow('cmd');
+            return '';
         default:
             return `'${command}' is not recognized as an internal or external command, operable program or batch file.`;
     }
@@ -2065,29 +2069,24 @@ function createPaint() {
     setTimeout(() => initPaintCanvas(), 100);
     
     return `
-        <div class="paint-app">
-            <div class="paint-toolbar">
-                <div class="paint-colors">
-                    <div class="paint-color active" style="background:#000" onclick="setPaintColor('#000', this)"></div>
-                    <div class="paint-color" style="background:#fff" onclick="setPaintColor('#fff', this)"></div>
-                    <div class="paint-color" style="background:#ff0000" onclick="setPaintColor('#ff0000', this)"></div>
-                    <div class="paint-color" style="background:#00ff00" onclick="setPaintColor('#00ff00', this)"></div>
-                    <div class="paint-color" style="background:#0000ff" onclick="setPaintColor('#0000ff', this)"></div>
-                    <div class="paint-color" style="background:#ffff00" onclick="setPaintColor('#ffff00', this)"></div>
-                    <div class="paint-color" style="background:#ff00ff" onclick="setPaintColor('#ff00ff', this)"></div>
-                    <div class="paint-color" style="background:#00ffff" onclick="setPaintColor('#00ffff', this)"></div>
-                    <div class="paint-color" style="background:#ff8000" onclick="setPaintColor('#ff8000', this)"></div>
-                    <div class="paint-color" style="background:#8000ff" onclick="setPaintColor('#8000ff', this)"></div>
+        <div class="paint-app" style="height: 100%; display: flex; flex-direction: column; background: #f0f0f0;">
+            <div class="paint-toolbar" style="padding: 10px; background: white; border-bottom: 1px solid #ccc; display: flex; gap: 15px; align-items: center;">
+                <div class="paint-colors" style="display: flex; gap: 5px;">
+                    <div class="paint-color active" style="width: 20px; height: 20px; background:#000; cursor: pointer; border: 1px solid #999;" onclick="setPaintColor('#000', this)"></div>
+                    <div class="paint-color" style="width: 20px; height: 20px; background:#fff; cursor: pointer; border: 1px solid #999;" onclick="setPaintColor('#fff', this)"></div>
+                    <div class="paint-color" style="width: 20px; height: 20px; background:#ff0000; cursor: pointer; border: 1px solid #999;" onclick="setPaintColor('#ff0000', this)"></div>
+                    <div class="paint-color" style="width: 20px; height: 20px; background:#00ff00; cursor: pointer; border: 1px solid #999;" onclick="setPaintColor('#00ff00', this)"></div>
+                    <div class="paint-color" style="width: 20px; height: 20px; background:#0000ff; cursor: pointer; border: 1px solid #999;" onclick="setPaintColor('#0000ff', this)"></div>
                 </div>
-                <div class="paint-tools">
-                    <button class="paint-tool active" onclick="setPaintTool('brush', this)">🖌️ Brush</button>
-                    <button class="paint-tool" onclick="setPaintTool('eraser', this)">🧹 Eraser</button>
-                    <button class="paint-tool" onclick="clearCanvas()">🗑️ Clear</button>
+                <div class="paint-tools" style="display: flex; gap: 5px;">
+                    <button class="paint-tool active" onclick="setPaintTool('brush', this)" style="padding: 5px 10px; cursor: pointer;">🖌️ Brush</button>
+                    <button class="paint-tool" onclick="setPaintTool('eraser', this)" style="padding: 5px 10px; cursor: pointer;">🧹 Eraser</button>
+                    <button class="paint-tool" onclick="clearCanvas()" style="padding: 5px 10px; cursor: pointer;">🗑️ Clear</button>
                 </div>
-                <label>Size: <input type="range" class="paint-size" min="1" max="50" value="5" onchange="paintSize=this.value"></label>
+                <label style="display: flex; align-items: center; gap: 5px;">Size: <input type="range" class="paint-size" min="1" max="50" value="5" oninput="paintSize=this.value"></label>
             </div>
-            <div class="paint-canvas-container">
-                <canvas id="paint-canvas" class="paint-canvas" width="600" height="400"></canvas>
+            <div class="paint-canvas-container" style="flex: 1; overflow: auto; padding: 20px; background: #adb5bd; display: flex; justify-content: center; align-items: center;">
+                <canvas id="paint-canvas" width="600" height="400" style="background: white; box-shadow: 0 0 10px rgba(0,0,0,0.2); cursor: crosshair;"></canvas>
             </div>
         </div>
     `;
@@ -2113,6 +2112,7 @@ function initPaintCanvas() {
 function draw(e) {
     if (!isDrawing) return;
     const canvas = document.getElementById('paint-canvas');
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const rect = canvas.getBoundingClientRect();
     
@@ -2124,14 +2124,14 @@ function draw(e) {
 
 function setPaintColor(color, el) {
     paintColor = color;
-    document.querySelectorAll('.paint-color').forEach(c => c.classList.remove('active'));
-    el.classList.add('active');
+    document.querySelectorAll('.paint-color').forEach(c => c.style.border = '1px solid #999');
+    if (el) el.style.border = '2px solid #0078d4';
 }
 
 function setPaintTool(tool, el) {
     paintTool = tool;
     document.querySelectorAll('.paint-tool').forEach(t => t.classList.remove('active'));
-    el.classList.add('active');
+    if (el) el.classList.add('active');
 }
 
 function clearCanvas() {
@@ -2469,84 +2469,8 @@ function createSolitaire() {
     `;
 }
 
-function createPaint() {
-    return `
-        <div class="paint-app" style="height: 100%; display: flex; flex-direction: column; background: #f0f0f0;">
-            <div class="paint-toolbar" style="padding: 10px; background: white; border-bottom: 1px solid #ccc; display: flex; gap: 15px; align-items: center;">
-                <div class="paint-tool-group" style="display: flex; gap: 5px;">
-                    <button onclick="setPaintTool('brush')" style="padding: 5px 10px; cursor: pointer;">🖌️</button>
-                    <button onclick="setPaintTool('eraser')" style="padding: 5px 10px; cursor: pointer;">🧽</button>
-                    <button onclick="clearCanvas()" style="padding: 5px 10px; cursor: pointer;">🗑️</button>
-                </div>
-                <div class="paint-color-group" style="display: flex; gap: 5px;">
-                    <div onclick="setPaintColor('#000000')" style="width: 20px; height: 20px; background: black; cursor: pointer; border: 1px solid #999;"></div>
-                    <div onclick="setPaintColor('#ff0000')" style="width: 20px; height: 20px; background: red; cursor: pointer; border: 1px solid #999;"></div>
-                    <div onclick="setPaintColor('#0000ff')" style="width: 20px; height: 20px; background: blue; cursor: pointer; border: 1px solid #999;"></div>
-                    <div onclick="setPaintColor('#008000')" style="width: 20px; height: 20px; background: green; cursor: pointer; border: 1px solid #999;"></div>
-                </div>
-                <input type="range" min="1" max="20" value="5" onchange="setPaintSize(this.value)" title="Brush Size">
-            </div>
-            <div class="paint-canvas-container" style="flex: 1; overflow: auto; padding: 20px; background: #adb5bd; display: flex; justify-content: center; align-items: center;">
-                <canvas id="paint-canvas" width="800" height="600" style="background: white; box-shadow: 0 0 10px rgba(0,0,0,0.2); cursor: crosshair;"></canvas>
-            </div>
-        </div>
-    `;
-}
-
-let paintColor = '#000000';
-let paintSize = 5;
-let isDrawing = false;
-let paintTool = 'brush';
-
-function setupPaint() {
-    const canvas = document.getElementById('paint-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    
-    canvas.onmousedown = (e) => {
-        isDrawing = true;
-        ctx.beginPath();
-        ctx.moveTo(e.offsetX, e.offsetY);
-    };
-    
-    canvas.onmousemove = (e) => {
-        if (!isDrawing) return;
-        ctx.lineTo(e.offsetX, e.offsetY);
-        ctx.strokeStyle = paintTool === 'eraser' ? '#ffffff' : paintColor;
-        ctx.lineWidth = paintSize;
-        ctx.lineCap = 'round';
-        ctx.stroke();
-    };
-    
-    canvas.onmouseup = () => isDrawing = false;
-    canvas.onmouseleave = () => isDrawing = false;
-}
-
-function setPaintTool(tool) { paintTool = tool; }
-function setPaintColor(color) { paintColor = color; paintTool = 'brush'; }
-function setPaintSize(size) { paintSize = size; }
-function clearCanvas() {
-    const canvas = document.getElementById('paint-canvas');
-    if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-}
-
-function createWeather() {
-    return `
-        <div style="height: 100%; background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center;">
-            <div style="font-size: 24px; margin-bottom: 10px;">New York, NY</div>
-            <div style="font-size: 72px; font-weight: 300; margin: 20px 0;">72°</div>
-            <div style="font-size: 80px; margin-bottom: 20px;">🌤️</div>
-            <div style="font-size: 20px;">Partly Cloudy</div>
-            <div style="margin-top: 40px; display: flex; justify-content: space-around; background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px;">
-                <div>Mon<br>☀️<br>75°</div>
-                <div>Tue<br>⛅<br>70°</div>
-                <div>Wed<br>🌧️<br>65°</div>
-                <div>Thu<br>☁️<br>68°</div>
-                <div>Fri<br>☀️<br>74°</div>
-            </div>
-        </div>
-    `;
-}
+// Weather App
+function createStore() {
     const apps = [
         { icon: '🎮', name: 'Xbox', rating: '★★★★☆' },
         { icon: '🎵', name: 'Spotify', rating: '★★★★★' },
