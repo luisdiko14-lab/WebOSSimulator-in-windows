@@ -8,6 +8,7 @@ This is a web-based Windows 10 simulator that recreates the complete Windows ins
 - **Paint App**: Fixed duplicate `paintColor` declaration and improved drawing logic with `paintIsDrawing` flag.
 - **Login System**: Restored login functionality, added multi-user selection support, and fixed password validation.
 - **UI & Cleanup**: Updated login screen UI, removed duplicate `S.js`, and unified clock/lock-screen time logic.
+- **Setup Flow**: Verified setup redirection and persistence between `setup_1.html`, `setup_2.html`, and the main desktop.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
