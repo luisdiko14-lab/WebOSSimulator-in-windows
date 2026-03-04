@@ -263,8 +263,15 @@ function startInstallation() {
 }
 
 function showScreen(screenId) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(screenId).classList.add('active');
+    document.querySelectorAll('.screen').forEach(s => {
+        s.classList.remove('active');
+        s.style.display = 'none';
+    });
+    const target = document.getElementById(screenId);
+    if (target) {
+        target.classList.add('active');
+        target.style.display = 'flex';
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -632,7 +639,8 @@ function createWindow(appName) {
         wifi: { title: '📶 Network & Internet', content: createWifiSettings() },
         defender: { title: '🛡️ Windows Security', content: createDefender() },
         music: { title: '🎵 Groove Music', content: createMusicPlayer() },
-        solitaire: { title: '🃏 Solitaire', content: createSolitaire() }
+        solitaire: { title: '🃏 Solitaire', content: createSolitaire() },
+        discord: { title: '💬 Discord', content: createDiscordApp() }
     };
     
     const appData = apps[appName] || { title: 'Window', content: '<p>App content</p>' };
@@ -3078,4 +3086,92 @@ function createWifiSettings() {
             </div>
         </div>
     `;
+}
+
+function createDiscordApp() {
+    const clientId = "YOUR_DISCORD_CLIENT_ID";
+    const redirectUri = encodeURIComponent(window.location.origin + '/api/auth/callback');
+    const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=identify%20guilds`;
+    
+    return `
+        <div style="height: 100%; display: flex; flex-direction: column; background: #36393f; color: white; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+            <div style="padding: 20px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <div style="font-size: 64px; margin-bottom: 20px;">💬</div>
+                <h2 style="margin-bottom: 10px;">Welcome to Discord</h2>
+                <p style="color: #b9bbbe; margin-bottom: 30px;">Login to see your servers and profile.</p>
+                <button onclick="window.open('${authUrl}', '_blank')" style="padding: 12px 24px; background: #5865f2; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background 0.2s;">
+                    Login with Discord
+                </button>
+                <div id="discord-profile" style="margin-top: 30px; display: none; width: 100%; text-align: left; background: #2f3136; padding: 15px; border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <img id="discord-avatar" src="" style="width: 50px; height: 50px; border-radius: 50%;">
+                        <div>
+                            <div id="discord-username" style="font-weight: bold; font-size: 18px;"></div>
+                            <div id="discord-id" style="color: #b9bbbe; font-size: 12px;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <div style="font-weight: bold; margin-bottom: 8px; font-size: 14px; text-transform: uppercase; color: #8e9297;">Servers</div>
+                        <div id="discord-guilds" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+async function handleDiscordCallback() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (!code) return;
+
+    // In a real app, this would be a server-side exchange
+    // Since we are frontend-only, we simulate the flow
+    console.log("Discord Auth Code received:", code);
+    
+    // Clear the URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    // Show loading in Discord app if open
+    const discordProfile = document.getElementById('discord-profile');
+    if (discordProfile) {
+        discordProfile.style.display = 'block';
+        discordProfile.innerHTML = '<p>Loading profile...</p>';
+    }
+
+    // Mock data for simulation
+    setTimeout(() => {
+        const mockUser = {
+            username: "ReplitUser",
+            id: "123456789",
+            avatar: "https://cdn.discordapp.com/embed/avatars/0.png"
+        };
+        const mockGuilds = [
+            { name: "Replit Community", icon: "🌐" },
+            { name: "Windows 10 Sim Fans", icon: "💻" }
+        ];
+
+        if (discordProfile) {
+            discordProfile.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <img src="${mockUser.avatar}" style="width: 50px; height: 50px; border-radius: 50%;">
+                    <div>
+                        <div style="font-weight: bold; font-size: 18px;">${mockUser.username}</div>
+                        <div id="discord-id" style="color: #b9bbbe; font-size: 12px;">ID: ${mockUser.id}</div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <div style="font-weight: bold; margin-bottom: 8px; font-size: 14px; text-transform: uppercase; color: #8e9297;">Servers</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        ${mockGuilds.map(g => `<div title="${g.name}" style="width: 40px; height: 40px; background: #36393f; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer;">${g.icon}</div>`).join('')}
+                    </div>
+                </div>
+            `;
+        }
+    }, 1500);
+}
+
+// Add to checkUrlParams or DOMContentLoaded
+if (window.location.search.includes('code=')) {
+    handleDiscordCallback();
 }
