@@ -310,9 +310,12 @@ document.addEventListener('DOMContentLoaded', () => {
         renderUserList();
     });
     
-    document.getElementById('login-password')?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') attemptLogin();
-    });
+    const loginPasswordInput = document.getElementById('login-password');
+    if (loginPasswordInput) {
+        loginPasswordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') attemptLogin();
+        });
+    }
     
     updateClock();
     setInterval(updateClock, 1000);
@@ -454,16 +457,17 @@ function startLoginSequence() {
 }
 
 function attemptLogin() {
-    const enteredPassword = document.getElementById('login-password').value;
+    const passwordInput = document.getElementById('login-password');
+    const enteredPassword = passwordInput.value;
     const errorElement = document.getElementById('login-error');
     
     if (enteredPassword === userData.password) {
-        document.getElementById('login-password').value = '';
-        errorElement.textContent = '';
+        passwordInput.value = '';
+        if (errorElement) errorElement.textContent = '';
         startLoginSequence();
     } else {
-        errorElement.textContent = 'Incorrect password. Please try again.';
-        document.getElementById('login-password').value = '';
+        if (errorElement) errorElement.textContent = 'Incorrect password. Please try again.';
+        passwordInput.value = '';
         playSound('error');
     }
 }
@@ -488,6 +492,10 @@ function updateClock() {
     const lockDate = document.getElementById('lock-date');
     if (lockTime) lockTime.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
     if (lockDate) lockDate.textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+function updateLockTime() {
+    updateClock();
 }
 
 function toggleStartMenu() {
@@ -2100,26 +2108,25 @@ function initPaintCanvas() {
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    canvas.addEventListener('mousedown', (e) => {
-        isDrawing = true;
-        draw(e);
-    });
-    canvas.addEventListener('mousemove', draw);
-    canvas.addEventListener('mouseup', () => isDrawing = false);
-    canvas.addEventListener('mouseout', () => isDrawing = false);
-}
+    let paintIsDrawing = false;
 
-function draw(e) {
-    if (!isDrawing) return;
-    const canvas = document.getElementById('paint-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
-    
-    ctx.beginPath();
-    ctx.arc(e.clientX - rect.left, e.clientY - rect.top, paintSize/2, 0, Math.PI * 2);
-    ctx.fillStyle = paintTool === 'eraser' ? 'white' : paintColor;
-    ctx.fill();
+    canvas.addEventListener('mousedown', (e) => {
+        paintIsDrawing = true;
+        drawPaint(e);
+    });
+    canvas.addEventListener('mousemove', drawPaint);
+    canvas.addEventListener('mouseup', () => paintIsDrawing = false);
+    canvas.addEventListener('mouseout', () => paintIsDrawing = false);
+
+    function drawPaint(e) {
+        if (!paintIsDrawing) return;
+        const rect = canvas.getBoundingClientRect();
+        
+        ctx.beginPath();
+        ctx.arc(e.clientX - rect.left, e.clientY - rect.top, paintSize/2, 0, Math.PI * 2);
+        ctx.fillStyle = paintTool === 'eraser' ? 'white' : paintColor;
+        ctx.fill();
+    }
 }
 
 function setPaintColor(color, el) {
@@ -2720,10 +2727,15 @@ function selectLoginUser(index) {
     currentUserIndex = index;
     userData = users[index];
     document.getElementById('login-username').textContent = userData.username;
-    const loginAvatar = document.querySelector('#screen-login .user-avatar');
+    const loginAvatar = document.getElementById('login-avatar-container');
     if (loginAvatar) {
-        loginAvatar.style.background = userData.avatarColor;
-        loginAvatar.innerHTML = `<span style="font-size: 50px">${userData.avatar}</span>`;
+        if (userData.avatarUrl) {
+            loginAvatar.innerHTML = '';
+            loginAvatar.style.background = `url('${userData.avatarUrl}') center/cover no-repeat`;
+        } else {
+            loginAvatar.style.background = userData.avatarColor || '#0078d4';
+            loginAvatar.innerHTML = userData.avatar || '👤';
+        }
     }
     renderUserList();
 }
