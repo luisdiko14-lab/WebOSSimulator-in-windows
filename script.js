@@ -430,6 +430,11 @@ function startLoginSequence() {
     if (loggingInText) loggingInText.textContent = 'Welcome';
     if (loginStatus) loginStatus.textContent = userData.username;
     
+    // Make sure other screens are hidden
+    document.querySelectorAll('.screen').forEach(s => {
+        s.classList.remove('active');
+        s.style.display = 'none';
+    });
     showScreen('screen-logging-in');
     
     setTimeout(() => {
@@ -442,7 +447,16 @@ function startLoginSequence() {
     }, 3000);
     
     setTimeout(() => {
-        showScreen('screen-desktop');
+        // Force all other screens off before showing desktop
+        document.querySelectorAll('.screen').forEach(s => {
+            s.classList.remove('active');
+            s.style.display = 'none';
+        });
+        const desktopScreen = document.getElementById('screen-desktop');
+        if (desktopScreen) {
+            desktopScreen.classList.add('active');
+            desktopScreen.style.display = 'block';
+        }
         
         // Update Desktop Profile Info
         const startUsernameEl = document.getElementById('start-username');
@@ -640,7 +654,10 @@ function createWindow(appName) {
         defender: { title: '🛡️ Windows Security', content: createDefender() },
         music: { title: '🎵 Groove Music', content: createMusicPlayer() },
         solitaire: { title: '🃏 Solitaire', content: createSolitaire() },
-        discord: { title: '💬 Discord', content: createDiscordApp() }
+        discord: { title: '💬 Discord', content: createDiscordApp() },
+        advanced: { title: '⚙️ Advanced Settings', content: createAdvancedSettings() },
+        code: { title: '💻 Code Editor', content: createCodeEditor() },
+        sysinfo: { title: 'ℹ️ System Information', content: createSystemInfo() }
     };
     
     const appData = apps[appName] || { title: 'Window', content: '<p>App content</p>' };
@@ -3089,35 +3106,48 @@ function createWifiSettings() {
 }
 
 function createDiscordApp() {
-    const clientId = "YOUR_DISCORD_CLIENT_ID";
-    const redirectUri = encodeURIComponent(window.location.origin + '/api/auth/callback');
-    const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=identify%20guilds`;
-    
     return `
-        <div style="height: 100%; display: flex; flex-direction: column; background: #36393f; color: white; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
-            <div style="padding: 20px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                <div style="font-size: 64px; margin-bottom: 20px;">💬</div>
-                <h2 style="margin-bottom: 10px;">Welcome to Discord</h2>
-                <p style="color: #b9bbbe; margin-bottom: 30px;">Login to see your servers and profile.</p>
-                <button onclick="window.open('${authUrl}', '_blank')" style="padding: 12px 24px; background: #5865f2; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background 0.2s;">
-                    Login with Discord
-                </button>
-                <div id="discord-profile" style="margin-top: 30px; display: none; width: 100%; text-align: left; background: #2f3136; padding: 15px; border-radius: 8px;">
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <img id="discord-avatar" src="" style="width: 50px; height: 50px; border-radius: 50%;">
+        <div style="height: 100%; display: flex; flex-direction: column; background: #36393f; color: white;">
+            <div style="padding: 20px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: linear-gradient(135deg, #2c2f33 0%, #36393f 100%);">
+                <div style="font-size: 80px; margin-bottom: 20px;">💬</div>
+                <h2 style="margin-bottom: 10px; font-size: 28px;">Welcome to Discord</h2>
+                <p style="color: #b9bbbe; margin-bottom: 30px;">Click below to simulate OAuth2 login</p>
+                <button onclick="discordLogin()" style="padding: 12px 32px; background: #5865f2; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px;">Login with Discord OAuth2</button>
+                <div id="discord-profile" style="margin-top: 40px; display: none; width: 80%; max-width: 400px; background: #2f3136; padding: 20px; border-radius: 8px; text-align: left;">
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                        <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #5865f2, #7289da); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px;">👤</div>
                         <div>
-                            <div id="discord-username" style="font-weight: bold; font-size: 18px;"></div>
-                            <div id="discord-id" style="color: #b9bbbe; font-size: 12px;"></div>
+                            <div style="font-weight: bold; font-size: 18px;" id="discord-username">ReplitUser</div>
+                            <div style="color: #b9bbbe; font-size: 12px;">OAuth2 Authenticated</div>
                         </div>
                     </div>
-                    <div style="margin-top: 15px;">
-                        <div style="font-weight: bold; margin-bottom: 8px; font-size: 14px; text-transform: uppercase; color: #8e9297;">Servers</div>
-                        <div id="discord-guilds" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                    <div style="border-top: 1px solid #202225; padding-top: 15px;">
+                        <div style="font-weight: bold; margin-bottom: 12px; font-size: 14px; text-transform: uppercase; color: #8e9297;">Guilds (Scopes: identify + guilds)</div>
+                        <div id="discord-guilds" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
                     </div>
                 </div>
             </div>
         </div>
     `;
+}
+
+function discordLogin() {
+    const profile = document.getElementById('discord-profile');
+    if (profile) {
+        profile.style.display = 'block';
+        const guilds = [
+            {name: 'Replit', icon: '🔴'},
+            {name: 'Windows 10 Sim', icon: '💻'},
+            {name: 'Dev Community', icon: '👨‍💻'},
+            {name: 'Gaming Hub', icon: '🎮'}
+        ];
+        document.getElementById('discord-guilds').innerHTML = guilds.map(g => 
+            `<div style="background: #36393f; padding: 10px; border-radius: 4px; text-align: center; cursor: pointer;">
+                <div style="font-size: 24px; margin-bottom: 4px;">${g.icon}</div>
+                <div style="font-size: 12px;">${g.name}</div>
+            </div>`
+        ).join('');
+    }
 }
 
 async function handleDiscordCallback() {
@@ -3174,4 +3204,121 @@ async function handleDiscordCallback() {
 // Add to checkUrlParams or DOMContentLoaded
 if (window.location.search.includes('code=')) {
     handleDiscordCallback();
+}
+
+function createAdvancedSettings() {
+    return `
+        <div style="height: 100%; background: #f5f5f5; overflow-y: auto; padding: 20px;">
+            <h2 style="margin-bottom: 20px;">Advanced Settings</h2>
+            
+            <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <h3 style="margin-bottom: 12px; font-size: 16px;">System Performance</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee;">
+                    <span>Enable Hardware Acceleration</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee;">
+                    <span>Virtual Memory</span>
+                    <span style="color: #666;">16 GB</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                    <span>Storage Optimization</span>
+                    <button style="padding: 6px 12px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer;">Run</button>
+                </div>
+            </div>
+
+            <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <h3 style="margin-bottom: 12px; font-size: 16px;">Privacy & Security</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee;">
+                    <span>Windows Defender</span>
+                    <span style="color: #107c10;">✓ Active</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee;">
+                    <span>Firewall</span>
+                    <span style="color: #107c10;">✓ On</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                    <span>App Permissions</span>
+                    <button style="padding: 6px 12px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer;">Manage</button>
+                </div>
+            </div>
+
+            <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <h3 style="margin-bottom: 12px; font-size: 16px;">About This PC</h3>
+                <div style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>OS Build:</strong> 19042.1234</div>
+                <div style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Processor:</strong> Intel(R) Core(TM) i7-10700K</div>
+                <div style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>RAM:</strong> 32 GB</div>
+                <div style="padding: 8px 0;"><strong>Device Name:</strong> REPLIT-PC</div>
+            </div>
+
+            <div style="background: white; padding: 16px; border-radius: 8px;">
+                <h3 style="margin-bottom: 12px; font-size: 16px;">Devices</h3>
+                <div style="padding: 8px 0; border-bottom: 1px solid #eee;">
+                    <div style="font-weight: bold; margin-bottom: 4px;">💾 Storage</div>
+                    <div style="color: #666; font-size: 12px;">256 GB SSD • 178 GB free</div>
+                </div>
+                <div style="padding: 8px 0;">
+                    <div style="font-weight: bold; margin-bottom: 4px;">🔊 Audio Devices</div>
+                    <div style="color: #666; font-size: 12px;">Stereo Mix, Speakers, Microphone</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function createCodeEditor() {
+    return `
+        <div style="height: 100%; display: flex; flex-direction: column; background: #1e1e1e;">
+            <div style="background: #2d2d2d; padding: 12px; border-bottom: 1px solid #3e3e42; color: #ccc; display: flex; gap: 8px;">
+                <button style="padding: 4px 8px; background: #0078d4; color: white; border: none; border-radius: 2px; cursor: pointer; font-size: 12px;">File</button>
+                <button style="padding: 4px 8px; background: transparent; color: #ccc; border: none; cursor: pointer; font-size: 12px;">Edit</button>
+                <button style="padding: 4px 8px; background: transparent; color: #ccc; border: none; cursor: pointer; font-size: 12px;">View</button>
+                <button style="padding: 4px 8px; background: transparent; color: #ccc; border: none; cursor: pointer; font-size: 12px;">Help</button>
+            </div>
+            <textarea placeholder="// Write your code here..." style="flex: 1; background: #1e1e1e; color: #d4d4d4; border: none; padding: 16px; font-family: 'Courier New', monospace; font-size: 14px; resize: none;"></textarea>
+            <div style="background: #2d2d2d; padding: 8px 12px; color: #859900; border-top: 1px solid #3e3e42; font-size: 12px; font-family: monospace;">
+                Ln 1, Col 1
+            </div>
+        </div>
+    `;
+}
+
+function createSystemInfo() {
+    return `
+        <div style="height: 100%; background: #f5f5f5; overflow-y: auto; padding: 20px;">
+            <h2 style="margin-bottom: 20px;">System Information</h2>
+            
+            <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <h3 style="margin-bottom: 12px;">Computer Details</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold; width: 50%;">Computer Name:</td><td style="padding: 8px; border-bottom: 1px solid #eee;">REPLIT-DESKTOP</td></tr>
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">Manufacturer:</td><td style="padding: 8px; border-bottom: 1px solid #eee;">Virtual Machine</td></tr>
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">OS Name:</td><td style="padding: 8px; border-bottom: 1px solid #eee;">Windows 10 Pro</td></tr>
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">OS Build:</td><td style="padding: 8px; border-bottom: 1px solid #eee;">19042.1288</td></tr>
+                    <tr><td style="padding: 8px; font-weight: bold;">Installation Date:</td><td style="padding: 8px;">3/10/2026</td></tr>
+                </table>
+            </div>
+
+            <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <h3 style="margin-bottom: 12px;">Hardware</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold; width: 50%;">Processor:</td><td style="padding: 8px; border-bottom: 1px solid #eee;">Intel Core i7 @ 3.6GHz</td></tr>
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">Installed RAM:</td><td style="padding: 8px; border-bottom: 1px solid #eee;">32 GB (Available: 18 GB)</td></tr>
+                    <tr><td style="padding: 8px; font-weight: bold;">System Type:</td><td style="padding: 8px;">x64-based PC</td></tr>
+                </table>
+            </div>
+
+            <div style="background: white; padding: 16px; border-radius: 8px;">
+                <h3 style="margin-bottom: 12px;">Network</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold; width: 50%;">IP Address:</td><td style="padding: 8px; border-bottom: 1px solid #eee;">192.168.1.100</td></tr>
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">IPv4 Address:</td><td style="padding: 8px; border-bottom: 1px solid #eee;">192.168.1.100</td></tr>
+                    <tr><td style="padding: 8px; font-weight: bold;">DNS Servers:</td><td style="padding: 8px;">8.8.8.8, 8.8.4.4</td></tr>
+                </table>
+            </div>
+        </div>
+    `;
 }
