@@ -2,13 +2,14 @@
 
 ## Overview
 
-This is a web-based Windows 10 simulator that recreates the complete Windows installation experience and desktop environment using pure HTML, CSS, and JavaScript.
+This is a web-based Windows 10 simulator that recreates the complete Windows installation experience and desktop environment using HTML, CSS, and JavaScript with a Node.js/Express backend for Discord OAuth2.
 
-## Recent Fixes
-- **Paint App**: Fixed duplicate `paintColor` declaration and improved drawing logic with `paintIsDrawing` flag.
-- **Login System**: Restored login functionality, added multi-user selection support, and fixed password validation.
-- **UI & Cleanup**: Updated login screen UI, removed duplicate `S.js`, and unified clock/lock-screen time logic.
-- **Setup Flow**: Verified setup redirection and persistence between `setup_1.html`, `setup_2.html`, and the main desktop.
+## Recent Fixes & Features
+- **Discord OAuth2**: Full Discord integration with client ID/secret, state parameter, and real guild data
+- **Login System**: Fixed screen overlapping, properly hides all screens during login sequence
+- **Backend API**: Node.js/Express server handling `/api/auth/discord-callback` and OAuth2 flow
+- **18+ Desktop Apps**: Discord, Code Editor, System Info, Advanced Settings, Photos, Calendar, Maps, Music, Security, and more
+- **Enhanced Settings**: System Performance, Privacy & Security, Hardware info, Network details
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

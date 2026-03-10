@@ -3106,48 +3106,63 @@ function createWifiSettings() {
 }
 
 function createDiscordApp() {
+    let discordUser = null;
+    let discordGuilds = [];
+    
+    const params = new URLSearchParams(window.location.search);
+    const userParam = params.get('user');
+    const tokenParam = params.get('discord_token');
+    
+    if (userParam && tokenParam) {
+        try {
+            discordUser = JSON.parse(decodeURIComponent(userParam));
+            discordGuilds = discordUser.guilds || [];
+        } catch (e) {
+            console.error('Failed to parse Discord user:', e);
+        }
+    }
+    
+    if (discordUser && discordUser.id) {
+        return `
+            <div style="height: 100%; display: flex; flex-direction: column; background: #36393f; color: white;">
+                <div style="padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <div style="width: 80px; height: 80px; background: url('${discordUser.avatar}') center/cover no-repeat; border-radius: 50%; margin-bottom: 20px; border: 3px solid #5865f2;"></div>
+                    <h2 style="margin-bottom: 5px; font-size: 28px;">${discordUser.username}</h2>
+                    <p style="color: #b9bbbe; margin-bottom: 30px;">ID: ${discordUser.id}</p>
+                    
+                    <div style="width: 90%; max-width: 500px; background: #2f3136; padding: 20px; border-radius: 8px; text-align: left;">
+                        <div style="font-weight: bold; margin-bottom: 15px; font-size: 14px; text-transform: uppercase; color: #8e9297;">Your Servers</div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-height: 200px; overflow-y: auto;">
+                            ${discordGuilds.map(g => `
+                                <div style="background: #36393f; padding: 12px; border-radius: 4px; text-align: center; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#40444b'" onmouseout="this.style.background='#36393f';">
+                                    <div style="font-size: 28px; margin-bottom: 4px;">${g.icon || '🎮'}</div>
+                                    <div style="font-size: 11px; color: #b9bbbe; overflow: hidden; text-overflow: ellipsis;">${g.name}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <button onclick="discordLogout()" style="margin-top: 30px; padding: 10px 24px; background: #ed4245; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Logout</button>
+                </div>
+            </div>
+        `;
+    }
+    
     return `
         <div style="height: 100%; display: flex; flex-direction: column; background: #36393f; color: white;">
             <div style="padding: 20px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: linear-gradient(135deg, #2c2f33 0%, #36393f 100%);">
                 <div style="font-size: 80px; margin-bottom: 20px;">💬</div>
                 <h2 style="margin-bottom: 10px; font-size: 28px;">Welcome to Discord</h2>
-                <p style="color: #b9bbbe; margin-bottom: 30px;">Click below to simulate OAuth2 login</p>
-                <button onclick="discordLogin()" style="padding: 12px 32px; background: #5865f2; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px;">Login with Discord OAuth2</button>
-                <div id="discord-profile" style="margin-top: 40px; display: none; width: 80%; max-width: 400px; background: #2f3136; padding: 20px; border-radius: 8px; text-align: left;">
-                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-                        <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #5865f2, #7289da); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px;">👤</div>
-                        <div>
-                            <div style="font-weight: bold; font-size: 18px;" id="discord-username">ReplitUser</div>
-                            <div style="color: #b9bbbe; font-size: 12px;">OAuth2 Authenticated</div>
-                        </div>
-                    </div>
-                    <div style="border-top: 1px solid #202225; padding-top: 15px;">
-                        <div style="font-weight: bold; margin-bottom: 12px; font-size: 14px; text-transform: uppercase; color: #8e9297;">Guilds (Scopes: identify + guilds)</div>
-                        <div id="discord-guilds" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
-                    </div>
-                </div>
+                <p style="color: #b9bbbe; margin-bottom: 30px;">Login with your Discord account via OAuth2</p>
+                <button onclick="window.location.href='/api/auth/discord'" style="padding: 12px 32px; background: #5865f2; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px;">Login with Discord</button>
+                <p style="color: #72767d; font-size: 12px; margin-top: 20px;">Requires Discord app credentials (CLIENT_ID & CLIENT_SECRET)</p>
             </div>
         </div>
     `;
 }
 
-function discordLogin() {
-    const profile = document.getElementById('discord-profile');
-    if (profile) {
-        profile.style.display = 'block';
-        const guilds = [
-            {name: 'Replit', icon: '🔴'},
-            {name: 'Windows 10 Sim', icon: '💻'},
-            {name: 'Dev Community', icon: '👨‍💻'},
-            {name: 'Gaming Hub', icon: '🎮'}
-        ];
-        document.getElementById('discord-guilds').innerHTML = guilds.map(g => 
-            `<div style="background: #36393f; padding: 10px; border-radius: 4px; text-align: center; cursor: pointer;">
-                <div style="font-size: 24px; margin-bottom: 4px;">${g.icon}</div>
-                <div style="font-size: 12px;">${g.name}</div>
-            </div>`
-        ).join('');
-    }
+function discordLogout() {
+    window.location.href = '/api/auth/logout';
 }
 
 async function handleDiscordCallback() {
