@@ -3148,14 +3148,19 @@ function createDiscordApp() {
         `;
     }
     
+    const clientId = '1370655950310080522';
+    const redirectUri = 'https://dc97442b-2e83-447c-806e-1718dc226361-00-ry3rm930k0c5.worf.replit.dev/api/auth/discord-callback';
+    const scopes = 'identify+email+guilds';
+    const authUrl = `https://discord.com/oauth2/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}`;
+    
     return `
         <div style="height: 100%; display: flex; flex-direction: column; background: #36393f; color: white;">
             <div style="padding: 20px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: linear-gradient(135deg, #2c2f33 0%, #36393f 100%);">
                 <div style="font-size: 80px; margin-bottom: 20px;">💬</div>
                 <h2 style="margin-bottom: 10px; font-size: 28px;">Welcome to Discord</h2>
                 <p style="color: #b9bbbe; margin-bottom: 30px;">Login with your Discord account via OAuth2</p>
-                <button onclick="window.location.href='/api/auth/discord'" style="padding: 12px 32px; background: #5865f2; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px;">Login with Discord</button>
-                <p style="color: #72767d; font-size: 12px; margin-top: 20px;">Requires Discord app credentials (CLIENT_ID & CLIENT_SECRET)</p>
+                <a href="${authUrl}" style="padding: 12px 32px; background: #5865f2; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px; text-decoration: none; display: inline-block;">Login with Discord</a>
+                <p style="color: #72767d; font-size: 12px; margin-top: 20px;">Using OAuth2 with Discord API</p>
             </div>
         </div>
     `;
