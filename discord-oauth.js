@@ -1,79 +1,141 @@
-// Lightweight Discord OAuth handler for the simulator
+// Lightweight Discord OAuth handler
 const http = require('http');
 const url = require('url');
 const querystring = require('querystring');
+const crypto = require('crypto');
 
-const PORT = 3001;
+const PORT = process.env.PORTs || 5000;
+
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 
+const BASE_URL = process.env.REPLIT_DEV_DOMAIN
+  ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+  : `http://localhost:${PORT}`;
+
+const REDIRECT_URI = `${BASE_URL}/api/auth/discord-callback`;
+
+// simple memory state store
+const oauthStates = new Set();
+
 const server = http.createServer(async (req, res) => {
-    const parsedUrl = url.parse(req.url, true);
-    const pathname = parsedUrl.pathname;
-    const query = parsedUrl.query;
+  const parsed = url.parse(req.url, true);
+  const pathname = parsed.pathname;
+  const query = parsed.query;
 
-    if (pathname === '/api/auth/discord') {
-        const state = Math.random().toString(36).substring(7);
-        const redirectUri = `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/api/auth/discord-callback`;
-        const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=identify+guilds&state=${state}`;
-        
-        res.writeHead(302, { 'Location': authUrl });
-        res.end();
-    } else if (pathname === '/api/auth/discord-callback') {
-        const code = query.code;
-        const state = query.state;
+  // LOGIN
+  if (pathname === '/api/auth/discord') {
 
-        if (!code || !DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET) {
-            return res.writeHead(400).end('Missing code or credentials');
-        }
+    const state = crypto.randomBytes(16).toString('hex');
+    oauthStates.add(state);
 
-        try {
-            const tokenRes = await fetch('https://discord.com/api/v10/oauth2/token', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: querystring.stringify({
-                    client_id: DISCORD_CLIENT_ID,
-                    client_secret: DISCORD_CLIENT_SECRET,
-                    code,
-                    grant_type: 'authorization_code',
-                    redirect_uri: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/api/auth/discord-callback`
-                })
-            });
+    const authUrl =
+      `https://discord.com/api/oauth2/authorize` +
+      `?client_id=${DISCORD_CLIENT_ID}` +
+      `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
+      `&response_type=code` +
+      `&scope=identify%20guilds` +
+      `&state=${state}`;
 
-            const tokenData = await tokenRes.json();
-            if (!tokenData.access_token) throw new Error('No access token');
+    res.writeHead(302, { Location: authUrl });
+    return res.end();
+  }
 
-            const userRes = await fetch('https://discord.com/api/v10/users/@me', {
-                headers: { Authorization: `Bearer ${tokenData.access_token}` }
-            });
-            const userData = await userRes.json();
+  // CALLBACK
+  if (pathname === '/api/auth/discord-callback') {
 
-            const guildsRes = await fetch('https://discord.com/api/v10/users/@me/guilds', {
-                headers: { Authorization: `Bearer ${tokenData.access_token}` }
-            });
-            const guildsData = await guildsRes.json();
+    const { code, state, error } = query;
 
-            const redirect = `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/?user=${encodeURIComponent(JSON.stringify({
-                id: userData.id,
-                username: userData.username,
-                avatar: `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`,
-                guilds: guildsData.slice(0, 10)
-            }))}&discord_token=${tokenData.access_token}`;
-
-            res.writeHead(302, { 'Location': redirect });
-            res.end();
-        } catch (error) {
-            console.error('OAuth error:', error);
-            res.writeHead(400).end('Authentication failed');
-        }
-    } else if (pathname === '/api/auth/logout') {
-        res.writeHead(302, { 'Location': '/' });
-        res.end();
-    } else {
-        res.writeHead(404).end('Not found');
+    if (error) {
+      res.writeHead(400);
+      return res.end(`Discord OAuth error: ${error}`);
     }
+
+    if (!code || !state || !oauthStates.has(state)) {
+      res.writeHead(400);
+      return res.end('Invalid OAuth state or code');
+    }
+
+    oauthStates.delete(state);
+
+    try {
+
+      const tokenRes = await fetch(
+        'https://discord.com/api/v10/oauth2/token',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: querystring.stringify({
+            client_id: DISCORD_CLIENT_ID,
+            client_secret: DISCORD_CLIENT_SECRET,
+            grant_type: 'authorization_code',
+            code,
+            redirect_uri: REDIRECT_URI
+          })
+        }
+      );
+
+      const tokenData = await tokenRes.json();
+
+      if (!tokenData.access_token) {
+        throw new Error(JSON.stringify(tokenData));
+      }
+
+      const accessToken = tokenData.access_token;
+
+      const userRes = await fetch(
+        'https://discord.com/api/v10/users/@me',
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+
+      const user = await userRes.json();
+
+      const guildsRes = await fetch(
+        'https://discord.com/api/v10/users/@me/guilds',
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+
+      const guilds = await guildsRes.json();
+
+      const avatar = user.avatar
+        ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+        : `https://cdn.discordapp.com/embed/avatars/${parseInt(user.discriminator) % 5}.png`;
+
+      const payload = {
+        id: user.id,
+        username: user.username,
+        avatar,
+        guilds: Array.isArray(guilds) ? guilds.slice(0, 10) : []
+      };
+
+      const redirect =
+        `${BASE_URL}/?user=${encodeURIComponent(JSON.stringify(payload))}` +
+        `&discord_token=${accessToken}`;
+
+      res.writeHead(302, { Location: redirect });
+      res.end();
+
+    } catch (err) {
+      console.error('OAuth error:', err);
+      res.writeHead(500);
+      res.end('OAuth authentication failed');
+    }
+
+    return;
+  }
+
+  // LOGOUT
+  if (pathname === '/api/auth/logout') {
+    res.writeHead(302, { Location: '/' });
+    return res.end();
+  }
+
+  res.writeHead(404);
+  res.end('Not found');
 });
 
 server.listen(PORT, () => {
-    console.log(`Discord OAuth handler running on port ${PORT}`);
+  console.log(`Discord OAuth running on ${PORT}`);
 });
