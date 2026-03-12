@@ -625,23 +625,44 @@ function openApp(appName) {
 function createWindow(appName) {
     const windowEl = document.createElement('div');
     windowEl.className = 'window active';
+    windowEl.dataset.app = appName;
     windowEl.style.left = (100 + openWindows.length * 30) + 'px';
-    windowEl.style.top = (80 + openWindows.length * 30) + 'px';
+    windowEl.style.top = (50 + openWindows.length * 30) + 'px';
     windowEl.style.zIndex = nextWindowZ++;
+    
+    const defaultSizes = {
+        browser: { w: 900, h: 600 },
+        chrome: { w: 900, h: 600 },
+        explorer: { w: 800, h: 500 },
+        settings: { w: 750, h: 550 },
+        taskmgr: { w: 650, h: 450 },
+        cmd: { w: 650, h: 400 },
+        powershell: { w: 650, h: 400 },
+        notepad: { w: 600, h: 450 },
+        wordpad: { w: 700, h: 500 },
+        code: { w: 800, h: 550 },
+        stickynotes: { w: 300, h: 300 },
+        calculator: { w: 320, h: 430 }
+    };
+    const size = defaultSizes[appName] || { w: 700, h: 480 };
+    windowEl.style.width = size.w + 'px';
+    windowEl.style.height = size.h + 'px';
     
     const apps = {
         calculator: { title: '🔢 Calculator', content: createCalculator() },
         notepad: { title: '📝 Notepad', content: createNotepad() },
+        wordpad: { title: '📄 WordPad', content: createWordPad() },
         explorer: { title: '📁 File Explorer', content: createExplorer() },
         settings: { title: '⚙️ Settings', content: createSettings() },
         taskmgr: { title: '📊 Task Manager', content: createTaskManager() },
         browser: { title: '🌐 Microsoft Edge', content: createBrowser() },
         computer: { title: '💻 This PC', content: createComputer() },
-        trash: { title: '🗑️ Recycle Bin', content: '<p>Recycle Bin is empty</p>' },
-        search: { title: '🔍 Search', content: '<p>Type to search your PC...</p>' },
+        trash: { title: '🗑️ Recycle Bin', content: createRecycleBin() },
+        search: { title: '🔍 Search', content: createSearch() },
         google_setup: { title: '🌐 Google Chrome Setup', content: createGoogleSetup() },
         chrome: { title: '🔵 Google Chrome', content: createChrome() },
         cmd: { title: '⬛ Command Prompt', content: createCMD() },
+        powershell: { title: '🔷 Windows PowerShell', content: createPowerShell() },
         paint: { title: '🎨 Paint', content: createPaint() },
         weather: { title: '🌤️ Weather', content: createWeather() },
         snipping: { title: '✂️ Snipping Tool', content: createSnipping() },
@@ -656,14 +677,31 @@ function createWindow(appName) {
         solitaire: { title: '🃏 Solitaire', content: createSolitaire() },
         discord: { title: '💬 Discord', content: createDiscordApp() },
         advanced: { title: '⚙️ Advanced Settings', content: createAdvancedSettings() },
-        code: { title: '💻 Code Editor', content: createCodeEditor() },
-        sysinfo: { title: 'ℹ️ System Information', content: createSystemInfo() }
+        code: { title: '💻 VS Code', content: createCodeEditor() },
+        sysinfo: { title: 'ℹ️ System Information', content: createSystemInfo() },
+        stickynotes: { title: '🟡 Sticky Notes', content: createStickyNotes() },
+        controlpanel: { title: '🎛️ Control Panel', content: createControlPanel() },
+        devmgr: { title: '🖥️ Device Manager', content: createDeviceManager() },
+        registry: { title: '📋 Registry Editor', content: createRegistryEditor() },
+        mediaplayer: { title: '▶️ Windows Media Player', content: createMediaPlayer() },
+        teams: { title: '👥 Microsoft Teams', content: createTeams() },
+        speedtest: { title: '⚡ Speed Test', content: createSpeedTest() },
+        mail: { title: '📧 Mail', content: createMail() },
+        xbox: { title: '🎮 Xbox', content: createXbox() }
     };
     
-    const appData = apps[appName] || { title: 'Window', content: '<p>App content</p>' };
+    const appData = apps[appName] || { title: '🪟 Window', content: '<div style="padding:20px">App not found</div>' };
     
     windowEl.innerHTML = `
-        <div class="window-titlebar">
+        <div class="window-resize-n"></div>
+        <div class="window-resize-s"></div>
+        <div class="window-resize-e"></div>
+        <div class="window-resize-w"></div>
+        <div class="window-resize-ne"></div>
+        <div class="window-resize-nw"></div>
+        <div class="window-resize-se"></div>
+        <div class="window-resize-sw"></div>
+        <div class="window-titlebar" ondblclick="maximizeWindow('${appName}')">
             <div class="window-title">${appData.title}</div>
             <div class="window-controls">
                 <button class="window-control minimize" onclick="minimizeWindow('${appName}')">−</button>
@@ -671,7 +709,7 @@ function createWindow(appName) {
                 <button class="window-control close" onclick="closeWindow('${appName}')">✕</button>
             </div>
         </div>
-        <div class="window-content ${appName === 'notepad' ? 'notepad-content' : ''}" id="window-content-${appName}">
+        <div class="window-content ${appName === 'notepad' || appName === 'wordpad' ? 'notepad-content' : ''}" id="window-content-${appName}">
             ${appData.content}
         </div>
     `;
@@ -685,6 +723,7 @@ function createWindow(appName) {
     windowEl.addEventListener('mousedown', () => focusWindow({ appName, element: windowEl }));
     
     makeDraggable(windowEl);
+    makeResizable(windowEl);
     
     return { appName, element: windowEl, title: appData.title };
 }
@@ -696,11 +735,13 @@ function makeDraggable(element) {
     titlebar.onmousedown = dragMouseDown;
     
     function dragMouseDown(e) {
+        if (e.target.classList.contains('window-control')) return;
         e.preventDefault();
         pos3 = e.clientX;
         pos4 = e.clientY;
         document.onmouseup = closeDragElement;
         document.onmousemove = elementDrag;
+        element.style.transition = 'none';
     }
     
     function elementDrag(e) {
@@ -709,14 +750,55 @@ function makeDraggable(element) {
         pos2 = pos4 - e.clientY;
         pos3 = e.clientX;
         pos4 = e.clientY;
-        element.style.top = (element.offsetTop - pos2) + 'px';
-        element.style.left = (element.offsetLeft - pos1) + 'px';
+        let newTop = element.offsetTop - pos2;
+        let newLeft = element.offsetLeft - pos1;
+        newTop = Math.max(0, Math.min(newTop, window.innerHeight - 48));
+        newLeft = Math.max(-element.offsetWidth + 100, Math.min(newLeft, window.innerWidth - 100));
+        element.style.top = newTop + 'px';
+        element.style.left = newLeft + 'px';
     }
     
     function closeDragElement() {
         document.onmouseup = null;
         document.onmousemove = null;
+        element.style.transition = '';
     }
+}
+
+function makeResizable(element) {
+    const handles = element.querySelectorAll('[class^="window-resize"]');
+    handles.forEach(handle => {
+        handle.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const dir = handle.className.replace('window-resize-', '');
+            const startX = e.clientX, startY = e.clientY;
+            const startW = element.offsetWidth, startH = element.offsetHeight;
+            const startLeft = element.offsetLeft, startTop = element.offsetTop;
+            
+            function onMove(e) {
+                const dx = e.clientX - startX, dy = e.clientY - startY;
+                if (dir.includes('e')) element.style.width = Math.max(300, startW + dx) + 'px';
+                if (dir.includes('s')) element.style.height = Math.max(200, startH + dy) + 'px';
+                if (dir.includes('w')) {
+                    const newW = Math.max(300, startW - dx);
+                    element.style.width = newW + 'px';
+                    element.style.left = (startLeft + startW - newW) + 'px';
+                }
+                if (dir.includes('n')) {
+                    const newH = Math.max(200, startH - dy);
+                    element.style.height = newH + 'px';
+                    element.style.top = (startTop + startH - newH) + 'px';
+                }
+            }
+            function onUp() {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+            }
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+    });
 }
 
 function focusWindow(windowData) {
