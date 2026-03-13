@@ -1704,83 +1704,427 @@ function createSettings() {
 }
 
 function createTaskManager() {
-    updateProcessList();
-    
+    const baseProcs = [
+        { name: 'System Idle Process',   icon: '⚙️', pid: 0,    cpu: 0.0,  mem: 8,      status: 'Running', type: 'System' },
+        { name: 'System',                icon: '⚙️', pid: 4,    cpu: 0.1,  mem: 144,    status: 'Running', type: 'System' },
+        { name: 'Registry',              icon: '📋', pid: 108,  cpu: 0.0,  mem: 72000,  status: 'Running', type: 'System' },
+        { name: 'smss.exe',              icon: '🖥️', pid: 348,  cpu: 0.0,  mem: 1024,   status: 'Running', type: 'System' },
+        { name: 'csrss.exe',             icon: '🖥️', pid: 512,  cpu: 0.2,  mem: 4096,   status: 'Running', type: 'System' },
+        { name: 'winlogon.exe',          icon: '🔐', pid: 620,  cpu: 0.0,  mem: 5120,   status: 'Running', type: 'System' },
+        { name: 'services.exe',          icon: '⚙️', pid: 668,  cpu: 0.0,  mem: 6144,   status: 'Running', type: 'System' },
+        { name: 'lsass.exe',             icon: '🔒', pid: 676,  cpu: 0.1,  mem: 12288,  status: 'Running', type: 'System' },
+        { name: 'svchost.exe',           icon: '⚙️', pid: 872,  cpu: 0.3,  mem: 18432,  status: 'Running', type: 'System' },
+        { name: 'svchost.exe',           icon: '⚙️', pid: 960,  cpu: 0.1,  mem: 15360,  status: 'Running', type: 'System' },
+        { name: 'MsMpEng.exe',           icon: '🛡️', pid: 1234, cpu: 0.4,  mem: 32768,  status: 'Running', type: 'Background' },
+        { name: 'explorer.exe',          icon: '📁', pid: 2340, cpu: 0.8,  mem: 48640,  status: 'Running', type: 'App' },
+        { name: 'taskmgr.exe',           icon: '📊', pid: 3120, cpu: 2.1,  mem: 20480,  status: 'Running', type: 'App' },
+        { name: 'chrome.exe',            icon: '🔵', pid: 4096, cpu: 3.2,  mem: 256000, status: 'Running', type: 'App' },
+        { name: 'Code.exe',              icon: '💻', pid: 5120, cpu: 2.8,  mem: 312000, status: 'Running', type: 'App' },
+        { name: 'Discord.exe',           icon: '💬', pid: 6144, cpu: 0.9,  mem: 128000, status: 'Running', type: 'App' },
+        { name: 'RuntimeBroker.exe',     icon: '⚙️', pid: 7200, cpu: 0.1,  mem: 9216,   status: 'Running', type: 'Background' },
+        { name: 'SearchApp.exe',         icon: '🔍', pid: 7800, cpu: 0.2,  mem: 24576,  status: 'Running', type: 'App' },
+        { name: 'OneDrive.exe',          icon: '☁️', pid: 8900, cpu: 0.1,  mem: 22016,  status: 'Running', type: 'Background' },
+        { name: 'Widgets.exe',           icon: '🪟', pid: 9100, cpu: 0.0,  mem: 11264,  status: 'Running', type: 'Background' },
+    ];
+
+    let selectedPid = null;
+    window._tmProcs = baseProcs;
+
+    setTimeout(() => { tmStartUpdater(); }, 100);
+
     return `
-        <div class="taskmgr-tabs">
-            <button class="taskmgr-tab active" onclick="switchTaskMgrTab('processes')">Processes</button>
-            <button class="taskmgr-tab" onclick="switchTaskMgrTab('performance')">Performance</button>
+    <div style="height:100%;display:flex;flex-direction:column;font-family:'Segoe UI',sans-serif;font-size:13px;">
+      <div style="display:flex;background:#f3f3f3;border-bottom:1px solid #ddd;">
+        <button class="tm-tab active" id="tm-tab-proc" onclick="tmSwitchTab('processes',event)">Processes</button>
+        <button class="tm-tab" id="tm-tab-perf" onclick="tmSwitchTab('performance',event)">Performance</button>
+        <button class="tm-tab" id="tm-tab-app" onclick="tmSwitchTab('apphistory',event)">App history</button>
+        <button class="tm-tab" id="tm-tab-start" onclick="tmSwitchTab('startup',event)">Startup</button>
+        <button class="tm-tab" id="tm-tab-users" onclick="tmSwitchTab('users',event)">Users</button>
+        <button class="tm-tab" id="tm-tab-det" onclick="tmSwitchTab('details',event)">Details</button>
+      </div>
+
+      <!-- PROCESSES TAB -->
+      <div id="tm-processes" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+        <div style="display:grid;grid-template-columns:1fr 80px 100px 90px 90px;background:#f3f3f3;border-bottom:2px solid #ddd;padding:4px 10px;font-weight:600;font-size:12px;color:#444;cursor:pointer;user-select:none;">
+          <span onclick="tmSortBy('name')">Name ⇅</span>
+          <span style="text-align:right;" onclick="tmSortBy('cpu')">CPU ⇅</span>
+          <span style="text-align:right;" onclick="tmSortBy('mem')">Memory ⇅</span>
+          <span style="text-align:right;">PID</span>
+          <span>Status</span>
         </div>
-        <div class="taskmgr-content">
-            <div id="taskmgr-processes">
-                <table class="process-list">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>CPU</th>
-                            <th>Memory</th>
-                        </tr>
-                    </thead>
-                    <tbody id="process-tbody"></tbody>
-                </table>
-            </div>
-            <div id="taskmgr-performance" style="display: none;">
-                <div class="performance-grid">
-                    <div class="performance-card">
-                        <h3>CPU</h3>
-                        <div class="performance-value" id="perf-cpu">0%</div>
-                        <div class="performance-graph">
-                            <div class="graph-line" id="cpu-graph"></div>
-                        </div>
-                    </div>
-                    <div class="performance-card">
-                        <h3>Memory</h3>
-                        <div class="performance-value" id="perf-memory">0 MB</div>
-                        <div class="performance-graph">
-                            <div class="graph-line" id="mem-graph"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div id="tm-proc-list" style="flex:1;overflow-y:auto;"></div>
+        <div style="display:flex;justify-content:flex-end;align-items:center;padding:6px 10px;border-top:1px solid #ddd;background:#f9f9f9;gap:8px;">
+          <span style="flex:1;font-size:12px;color:#666;" id="tm-proc-count">${baseProcs.length} processes</span>
+          <button onclick="tmEndTask()" style="padding:6px 20px;background:#d13438;color:white;border:none;border-radius:3px;cursor:pointer;font-size:13px;font-weight:600;" id="tm-end-btn" disabled>End Task</button>
         </div>
-    `;
+      </div>
+
+      <!-- PERFORMANCE TAB -->
+      <div id="tm-performance" style="flex:1;display:none;overflow:hidden;display:none;">
+        <div style="display:flex;height:100%;">
+          <div style="width:180px;border-right:1px solid #eee;overflow-y:auto;background:#fafafa;">
+            ${[
+              ['cpu','🖥️','CPU','Intel Core i9-14900K'],
+              ['mem','🧠','Memory','500 GB DDR5'],
+              ['disk','💾','Disk 0 (C:)','Samsung 990 Pro 100TB'],
+              ['gpu','🎮','GPU 0','RTX 4090'],
+              ['net','🌐','Ethernet','Intel I225-V 2.5Gb'],
+            ].map(([id,icon,label,sub],i)=>`
+            <div id="tm-nav-${id}" onclick="tmPerfNav('${id}')" style="padding:12px;cursor:pointer;border-bottom:1px solid #f0f0f0;${i===0?'background:#e3f2fd;border-left:3px solid #0078d4;':''}" onmouseover="this.style.background='#e8f4ff'" onmouseout="this.style.background='${i===0?'#e3f2fd':'transparent'}'">
+              <div style="font-size:18px;margin-bottom:2px;">${icon}</div>
+              <div style="font-weight:600;font-size:13px;">${label}</div>
+              <div style="font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sub}</div>
+              <div style="font-size:11px;color:#0078d4;margin-top:2px;" id="tm-nav-${id}-val">Loading...</div>
+            </div>`).join('')}
+          </div>
+          <div style="flex:1;padding:20px;overflow-y:auto;" id="tm-perf-detail">
+            <!-- filled by tmPerfNav -->
+          </div>
+        </div>
+      </div>
+
+      <!-- STARTUP TAB -->
+      <div id="tm-startup" style="flex:1;display:none;overflow:auto;padding:0;">
+        <div style="display:grid;grid-template-columns:1fr 100px 120px 120px;background:#f3f3f3;border-bottom:2px solid #ddd;padding:6px 12px;font-weight:600;font-size:12px;color:#444;">
+          <span>Name</span><span>Publisher</span><span>Status</span><span>Startup impact</span>
+        </div>
+        ${[
+          ['Microsoft Edge','Microsoft Corp.','Enabled','Medium'],
+          ['Discord','Discord Inc.','Enabled','High'],
+          ['OneDrive','Microsoft Corp.','Enabled','Medium'],
+          ['Spotify','Spotify AB','Disabled','Low'],
+          ['Steam','Valve Corp.','Disabled','High'],
+          ['Teams','Microsoft Corp.','Enabled','High'],
+          ['Zoom','Zoom Video','Disabled','Medium'],
+          ['Slack','Slack Tech.','Disabled','Medium'],
+        ].map(([n,p,s,i])=>`
+        <div style="display:grid;grid-template-columns:1fr 100px 120px 120px;padding:8px 12px;border-bottom:1px solid #f5f5f5;cursor:pointer;" onmouseover="this.style.background='#f0f7ff'" onmouseout="this.style.background='transparent'">
+          <span style="font-weight:500;">${n}</span>
+          <span style="color:#666;font-size:12px;">${p}</span>
+          <span style="color:${s==='Enabled'?'#107c10':'#d13438'};font-size:12px;">${s}</span>
+          <span style="color:${i==='High'?'#d13438':i==='Medium'?'#ca5010':'#107c10'};font-size:12px;">${i}</span>
+        </div>`).join('')}
+      </div>
+
+      <!-- USERS TAB -->
+      <div id="tm-users" style="flex:1;display:none;overflow:auto;padding:16px;">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:#f0f7ff;border-radius:8px;border:1px solid #cce4ff;margin-bottom:8px;">
+          <div style="width:48px;height:48px;background:linear-gradient(135deg,#0078d4,#50a0ff);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;">😊</div>
+          <div>
+            <div style="font-weight:600;font-size:15px;">${userData?.username||'User'}</div>
+            <div style="font-size:12px;color:#666;">Administrator • Active • Connected</div>
+          </div>
+          <div style="margin-left:auto;font-size:12px;color:#888;">CPU: <span id="tm-user-cpu">0%</span>  Mem: <span id="tm-user-mem">0 MB</span></div>
+        </div>
+      </div>
+
+      <!-- DETAILS TAB -->
+      <div id="tm-details" style="flex:1;display:none;overflow:auto;">
+        <div style="display:grid;grid-template-columns:1fr 60px 100px 80px 120px;background:#f3f3f3;border-bottom:2px solid #ddd;padding:5px 10px;font-weight:600;font-size:12px;color:#444;">
+          <span>Name</span><span>PID</span><span>Status</span><span>CPU</span><span>Memory</span>
+        </div>
+        ${baseProcs.map(p=>`
+        <div style="display:grid;grid-template-columns:1fr 60px 100px 80px 120px;padding:4px 10px;border-bottom:1px solid #f5f5f5;font-size:12px;cursor:pointer;" onmouseover="this.style.background='#f0f7ff'" onmouseout="this.style.background='transparent'">
+          <span>${p.name}</span>
+          <span style="color:#666;">${p.pid}</span>
+          <span style="color:#107c10;">${p.status}</span>
+          <span>${p.cpu.toFixed(1)}%</span>
+          <span>${(p.mem/1024).toFixed(1)} MB</span>
+        </div>`).join('')}
+      </div>
+
+      <!-- APP HISTORY TAB -->
+      <div id="tm-apphistory" style="flex:1;display:none;overflow:auto;padding:12px;">
+        <div style="color:#666;font-size:12px;margin-bottom:12px;">Resource usage since 1/1/2024 for current user account</div>
+        <div style="display:grid;grid-template-columns:1fr 80px 80px 80px;background:#f3f3f3;border-bottom:2px solid #ddd;padding:5px 10px;font-weight:600;font-size:12px;color:#444;margin-bottom:0;">
+          <span>Name</span><span>CPU time</span><span>Network</span><span>Metered</span>
+        </div>
+        ${[['Microsoft Edge','0:12:34','124 MB','2.1 MB'],['Teams','1:08:22','540 MB','80 MB'],['Mail','0:02:11','12 MB','0 MB'],['Discord','2:34:00','320 MB','44 MB'],['Xbox','0:45:00','56 MB','0 MB']].map(([n,c,net,m])=>`
+        <div style="display:grid;grid-template-columns:1fr 80px 80px 80px;padding:7px 10px;border-bottom:1px solid #f5f5f5;font-size:12px;cursor:pointer;" onmouseover="this.style.background='#f0f7ff'" onmouseout="this.style.background='transparent'">
+          <span>${n}</span><span style="color:#0078d4;">${c}</span><span>${net}</span><span style="color:#666;">${m}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
 }
 
-function switchTaskMgrTab(tab) {
-    document.querySelectorAll('.taskmgr-tab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
-    
-    if (tab === 'processes') {
-        document.getElementById('taskmgr-processes').style.display = 'block';
-        document.getElementById('taskmgr-performance').style.display = 'none';
-    } else {
-        document.getElementById('taskmgr-processes').style.display = 'none';
-        document.getElementById('taskmgr-performance').style.display = 'block';
+function tmSwitchTab(tab, e) {
+    const tabs = ['processes','performance','apphistory','startup','users','details'];
+    tabs.forEach(t => {
+        const el = document.getElementById('tm-' + t);
+        if (el) el.style.display = 'none';
+        const btn = document.getElementById('tm-tab-' + t.replace('processes','proc').replace('performance','perf').replace('apphistory','app').replace('startup','start').replace('users','users').replace('details','det'));
+        if (btn) btn.classList.remove('active');
+    });
+    const show = document.getElementById('tm-' + tab);
+    if (show) show.style.display = 'flex';
+    if (e?.target) e.target.classList.add('active');
+    if (tab === 'processes') tmRenderProcs();
+    if (tab === 'performance') { tmPerfNav('cpu'); tmStartPerfUpdater(); }
+}
+
+let _tmProcInterval = null;
+let _tmPerfInterval = null;
+let _tmSelectedPid = null;
+
+function tmStartUpdater() {
+    tmRenderProcs();
+    if (_tmProcInterval) clearInterval(_tmProcInterval);
+    _tmProcInterval = setInterval(() => {
+        if (document.getElementById('tm-proc-list')) tmRenderProcs();
+        else clearInterval(_tmProcInterval);
+    }, 2000);
+    tmPerfNav('cpu');
+}
+
+function tmRenderProcs() {
+    const list = document.getElementById('tm-proc-list');
+    if (!list) return;
+    const procs = (window._tmProcs || []).concat(
+        (openWindows || []).filter(w => !(window._tmProcs||[]).find(p=>p.name.includes(w.title.replace(/[^a-zA-Z]/g,'')))).map(w=>({
+            name: w.title, icon: '🪟', pid: 10000 + Math.floor(Math.random()*9000),
+            cpu: Math.random()*5, mem: 30000 + Math.random()*80000, status:'Running', type:'App'
+        }))
+    );
+    // jitter cpu values
+    procs.forEach(p => { p.cpu = Math.max(0, p.cpu + (Math.random()-0.5)*0.4); });
+
+    const totalCpu = procs.reduce((a,b)=>a+b.cpu,0);
+    const totalMem = procs.reduce((a,b)=>a+b.mem,0);
+    const countEl = document.getElementById('tm-proc-count');
+    if (countEl) countEl.textContent = `${procs.length} processes  |  CPU ${Math.min(totalCpu,100).toFixed(1)}%  |  Memory ${(totalMem/1024).toFixed(0)} MB`;
+
+    const userCpu = document.getElementById('tm-user-cpu');
+    const userMem = document.getElementById('tm-user-mem');
+    if (userCpu) userCpu.textContent = Math.min(totalCpu,100).toFixed(1) + '%';
+    if (userMem) userMem.textContent = (totalMem/1024).toFixed(0) + ' MB';
+
+    list.innerHTML = procs.map(p => {
+        const cpuPct = Math.min(p.cpu, 100);
+        const cpuColor = cpuPct > 50 ? '#d13438' : cpuPct > 20 ? '#ca5010' : '#107c10';
+        const memMb = (p.mem/1024).toFixed(0);
+        const isSelected = _tmSelectedPid === p.pid;
+        return `<div onclick="tmSelectProc(${p.pid})" style="display:grid;grid-template-columns:1fr 80px 100px 90px 90px;padding:5px 10px;border-bottom:1px solid #f5f5f5;cursor:pointer;${isSelected?'background:#cce4ff;':''}align-items:center;" onmouseover="if(${!isSelected})this.style.background='#f0f7ff'" onmouseout="if(${!isSelected})this.style.background='${isSelected?'#cce4ff':'transparent'}'">
+          <span style="display:flex;align-items:center;gap:6px;overflow:hidden;"><span style="font-size:15px;">${p.icon||'⚙️'}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</span></span>
+          <span style="text-align:right;color:${cpuColor};font-size:12px;">${cpuPct.toFixed(1)}%</span>
+          <span style="text-align:right;font-size:12px;">${memMb} MB</span>
+          <span style="text-align:right;color:#888;font-size:12px;">${p.pid}</span>
+          <span style="font-size:12px;color:#107c10;">${p.status}</span>
+        </div>`;
+    }).join('');
+}
+
+function tmSelectProc(pid) {
+    _tmSelectedPid = pid;
+    const btn = document.getElementById('tm-end-btn');
+    if (btn) btn.disabled = false;
+    tmRenderProcs();
+}
+
+function tmEndTask() {
+    if (!_tmSelectedPid) return;
+    const procs = window._tmProcs || [];
+    const proc = procs.find(p => p.pid === _tmSelectedPid);
+    if (proc) {
+        if (['System','smss.exe','winlogon.exe','csrss.exe','lsass.exe'].includes(proc.name)) {
+            if (confirm(`Warning: Ending "${proc.name}" may cause system instability or a BSOD.\n\nAre you sure?`)) {
+                triggerBSOD();
+                return;
+            }
+            return;
+        }
+        const idx = procs.indexOf(proc);
+        if (idx > -1) procs.splice(idx, 1);
+        window._tmProcs = procs;
+        _tmSelectedPid = null;
+        const btn = document.getElementById('tm-end-btn');
+        if (btn) btn.disabled = true;
+        addNotification('📊', 'Task Manager', `"${proc.name}" (PID ${proc.pid}) was ended.`);
+        tmRenderProcs();
     }
 }
 
-function updateProcessList() {
-    processes = [
-        { name: 'System', cpu: Math.random() * 5, memory: 150 + Math.random() * 50 },
-        { name: 'Windows Explorer', cpu: Math.random() * 10, memory: 80 + Math.random() * 40 },
-        { name: 'Microsoft Edge', cpu: Math.random() * 15, memory: 200 + Math.random() * 100 }
-    ];
-    
-    openWindows.forEach(win => {
-        processes.push({
-            name: win.title,
-            cpu: Math.random() * 8,
-            memory: 50 + Math.random() * 100
-        });
+function tmSortBy(col) {
+    const procs = window._tmProcs || [];
+    if (col === 'name') procs.sort((a,b)=>a.name.localeCompare(b.name));
+    if (col === 'cpu') procs.sort((a,b)=>b.cpu-a.cpu);
+    if (col === 'mem') procs.sort((a,b)=>b.mem-a.mem);
+    window._tmProcs = procs;
+    tmRenderProcs();
+}
+
+let _tmCpuHistory = Array(60).fill(0);
+let _tmMemHistory = Array(60).fill(0);
+
+function tmStartPerfUpdater() {
+    if (_tmPerfInterval) clearInterval(_tmPerfInterval);
+    _tmPerfInterval = setInterval(() => {
+        const cpu = Math.random() * 12 + 2;
+        const mem = 41000 + Math.random() * 2000; // ~8% of 500GB
+        _tmCpuHistory.push(cpu); _tmCpuHistory.shift();
+        _tmMemHistory.push(mem); _tmMemHistory.shift();
+        const navCpu = document.getElementById('tm-nav-cpu-val');
+        if (navCpu) navCpu.textContent = cpu.toFixed(1) + '%';
+        const navMem = document.getElementById('tm-nav-mem-val');
+        if (navMem) navMem.textContent = (mem/1024).toFixed(0) + ' MB';
+        updateTmGraph('cpu', _tmCpuHistory, cpu.toFixed(1)+'%', '#0078d4');
+        updateTmGraph('mem', _tmMemHistory, (mem/1024).toFixed(0)+' MB', '#107c10');
+        if (!document.getElementById('tm-perf-detail')) clearInterval(_tmPerfInterval);
+    }, 1000);
+}
+
+function updateTmGraph(type, history, valText, color) {
+    const canvas = document.getElementById('tm-graph-' + type);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#f0f8ff';
+    ctx.fillRect(0, 0, w, h);
+    // grid
+    ctx.strokeStyle = '#dde8f4';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = (i / 4) * h;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+    // graph line
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.fillStyle = color + '22';
+    ctx.beginPath();
+    history.forEach((v, i) => {
+        const x = (i / (history.length - 1)) * w;
+        const maxVal = type === 'mem' ? 512000 : 100;
+        const y = h - (v / maxVal) * h;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     });
-    
+    ctx.stroke();
+}
+
+function tmPerfNav(section) {
+    ['cpu','mem','disk','gpu','net'].forEach(s => {
+        const el = document.getElementById('tm-nav-' + s);
+        if (el) { el.style.background = 'transparent'; el.style.borderLeft = 'none'; }
+    });
+    const active = document.getElementById('tm-nav-' + section);
+    if (active) { active.style.background = '#e3f2fd'; active.style.borderLeft = '3px solid #0078d4'; }
+
+    const detail = document.getElementById('tm-perf-detail');
+    if (!detail) return;
+
+    const cpu = Math.random()*12+2;
+    const mem = 41000 + Math.random()*2000;
+
+    const sections = {
+        cpu: {
+            title: 'CPU', sub: 'Intel® Core™ i9-14900K @ 8.00 GHz',
+            stats: [
+                ['Utilization', (cpu).toFixed(1) + '%'],
+                ['Speed', '8.00 GHz'],
+                ['Processes', (window._tmProcs||[]).length + ''],
+                ['Threads', '524'],
+                ['Handles', '41,832'],
+                ['Up time', '0:' + String(Math.floor(Math.random()*60)).padStart(2,'0') + ':' + String(Math.floor(Math.random()*60)).padStart(2,'0') + ':' + String(Math.floor(Math.random()*60)).padStart(2,'0')],
+            ],
+            extra: ['Sockets: 1','Cores: 24 (8P+16E)','Logical processors: 32','Virtualization: Enabled','L1 cache: 2.0 MB','L2 cache: 32.0 MB','L3 cache: 36.0 MB'],
+            color: '#0078d4', histKey: 'cpu', maxVal: 100
+        },
+        mem: {
+            title: 'Memory', sub: '500 GB DDR5-6400 (4× 128 GB)',
+            stats: [
+                ['In use', (mem/1024).toFixed(1) + ' GB'],
+                ['Available', (500 - mem/1024).toFixed(1) + ' GB'],
+                ['Committed', (mem/1024*1.1).toFixed(1) + ' / 512.0 GB'],
+                ['Cached', '12.4 GB'],
+                ['Paged pool', '2.1 GB'],
+                ['Non-paged pool', '0.8 GB'],
+            ],
+            extra: ['Speed: 6400 MT/s','Slots used: 4 of 4','Form factor: DIMM','Hardware reserved: 128 MB'],
+            color: '#107c10', histKey: 'mem', maxVal: 512000
+        },
+        disk: {
+            title: 'Disk 0 (C:)', sub: 'Samsung 990 Pro NVMe — 100 TB',
+            stats: [
+                ['Active time', (Math.random()*20).toFixed(0) + '%'],
+                ['Avg response time', (Math.random()*2+0.1).toFixed(2) + ' ms'],
+                ['Read speed', (Math.random()*500).toFixed(0) + ' MB/s'],
+                ['Write speed', (Math.random()*400).toFixed(0) + ' MB/s'],
+                ['Capacity', '100.0 TB'],
+                ['Used space', (Math.random()*10+5).toFixed(1) + ' TB'],
+            ],
+            extra: ['Interface: NVMe PCIe 5.0','Sequential read: 12,400 MB/s','Sequential write: 11,800 MB/s','Partitions: 3'],
+            color: '#6b69d6', histKey: 'disk', maxVal: 100
+        },
+        gpu: {
+            title: 'GPU 0', sub: 'NVIDIA GeForce RTX 4090 — 24 GB GDDR6X',
+            stats: [
+                ['GPU utilization', (Math.random()*8).toFixed(1) + '%'],
+                ['Dedicated GPU memory', (Math.random()*4+1).toFixed(1) + ' GB / 24 GB'],
+                ['Shared GPU memory', (Math.random()*2).toFixed(1) + ' GB'],
+                ['GPU temperature', Math.floor(Math.random()*15+45) + '°C'],
+                ['Driver version', '560.81'],
+                ['DirectX version', '12 Ultimate'],
+            ],
+            extra: ['CUDA cores: 16,384','Boost clock: 2.52 GHz','Memory bandwidth: 1,008 GB/s'],
+            color: '#76b900', histKey: 'gpu', maxVal: 100
+        },
+        net: {
+            title: 'Ethernet', sub: 'Intel I225-V 2.5Gbps LAN',
+            stats: [
+                ['Send', (Math.random()*50).toFixed(1) + ' Kbps'],
+                ['Receive', (Math.random()*200).toFixed(1) + ' Kbps'],
+                ['IPv4 Address', '192.168.1.105'],
+                ['IPv6 Address', 'fe80::1'],
+                ['Signal strength', '100%'],
+                ['DNS name', 'DESKTOP-WIN10SIM'],
+            ],
+            extra: ['Adapter name: Intel I225-V','Interface: 2.5GbE','Operational state: Up','DHCP enabled: Yes'],
+            color: '#ca5010', histKey: 'net', maxVal: 2500
+        },
+    };
+
+    const s = sections[section];
+    if (!s) return;
+
+    const histData = section === 'cpu' ? _tmCpuHistory :
+                     section === 'mem' ? _tmMemHistory :
+                     Array(60).fill(0).map(() => Math.random() * s.maxVal * 0.2);
+
+    detail.innerHTML = `
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+        <div>
+          <div style="font-size:20px;font-weight:600;color:#1a1a1a;">${s.title}</div>
+          <div style="font-size:12px;color:#666;margin-top:2px;">${s.sub}</div>
+        </div>
+        <div style="font-size:22px;font-weight:300;color:${s.color};">${s.stats[0][1]}</div>
+      </div>
+      <canvas id="tm-graph-${section}" width="420" height="140" style="width:100%;max-width:420px;height:140px;border:1px solid #dde8f4;border-radius:4px;display:block;margin-bottom:16px;"></canvas>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;margin-bottom:16px;">
+        ${s.stats.map(([k,v])=>`<div><div style="font-size:11px;color:#888;">${k}</div><div style="font-size:14px;font-weight:500;">${v}</div></div>`).join('')}
+      </div>
+      <div style="background:#f5f5f5;border-radius:4px;padding:12px;font-size:12px;color:#555;line-height:1.8;">
+        ${s.extra.join('<br>')}
+      </div>
+    </div>`;
+
+    tmStartPerfUpdater();
+    // draw initial graph
+    setTimeout(() => updateTmGraph(section, histData, s.stats[0][1], s.color), 50);
+}
+
+// Keep old compat names
+function switchTaskMgrTab(tab) { tmSwitchTab(tab === 'processes' ? 'processes' : 'performance', null); }
+
+function updateProcessList() {
     const tbody = document.getElementById('process-tbody');
     if (tbody) {
-        tbody.innerHTML = processes.map(p => `
+        const procs = window._tmProcs || [];
+        tbody.innerHTML = procs.map(p => `
             <tr>
                 <td>${p.name}</td>
                 <td class="cpu-usage">${p.cpu.toFixed(1)}%</td>
-                <td class="mem-usage">${p.memory.toFixed(0)} MB</td>
+                <td class="mem-usage">${(p.mem/1024).toFixed(0)} MB</td>
             </tr>
         `).join('');
     }
@@ -1916,30 +2260,89 @@ function edgeLoadUrl(url) {
     }
     if (bar) bar.value = url;
     if (lockIcon) lockIcon.textContent = url.startsWith('https') ? '🔒' : '⚠️';
-    
+
     const tab = edgeTabs.find(t => t.id === edgeActiveTab);
     if (tab) {
         tab.url = url;
         tab.history = tab.history.slice(0, tab.histIdx + 1);
         tab.history.push(url);
         tab.histIdx = tab.history.length - 1;
-        try { tab.title = new URL(url).hostname; } catch(e) { tab.title = url; }
+        try { tab.title = new URL(url).hostname.replace('www.',''); } catch(e) { tab.title = url; }
         const tabEl = document.getElementById('edge-tab-' + tab.id);
-        if (tabEl) tabEl.querySelector('.edge-tab-title').textContent = tab.title.replace('www.','');
+        if (tabEl) tabEl.querySelector('.edge-tab-title').textContent = tab.title;
     }
-    
+
+    let hostname = '';
+    try { hostname = new URL(url).hostname; } catch(e) { hostname = url; }
+    const siteName = hostname.replace('www.','');
+    const isHttps = url.startsWith('https');
+
     content.innerHTML = `
-        <div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;">
-          <div style="background:#0078d4;color:white;padding:4px 12px;font-size:12px;display:flex;align-items:center;gap:8px;">
-            <span>⏳</span><span>Loading ${url}...</span>
-          </div>
-          <iframe id="edge-iframe" src="${url}" 
-            style="flex:1;border:none;width:100%;"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
-            onload="document.querySelector('#edge-content .edge-load-bar')?.remove(); document.getElementById('edge-lock-icon').textContent='🔒';"
-            onerror="this.srcdoc='<body style=padding:40px><h2>This page cannot be displayed</h2><p>The site blocked embedding. <a href=\\'${url}\\' target=\\'_top\\'>Open directly →</a></p></body>'">
+        <div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;background:#f3f3f3;">
+          <div id="edge-load-bar" style="background:linear-gradient(90deg,#0078d4,#50a0ff);height:3px;width:0%;transition:width 1s ease;"></div>
+          <iframe id="edge-iframe" src="${url}"
+            style="flex:1;border:none;width:100%;background:white;"
+            referrerpolicy="no-referrer"
+            onload="edgeIframeLoaded(this,'${url.replace(/'/g,"\\'")}')">
           </iframe>
+          <div id="edge-blocked-overlay" style="display:none;position:absolute;inset:0;top:3px;background:white;flex-direction:column;align-items:center;justify-content:center;z-index:10;">
+            <div style="text-align:center;max-width:500px;padding:40px;">
+              <div style="font-size:64px;margin-bottom:20px;">🌐</div>
+              <h2 style="font-size:22px;color:#1a1a1a;margin-bottom:8px;">${siteName}</h2>
+              <p style="color:#666;font-size:14px;margin-bottom:6px;">${url}</p>
+              <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:14px 20px;margin:20px 0;text-align:left;font-size:13px;">
+                <strong>⚠️ This page can't be shown here</strong><br>
+                <span style="color:#666;font-size:12px;">${siteName} has a security policy that prevents it from being embedded inside other windows. This is normal behaviour for most major websites.</span>
+              </div>
+              <button onclick="window.open('${url}','_blank')" style="background:#0078d4;color:white;border:none;border-radius:6px;padding:12px 28px;font-size:15px;cursor:pointer;font-weight:600;margin-right:10px;">🔗 Open ${siteName} in browser</button>
+              <button onclick="document.getElementById('edge-blocked-overlay').style.display='none';document.getElementById('edge-iframe').style.display='flex';" style="background:#f3f3f3;border:1px solid #ccc;border-radius:6px;padding:12px 20px;font-size:14px;cursor:pointer;">Try anyway</button>
+            </div>
+          </div>
         </div>`;
+
+    // animate the loading bar
+    setTimeout(() => {
+        const lb = document.getElementById('edge-load-bar');
+        if (lb) lb.style.width = '80%';
+    }, 50);
+    setTimeout(() => {
+        const lb = document.getElementById('edge-load-bar');
+        if (lb) { lb.style.width = '100%'; setTimeout(() => { if(lb) lb.style.display = 'none'; }, 400); }
+        // Check if iframe actually loaded content (many sites block with X-Frame-Options)
+        const iframe = document.getElementById('edge-iframe');
+        if (iframe) {
+            try {
+                // If we can access contentDocument and it has body, it loaded fine
+                const doc = iframe.contentDocument || iframe.contentWindow?.document;
+                if (!doc || doc.body === null || (doc.body && doc.body.innerHTML === '')) {
+                    showEdgeBlockedOverlay();
+                }
+            } catch(e) {
+                // Cross-origin means it loaded (browser enforces same-origin, not X-Frame-Options here)
+                // so do nothing - the content is there
+            }
+        }
+    }, 2000);
+}
+
+function edgeIframeLoaded(iframe, url) {
+    try {
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!doc || !doc.body || doc.body.innerHTML.trim() === '') {
+            showEdgeBlockedOverlay();
+        }
+    } catch(e) {
+        // Cross-origin means site actually loaded — that's fine
+    }
+}
+
+function showEdgeBlockedOverlay() {
+    const overlay = document.getElementById('edge-blocked-overlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+        const iframe = document.getElementById('edge-iframe');
+        if (iframe) iframe.style.display = 'none';
+    }
 }
 
 function edgeNav(action) {
@@ -2216,7 +2619,66 @@ function chromeLoadUrl(url) {
         const tabEl = document.getElementById('chrome-tab-' + tab.id);
         if (tabEl) tabEl.querySelector('.chrome-tab-title').textContent = tab.title;
     }
-    content.innerHTML = `<iframe src="${url}" style="width:100%;height:100%;border:none;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>`;
+
+    let hostname = '';
+    try { hostname = new URL(url).hostname; } catch(e) { hostname = url; }
+    const siteName = hostname.replace('www.','');
+
+    content.innerHTML = `
+        <div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;background:#f1f3f4;">
+          <div id="chrome-load-bar" style="background:linear-gradient(90deg,#4285f4,#34a853);height:3px;width:0%;transition:width 1s ease;position:absolute;top:0;left:0;z-index:5;"></div>
+          <iframe id="chrome-iframe" src="${url}"
+            style="flex:1;border:none;width:100%;height:100%;background:white;"
+            referrerpolicy="no-referrer"
+            onload="chromeIframeLoaded(this,'${url.replace(/'/g,"\\'")}')">
+          </iframe>
+          <div id="chrome-blocked-overlay" style="display:none;position:absolute;inset:0;background:white;flex-direction:column;align-items:center;justify-content:center;z-index:10;">
+            <div style="text-align:center;max-width:500px;padding:40px;">
+              <div style="font-size:64px;margin-bottom:20px;">🌐</div>
+              <h2 style="font-size:22px;color:#202124;margin-bottom:8px;">${siteName}</h2>
+              <p style="color:#5f6368;font-size:14px;margin-bottom:6px;">${url}</p>
+              <div style="background:#fef7e0;border:1px solid #fbbc04;border-radius:8px;padding:14px 20px;margin:20px 0;text-align:left;font-size:13px;">
+                <strong>⚠️ This page can't be shown here</strong><br>
+                <span style="color:#5f6368;font-size:12px;">${siteName} has a security policy that prevents it from being embedded. This is normal for most major websites.</span>
+              </div>
+              <button onclick="window.open('${url}','_blank')" style="background:#4285f4;color:white;border:none;border-radius:6px;padding:12px 28px;font-size:15px;cursor:pointer;font-weight:600;margin-right:10px;">🔗 Open ${siteName} in browser</button>
+              <button onclick="document.getElementById('chrome-blocked-overlay').style.display='none';document.getElementById('chrome-iframe').style.display='block';" style="background:#f1f3f4;border:1px solid #dadce0;border-radius:6px;padding:12px 20px;font-size:14px;cursor:pointer;">Try anyway</button>
+            </div>
+          </div>
+        </div>`;
+
+    setTimeout(() => { const lb = document.getElementById('chrome-load-bar'); if(lb) lb.style.width = '80%'; }, 50);
+    setTimeout(() => {
+        const lb = document.getElementById('chrome-load-bar');
+        if (lb) { lb.style.width = '100%'; setTimeout(() => { if(lb) lb.style.display='none'; }, 300); }
+        const iframe = document.getElementById('chrome-iframe');
+        if (iframe) {
+            try {
+                const doc = iframe.contentDocument || iframe.contentWindow?.document;
+                if (!doc || doc.body === null || (doc.body && doc.body.innerHTML.trim() === '')) {
+                    showChromeBlockedOverlay();
+                }
+            } catch(e) { /* cross-origin = actually loaded */ }
+        }
+    }, 2000);
+}
+
+function chromeIframeLoaded(iframe, url) {
+    try {
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!doc || !doc.body || doc.body.innerHTML.trim() === '') {
+            showChromeBlockedOverlay();
+        }
+    } catch(e) { /* cross-origin = actually loaded */ }
+}
+
+function showChromeBlockedOverlay() {
+    const overlay = document.getElementById('chrome-blocked-overlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+        const iframe = document.getElementById('chrome-iframe');
+        if (iframe) iframe.style.display = 'none';
+    }
 }
 
 function chromeNavAction(action) {

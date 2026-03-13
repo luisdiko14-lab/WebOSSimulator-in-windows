@@ -2818,3 +2818,31 @@ body {
 .sticky-note:hover {
     box-shadow: 5px 5px 20px rgba(0,0,0,0.4) !important;
 }
+
+/* ========================================
+   TASK MANAGER REDESIGN
+   ======================================== */
+.tm-tab {
+    padding: 8px 16px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 13px;
+    color: #444;
+    font-family: 'Segoe UI', sans-serif;
+    transition: background 0.15s;
+}
+.tm-tab:hover { background: rgba(0,120,212,0.08); }
+.tm-tab.active {
+    border-bottom: 2px solid #0078d4;
+    color: #0078d4;
+    font-weight: 600;
+}
+
+/* keep old process-list / performance styles for compat */
+.process-list { width: 100%; border-collapse: collapse; }
+.process-list th, .process-list td { padding: 6px 10px; text-align: left; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+.process-list th { background: #f3f3f3; font-weight: 600; color: #444; position: sticky; top: 0; }
+.cpu-usage { color: #107c10; }
+.mem-usage { color: #0078d4; }
