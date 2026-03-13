@@ -2635,3 +2635,186 @@ body {
     font-size: 12px;
     opacity: 0.8;
 }
+
+/* ========================================
+   BROWSER TABS - EDGE & CHROME
+   ======================================== */
+.edge-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #d0d0d0;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    min-width: 120px;
+    max-width: 200px;
+    font-size: 12px;
+    border: 1px solid #bbb;
+    border-bottom: none;
+    transition: background 0.15s;
+}
+.edge-tab.active {
+    background: white;
+    border-color: #ccc;
+    z-index: 2;
+    position: relative;
+}
+.edge-tab:hover:not(.active) { background: #c5c5c5; }
+.edge-tab-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.edge-tab-close { font-size: 11px; color: #666; padding: 1px 3px; border-radius: 3px; }
+.edge-tab-close:hover { background: rgba(0,0,0,0.1); color: #333; }
+.edge-bookmark { 
+    font-size: 12px; color: #333; cursor: pointer; 
+    padding: 2px 8px; border-radius: 3px; white-space: nowrap;
+    text-decoration: none; display: inline-flex; align-items: center;
+}
+.edge-bookmark:hover { background: #e8e8e8; }
+
+.chrome-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #c5c8d1;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    min-width: 120px;
+    max-width: 220px;
+    font-size: 12px;
+    border: 1px solid transparent;
+    transition: background 0.15s;
+}
+.chrome-tab.active {
+    background: white;
+    border-color: #e0e0e0;
+    border-bottom-color: white;
+    z-index: 2;
+    position: relative;
+    margin-bottom: -1px;
+}
+.chrome-tab:hover:not(.active) { background: #c0c3cc; }
+.chrome-tab-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chrome-tab-close { font-size: 11px; color: #666; padding: 1px 4px; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; }
+.chrome-tab-close:hover { background: rgba(0,0,0,0.15); }
+
+/* ========================================
+   WINDOW RESIZE HANDLES
+   ======================================== */
+.window-resize-n, .window-resize-s, .window-resize-e, .window-resize-w,
+.window-resize-ne, .window-resize-nw, .window-resize-se, .window-resize-sw {
+    position: absolute;
+    z-index: 100;
+}
+.window-resize-n  { top: -4px; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+.window-resize-s  { bottom: -4px; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+.window-resize-e  { right: -4px; top: 8px; bottom: 8px; width: 8px; cursor: ew-resize; }
+.window-resize-w  { left: -4px; top: 8px; bottom: 8px; width: 8px; cursor: ew-resize; }
+.window-resize-ne { top: -4px; right: -4px; width: 12px; height: 12px; cursor: nesw-resize; }
+.window-resize-nw { top: -4px; left: -4px; width: 12px; height: 12px; cursor: nwse-resize; }
+.window-resize-se { bottom: -4px; right: -4px; width: 12px; height: 12px; cursor: nwse-resize; }
+.window-resize-sw { bottom: -4px; left: -4px; width: 12px; height: 12px; cursor: nesw-resize; }
+
+/* ========================================
+   WINDOW IMPROVEMENTS
+   ======================================== */
+.window {
+    min-width: 300px !important;
+    min-height: 200px !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15) !important;
+}
+.window.active {
+    box-shadow: 0 16px 48px rgba(0,0,0,0.35), 0 4px 12px rgba(0,0,0,0.2) !important;
+}
+.window-titlebar { user-select: none; }
+
+/* ========================================
+   TASKBAR PINNED APPS
+   ======================================== */
+.taskbar-pinned {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-right: 8px;
+    border-right: 1px solid rgba(255,255,255,0.15);
+    padding-right: 8px;
+}
+.taskbar-pin-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 20px;
+    transition: background 0.15s;
+    border: none;
+    background: transparent;
+    color: white;
+    position: relative;
+}
+.taskbar-pin-btn:hover { background: rgba(255,255,255,0.15); }
+.taskbar-pin-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background: rgba(255,255,255,0.4);
+    border-radius: 50%;
+}
+
+/* ========================================
+   CMD / POWERSHELL
+   ======================================== */
+.cmd-window {
+    background: #000000;
+    color: #cccccc;
+    font-family: 'Consolas', 'Courier New', monospace;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    cursor: text;
+}
+.cmd-output {
+    flex: 1;
+    padding: 8px 12px;
+    white-space: pre-wrap;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.5;
+}
+.cmd-input-line {
+    display: flex;
+    align-items: center;
+    padding: 4px 12px 8px;
+}
+.cmd-prompt {
+    white-space: nowrap;
+    font-size: 13px;
+    font-family: 'Consolas', monospace;
+}
+.cmd-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-family: 'Consolas', monospace;
+    font-size: 13px;
+    outline: none;
+    caret-color: #cccccc;
+}
+
+/* ========================================
+   STICKY NOTES
+   ======================================== */
+.sticky-note {
+    transition: box-shadow 0.2s;
+}
+.sticky-note:hover {
+    box-shadow: 5px 5px 20px rgba(0,0,0,0.4) !important;
+}

@@ -185,6 +185,16 @@
                         <span class="search-text">Type here to search</span>
                     </div>
                 </div>
+                <div class="taskbar-pinned">
+                    <button class="taskbar-pin-btn" onclick="openApp('browser')" title="Microsoft Edge">🌐</button>
+                    <button class="taskbar-pin-btn" onclick="openApp('explorer')" title="File Explorer">📁</button>
+                    <button class="taskbar-pin-btn" onclick="openApp('mail')" title="Mail">📧</button>
+                    <button class="taskbar-pin-btn" onclick="openApp('teams')" title="Teams">👥</button>
+                    <button class="taskbar-pin-btn" onclick="openApp('store')" title="Microsoft Store">🛍️</button>
+                    <button class="taskbar-pin-btn" onclick="openApp('cmd')" title="Command Prompt">⬛</button>
+                    <button class="taskbar-pin-btn" onclick="openApp('code')" title="VS Code">💻</button>
+                    <button class="taskbar-pin-btn" onclick="openApp('calculator')" title="Calculator">🔢</button>
+                </div>
                 <div class="taskbar-center" id="taskbar-apps"></div>
                 <div class="taskbar-right">
                     <div class="system-tray">
@@ -281,11 +291,59 @@
                             </div>
                             <div class="app-item" onclick="openApp('code'); toggleStartMenu()">
                                 <span class="app-icon">💻</span>
-                                <span>Code Editor</span>
+                                <span>VS Code</span>
                             </div>
                             <div class="app-item" onclick="openApp('sysinfo'); toggleStartMenu()">
                                 <span class="app-icon">ℹ️</span>
                                 <span>System Info</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('wordpad'); toggleStartMenu()">
+                                <span class="app-icon">📄</span>
+                                <span>WordPad</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('stickynotes'); toggleStartMenu()">
+                                <span class="app-icon">🟡</span>
+                                <span>Sticky Notes</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('powershell'); toggleStartMenu()">
+                                <span class="app-icon">🔷</span>
+                                <span>PowerShell</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('controlpanel'); toggleStartMenu()">
+                                <span class="app-icon">🎛️</span>
+                                <span>Control Panel</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('devmgr'); toggleStartMenu()">
+                                <span class="app-icon">🖥️</span>
+                                <span>Device Manager</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('registry'); toggleStartMenu()">
+                                <span class="app-icon">📋</span>
+                                <span>Registry Editor</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('mediaplayer'); toggleStartMenu()">
+                                <span class="app-icon">▶️</span>
+                                <span>Media Player</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('teams'); toggleStartMenu()">
+                                <span class="app-icon">👥</span>
+                                <span>Microsoft Teams</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('mail'); toggleStartMenu()">
+                                <span class="app-icon">📧</span>
+                                <span>Mail</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('xbox'); toggleStartMenu()">
+                                <span class="app-icon">🎮</span>
+                                <span>Xbox</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('speedtest'); toggleStartMenu()">
+                                <span class="app-icon">⚡</span>
+                                <span>Speed Test</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('search'); toggleStartMenu()">
+                                <span class="app-icon">🔍</span>
+                                <span>Search</span>
                             </div>
                         </div>
                     </div>

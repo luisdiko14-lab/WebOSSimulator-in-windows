@@ -1805,20 +1805,209 @@ function startPerformanceMonitoring() {
     }, 2000);
 }
 
+let edgeTabs = [{ id: 1, url: '', title: 'New Tab', favicon: '🌐', history: [], histIdx: -1 }];
+let edgeActiveTab = 1;
+let edgeTabCounter = 2;
+
 function createBrowser() {
+    setTimeout(() => setupEdgeBrowser(), 100);
     return `
-        <div style="height: 100%; display: flex; flex-direction: column;">
-            <div style="background: #f3f3f3; padding: 8px; border-bottom: 1px solid #e0e0e0;">
-                <input type="text" value="https://www.bing.com" style="width: 100%; padding: 8px; border: 1px solid #d0d0d0; border-radius: 4px;">
-            </div>
-            <div style="flex: 1; display: flex; align-items: center; justify-content: center; background: white;">
-                <div style="text-align: center;">
-                    <h2 style="color: #0078d4;">Microsoft Edge</h2>
-                    <p>The fast and secure browser for Windows 10</p>
-                </div>
-            </div>
+    <div style="height:100%;display:flex;flex-direction:column;background:#f3f3f3;">
+      <div id="edge-tabs-bar" style="display:flex;align-items:center;background:#e8e8e8;padding:4px 8px 0;gap:2px;min-height:36px;">
+        <div class="edge-tab active" id="edge-tab-1" onclick="switchEdgeTab(1)">
+          <span class="edge-tab-favicon">🌐</span>
+          <span class="edge-tab-title">New Tab</span>
+          <span class="edge-tab-close" onclick="closeEdgeTab(event,1)">✕</span>
         </div>
-    `;
+        <button onclick="newEdgeTab()" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px 8px;border-radius:4px;color:#555;" title="New Tab">+</button>
+      </div>
+      <div style="background:#fff;border-bottom:1px solid #ddd;padding:6px 8px;display:flex;align-items:center;gap:6px;">
+        <button onclick="edgeNav('back')" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px 8px;border-radius:20px;color:#333;" title="Back">←</button>
+        <button onclick="edgeNav('forward')" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px 8px;border-radius:20px;color:#333;" title="Forward">→</button>
+        <button onclick="edgeNav('refresh')" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px 8px;border-radius:20px;color:#333;" title="Refresh">↻</button>
+        <div style="flex:1;display:flex;align-items:center;background:#f5f5f5;border:1px solid #ddd;border-radius:20px;padding:6px 14px;gap:8px;">
+          <span id="edge-lock-icon" style="font-size:13px;color:#666;">🔒</span>
+          <input id="edge-url-bar" type="text" value="" placeholder="Search the web or enter a URL"
+            style="flex:1;border:none;background:none;outline:none;font-size:14px;"
+            onkeydown="if(event.key==='Enter')edgeGo()"
+            onfocus="this.select()">
+        </div>
+        <button onclick="edgeGo()" style="background:#0078d4;border:none;cursor:pointer;font-size:13px;padding:6px 14px;border-radius:20px;color:#fff;font-weight:600;">Go</button>
+        <button onclick="edgeBookmark()" style="background:none;border:none;cursor:pointer;font-size:18px;" title="Bookmark">☆</button>
+      </div>
+      <div id="edge-bookmarks-bar" style="background:#f9f9f9;border-bottom:1px solid #eee;padding:3px 10px;display:flex;gap:8px;flex-wrap:wrap;">
+        <a class="edge-bookmark" onclick="edgeLoadUrl('https://www.google.com')">🔍 Google</a>
+        <a class="edge-bookmark" onclick="edgeLoadUrl('https://www.youtube.com')">▶️ YouTube</a>
+        <a class="edge-bookmark" onclick="edgeLoadUrl('https://www.github.com')">🐙 GitHub</a>
+        <a class="edge-bookmark" onclick="edgeLoadUrl('https://www.reddit.com')">🤖 Reddit</a>
+        <a class="edge-bookmark" onclick="edgeLoadUrl('https://www.wikipedia.org')">📖 Wikipedia</a>
+        <a class="edge-bookmark" onclick="edgeLoadUrl('https://www.twitter.com')">🐦 X (Twitter)</a>
+        <a class="edge-bookmark" onclick="edgeLoadUrl('https://news.ycombinator.com')">🟧 Hacker News</a>
+      </div>
+      <div id="edge-content" style="flex:1;position:relative;background:white;">
+        ${edgeNewTabPage()}
+      </div>
+    </div>`;
+}
+
+function edgeNewTabPage() {
+    const sites = [
+        { icon: '🔍', name: 'Google', url: 'https://www.google.com' },
+        { icon: '▶️', name: 'YouTube', url: 'https://www.youtube.com' },
+        { icon: '🐙', name: 'GitHub', url: 'https://github.com' },
+        { icon: '🤖', name: 'Reddit', url: 'https://www.reddit.com' },
+        { icon: '📖', name: 'Wikipedia', url: 'https://www.wikipedia.org' },
+        { icon: '🐦', name: 'Twitter', url: 'https://www.twitter.com' },
+        { icon: '📰', name: 'BBC News', url: 'https://www.bbc.com/news' },
+        { icon: '🛍️', name: 'Amazon', url: 'https://www.amazon.com' }
+    ];
+    return `
+    <div style="height:100%;display:flex;flex-direction:column;align-items:center;padding-top:40px;background:linear-gradient(to bottom,#f0f4f9,#fff);">
+      <div style="font-size:50px;margin-bottom:10px;">🌐</div>
+      <h1 style="font-size:32px;font-weight:300;color:#333;margin-bottom:30px;">Microsoft Edge</h1>
+      <div style="display:flex;align-items:center;background:white;border:2px solid #0078d4;border-radius:30px;padding:10px 20px;width:560px;max-width:90%;gap:10px;box-shadow:0 2px 12px rgba(0,120,212,0.15);">
+        <span style="font-size:18px;">🔍</span>
+        <input id="edge-newtab-search" type="text" placeholder="Search the web..."
+          style="flex:1;border:none;outline:none;font-size:16px;"
+          onkeydown="if(event.key==='Enter'){edgeLoadUrl('https://www.bing.com/search?q='+encodeURIComponent(this.value))}">
+        <button onclick="var q=document.getElementById('edge-newtab-search').value;if(q)edgeLoadUrl('https://www.bing.com/search?q='+encodeURIComponent(q))"
+          style="background:#0078d4;color:white;border:none;border-radius:20px;padding:6px 16px;cursor:pointer;">Search</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,110px);gap:16px;margin-top:40px;">
+        ${sites.map(s => `
+        <div onclick="edgeLoadUrl('${s.url}')" style="background:white;border-radius:12px;padding:16px;text-align:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform 0.15s,box-shadow 0.15s;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 6px 16px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'">
+          <div style="font-size:32px;margin-bottom:6px;">${s.icon}</div>
+          <div style="font-size:12px;color:#444;">${s.name}</div>
+        </div>`).join('')}
+      </div>
+      <div id="edge-news" style="margin-top:40px;width:600px;max-width:90%;">
+        <h3 style="color:#555;margin-bottom:16px;font-weight:400;">📰 Top Stories</h3>
+        <div style="display:grid;gap:10px;">
+          ${['Tech giants announce AI breakthroughs at summit','Scientists discover new exoplanet in habitable zone','Global markets react to new economic data','New open-source project gains 100k stars in 24 hours'].map(h=>`
+          <div onclick="edgeLoadUrl('https://news.ycombinator.com')" style="background:white;border-radius:8px;padding:14px;cursor:pointer;border:1px solid #eee;display:flex;gap:12px;align-items:center;" onmouseover="this.style.background='#f5f9ff'" onmouseout="this.style.background='white'">
+            <span style="font-size:24px;">📰</span><span style="color:#333;font-size:14px;">${h}</span>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function setupEdgeBrowser() {}
+
+function edgeGo() {
+    const bar = document.getElementById('edge-url-bar');
+    if (!bar) return;
+    let url = bar.value.trim();
+    if (!url) return;
+    edgeLoadUrl(url);
+}
+
+function edgeLoadUrl(url) {
+    const bar = document.getElementById('edge-url-bar');
+    const content = document.getElementById('edge-content');
+    const lockIcon = document.getElementById('edge-lock-icon');
+    if (!content) return;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        if (url.includes('.') && !url.includes(' ')) {
+            url = 'https://' + url;
+        } else {
+            url = 'https://www.bing.com/search?q=' + encodeURIComponent(url);
+        }
+    }
+    if (bar) bar.value = url;
+    if (lockIcon) lockIcon.textContent = url.startsWith('https') ? '🔒' : '⚠️';
+    
+    const tab = edgeTabs.find(t => t.id === edgeActiveTab);
+    if (tab) {
+        tab.url = url;
+        tab.history = tab.history.slice(0, tab.histIdx + 1);
+        tab.history.push(url);
+        tab.histIdx = tab.history.length - 1;
+        try { tab.title = new URL(url).hostname; } catch(e) { tab.title = url; }
+        const tabEl = document.getElementById('edge-tab-' + tab.id);
+        if (tabEl) tabEl.querySelector('.edge-tab-title').textContent = tab.title.replace('www.','');
+    }
+    
+    content.innerHTML = `
+        <div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;">
+          <div style="background:#0078d4;color:white;padding:4px 12px;font-size:12px;display:flex;align-items:center;gap:8px;">
+            <span>⏳</span><span>Loading ${url}...</span>
+          </div>
+          <iframe id="edge-iframe" src="${url}" 
+            style="flex:1;border:none;width:100%;"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
+            onload="document.querySelector('#edge-content .edge-load-bar')?.remove(); document.getElementById('edge-lock-icon').textContent='🔒';"
+            onerror="this.srcdoc='<body style=padding:40px><h2>This page cannot be displayed</h2><p>The site blocked embedding. <a href=\\'${url}\\' target=\\'_top\\'>Open directly →</a></p></body>'">
+          </iframe>
+        </div>`;
+}
+
+function edgeNav(action) {
+    const tab = edgeTabs.find(t => t.id === edgeActiveTab);
+    if (!tab) return;
+    if (action === 'back' && tab.histIdx > 0) {
+        tab.histIdx--;
+        edgeLoadUrl(tab.history[tab.histIdx]);
+    } else if (action === 'forward' && tab.histIdx < tab.history.length - 1) {
+        tab.histIdx++;
+        edgeLoadUrl(tab.history[tab.histIdx]);
+    } else if (action === 'refresh') {
+        const iframe = document.getElementById('edge-iframe');
+        if (iframe) iframe.src = iframe.src;
+        else if (tab.url) edgeLoadUrl(tab.url);
+    }
+}
+
+function newEdgeTab() {
+    const id = edgeTabCounter++;
+    edgeTabs.push({ id, url: '', title: 'New Tab', favicon: '🌐', history: [], histIdx: -1 });
+    const bar = document.getElementById('edge-tabs-bar');
+    const addBtn = bar.querySelector('button');
+    const tabEl = document.createElement('div');
+    tabEl.className = 'edge-tab';
+    tabEl.id = 'edge-tab-' + id;
+    tabEl.innerHTML = `<span class="edge-tab-favicon">🌐</span><span class="edge-tab-title">New Tab</span><span class="edge-tab-close" onclick="closeEdgeTab(event,${id})">✕</span>`;
+    tabEl.onclick = () => switchEdgeTab(id);
+    bar.insertBefore(tabEl, addBtn);
+    switchEdgeTab(id);
+}
+
+function switchEdgeTab(id) {
+    edgeActiveTab = id;
+    document.querySelectorAll('.edge-tab').forEach(t => t.classList.remove('active'));
+    const tabEl = document.getElementById('edge-tab-' + id);
+    if (tabEl) tabEl.classList.add('active');
+    const tab = edgeTabs.find(t => t.id === id);
+    const bar = document.getElementById('edge-url-bar');
+    if (bar && tab) bar.value = tab.url;
+    const content = document.getElementById('edge-content');
+    if (content && tab) {
+        if (tab.url) edgeLoadUrl(tab.url);
+        else content.innerHTML = edgeNewTabPage();
+    }
+}
+
+function closeEdgeTab(e, id) {
+    e.stopPropagation();
+    if (edgeTabs.length === 1) { closeWindow('browser'); return; }
+    edgeTabs = edgeTabs.filter(t => t.id !== id);
+    const tabEl = document.getElementById('edge-tab-' + id);
+    if (tabEl) tabEl.remove();
+    if (edgeActiveTab === id) switchEdgeTab(edgeTabs[0].id);
+}
+
+function edgeBookmark() {
+    const tab = edgeTabs.find(t => t.id === edgeActiveTab);
+    if (tab && tab.url) {
+        const bar = document.getElementById('edge-bookmarks-bar');
+        if (bar) {
+            const bm = document.createElement('a');
+            bm.className = 'edge-bookmark';
+            bm.textContent = '⭐ ' + (tab.title || tab.url);
+            bm.onclick = () => edgeLoadUrl(tab.url);
+            bar.appendChild(bm);
+        }
+    }
 }
 
 function createComputer() {
@@ -1910,54 +2099,176 @@ function startChromeDownload() {
     }, 300);
 }
 
+let chromeTabs = [{ id: 1, url: '', title: 'New Tab', history: [], histIdx: -1 }];
+let chromeActiveTab = 1;
+let chromeTabCounter = 2;
+
 function createChrome() {
-    setTimeout(() => {
-        const urlInput = document.getElementById('chrome-url-input');
-        const goBtn = document.getElementById('chrome-go-btn');
-        
-        if (urlInput && goBtn) {
-            goBtn.addEventListener('click', () => navigateChrome());
-            urlInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') navigateChrome();
-            });
-        }
-    }, 100);
-    
+    setTimeout(() => {}, 100);
     return `
-        <div class="chrome-browser">
-            <div class="chrome-toolbar">
-                <button class="chrome-nav-btn" onclick="chromeBack()">←</button>
-                <button class="chrome-nav-btn" onclick="chromeForward()">→</button>
-                <button class="chrome-nav-btn" onclick="chromeRefresh()">↻</button>
-                <div class="chrome-url-bar">
-                    <span style="color: #5f6368; margin-right: 8px;">🔒</span>
-                    <input type="text" id="chrome-url-input" value="https://www.google.com" placeholder="Search Google or type a URL">
-                </div>
-                <button class="chrome-nav-btn" id="chrome-go-btn">Go</button>
-            </div>
-            <div class="chrome-content" id="chrome-content">
-                <div class="chrome-google-page">
-                    <div class="google-logo">
-                        <span style="color: #4285f4; font-size: 72px; font-weight: 400;">G</span>
-                        <span style="color: #ea4335; font-size: 72px; font-weight: 400;">o</span>
-                        <span style="color: #fbbc05; font-size: 72px; font-weight: 400;">o</span>
-                        <span style="color: #4285f4; font-size: 72px; font-weight: 400;">g</span>
-                        <span style="color: #34a853; font-size: 72px; font-weight: 400;">l</span>
-                        <span style="color: #ea4335; font-size: 72px; font-weight: 400;">e</span>
-                    </div>
-                    <div class="google-search-box">
-                        <input type="text" placeholder="Search Google or type a URL" style="width: 100%; padding: 12px 20px; border: 1px solid #dfe1e5; border-radius: 24px; font-size: 16px; outline: none;">
-                    </div>
-                    <div style="margin-top: 40px; display: flex; gap: 16px; justify-content: center;">
-                        <button onclick="downloadRansomware()" style="padding: 12px 24px; background: linear-gradient(135deg, #ff0000, #cc0000); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; box-shadow: 0 4px 15px rgba(255,0,0,0.4);">⚠️ Download Ransomware.exe</button>
-                        <button onclick="downloadFreeGames()" style="padding: 12px 24px; background: linear-gradient(135deg, #00cc00, #009900); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold;">🎮 Free Games 2024</button>
-                    </div>
-                    <p style="margin-top: 16px; color: #999; font-size: 12px;">Totally safe downloads! Trust us! 😈</p>
-                </div>
-            </div>
+    <div style="height:100%;display:flex;flex-direction:column;background:#dee1e6;">
+      <div id="chrome-tabs-bar" style="display:flex;align-items:flex-end;background:#dee1e6;padding:8px 8px 0;gap:1px;min-height:40px;">
+        <div class="chrome-tab active" id="chrome-tab-1" onclick="switchChromeTab(1)">
+          <span class="chrome-tab-favicon">🌐</span>
+          <span class="chrome-tab-title">New Tab</span>
+          <span class="chrome-tab-close" onclick="closeChromeTab(event,1)">✕</span>
         </div>
-    `;
+        <button onclick="newChromeTab()" style="background:none;border:none;cursor:pointer;font-size:20px;padding:2px 10px;color:#555;margin-bottom:2px;" title="New Tab">+</button>
+        <div style="flex:1"></div>
+        <div style="display:flex;gap:6px;align-items:center;padding:4px 8px;">
+          <button style="background:none;border:none;cursor:pointer;font-size:16px;color:#555;" title="Extensions">🧩</button>
+          <button style="background:none;border:none;cursor:pointer;font-size:16px;color:#555;" title="Profile">👤</button>
+          <button style="background:none;border:none;cursor:pointer;font-size:16px;color:#555;" title="Menu">⋮</button>
+        </div>
+      </div>
+      <div style="background:white;border-bottom:1px solid #ddd;padding:6px 8px;display:flex;align-items:center;gap:6px;">
+        <button onclick="chromeNavAction('back')" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px 8px;border-radius:20px;color:#333;">←</button>
+        <button onclick="chromeNavAction('forward')" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px 8px;border-radius:20px;color:#333;">→</button>
+        <button onclick="chromeNavAction('refresh')" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px 8px;border-radius:20px;color:#333;">↻</button>
+        <div style="flex:1;display:flex;align-items:center;background:#f1f3f4;border-radius:24px;padding:8px 16px;gap:8px;">
+          <span id="chrome-lock-icon" style="font-size:13px;color:#666;">🔒</span>
+          <input id="chrome-url-input" type="text" value="" placeholder="Search Google or type a URL"
+            style="flex:1;border:none;background:none;outline:none;font-size:14px;"
+            onkeydown="if(event.key==='Enter')chromeGoUrl()"
+            onfocus="this.select()">
+        </div>
+        <button onclick="chromeGoUrl()" style="background:#4285f4;color:white;border:none;border-radius:20px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">Go</button>
+        <button onclick="chromeBookmark()" style="background:none;border:none;cursor:pointer;font-size:18px;" title="Bookmark">☆</button>
+      </div>
+      <div id="chrome-content" style="flex:1;position:relative;background:white;">
+        ${chromeNewTabPage()}
+      </div>
+    </div>`;
 }
+
+function chromeNewTabPage() {
+    const sites = [
+        { icon: '📺', name: 'YouTube', url: 'https://www.youtube.com' },
+        { icon: '🐙', name: 'GitHub', url: 'https://github.com' },
+        { icon: '🤖', name: 'Reddit', url: 'https://www.reddit.com' },
+        { icon: '📖', name: 'Wikipedia', url: 'https://www.wikipedia.org' },
+        { icon: '🛍️', name: 'Amazon', url: 'https://www.amazon.com' },
+        { icon: '🐦', name: 'Twitter', url: 'https://twitter.com' },
+        { icon: '💼', name: 'LinkedIn', url: 'https://www.linkedin.com' },
+        { icon: '🗺️', name: 'Maps', url: 'https://maps.google.com' }
+    ];
+    return `
+    <div style="height:100%;display:flex;flex-direction:column;align-items:center;padding-top:60px;background:linear-gradient(to bottom,#fff,#f8f9fa);">
+      <div style="display:flex;align-items:center;margin-bottom:30px;gap:6px;">
+        <span style="color:#4285f4;font-size:48px;font-weight:300;font-family:serif;">G</span>
+        <span style="color:#ea4335;font-size:48px;font-weight:300;font-family:serif;">o</span>
+        <span style="color:#fbbc05;font-size:48px;font-weight:300;font-family:serif;">o</span>
+        <span style="color:#4285f4;font-size:48px;font-weight:300;font-family:serif;">g</span>
+        <span style="color:#34a853;font-size:48px;font-weight:300;font-family:serif;">l</span>
+        <span style="color:#ea4335;font-size:48px;font-weight:300;font-family:serif;">e</span>
+      </div>
+      <div style="display:flex;align-items:center;border:1px solid #dfe1e5;border-radius:24px;padding:10px 20px;width:560px;max-width:90%;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        <span style="font-size:18px;color:#9aa0a6;">🔍</span>
+        <input id="chrome-newtab-search" type="text" placeholder="Search Google or type a URL"
+          style="flex:1;border:none;outline:none;font-size:16px;"
+          onkeydown="if(event.key==='Enter'){chromeLoadUrl('https://www.google.com/search?q='+encodeURIComponent(this.value))}">
+      </div>
+      <div style="display:flex;gap:12px;margin-top:12px;">
+        <button onclick="var q=document.getElementById('chrome-newtab-search').value;chromeLoadUrl(q?'https://www.google.com/search?q='+encodeURIComponent(q):'https://www.google.com')" style="padding:8px 20px;background:#f8f9fa;border:1px solid #dfe1e5;border-radius:4px;cursor:pointer;color:#3c4043;">Google Search</button>
+        <button onclick="chromeLoadUrl('https://www.google.com/search?q=i+am+feeling+lucky')" style="padding:8px 20px;background:#f8f9fa;border:1px solid #dfe1e5;border-radius:4px;cursor:pointer;color:#3c4043;">I'm Feeling Lucky</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,100px);gap:12px;margin-top:40px;">
+        ${sites.map(s=>`
+        <div onclick="chromeLoadUrl('${s.url}')" style="display:flex;flex-direction:column;align-items:center;padding:12px;border-radius:8px;cursor:pointer;" onmouseover="this.style.background='#f1f3f4'" onmouseout="this.style.background='transparent'">
+          <div style="width:48px;height:48px;background:#f1f3f4;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:6px;">${s.icon}</div>
+          <span style="font-size:12px;color:#3c4043;">${s.name}</span>
+        </div>`).join('')}
+      </div>
+      <div style="margin-top:40px;padding:12px 24px;background:#fff3cd;border-radius:8px;border:1px solid #ffc107;text-align:center;">
+        <p style="margin-bottom:10px;color:#856404;font-size:13px;">⚠️ Suspicious downloads found:</p>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button onclick="downloadRansomware()" style="padding:8px 16px;background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">⚠️ Ransomware.exe</button>
+          <button onclick="downloadFreeGames()" style="padding:8px 16px;background:#28a745;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">🎮 FreeGames2024.exe</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function chromeGoUrl() {
+    const bar = document.getElementById('chrome-url-input');
+    if (!bar) return;
+    chromeLoadUrl(bar.value.trim());
+}
+
+function chromeLoadUrl(url) {
+    const bar = document.getElementById('chrome-url-input');
+    const content = document.getElementById('chrome-content');
+    const lock = document.getElementById('chrome-lock-icon');
+    if (!content) return;
+    if (!url) return;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = url.includes('.') && !url.includes(' ') ? 'https://' + url : 'https://www.google.com/search?q=' + encodeURIComponent(url);
+    }
+    if (bar) bar.value = url;
+    if (lock) lock.textContent = url.startsWith('https') ? '🔒' : '⚠️';
+    const tab = chromeTabs.find(t => t.id === chromeActiveTab);
+    if (tab) {
+        tab.url = url;
+        tab.history = tab.history.slice(0, tab.histIdx + 1);
+        tab.history.push(url);
+        tab.histIdx++;
+        try { tab.title = new URL(url).hostname.replace('www.',''); } catch(e) { tab.title = url; }
+        const tabEl = document.getElementById('chrome-tab-' + tab.id);
+        if (tabEl) tabEl.querySelector('.chrome-tab-title').textContent = tab.title;
+    }
+    content.innerHTML = `<iframe src="${url}" style="width:100%;height:100%;border:none;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>`;
+}
+
+function chromeNavAction(action) {
+    const tab = chromeTabs.find(t => t.id === chromeActiveTab);
+    if (!tab) return;
+    if (action === 'back' && tab.histIdx > 0) { tab.histIdx--; chromeLoadUrl(tab.history[tab.histIdx]); }
+    else if (action === 'forward' && tab.histIdx < tab.history.length - 1) { tab.histIdx++; chromeLoadUrl(tab.history[tab.histIdx]); }
+    else if (action === 'refresh') { const c=document.getElementById('chrome-content'); const f=c?.querySelector('iframe'); if(f){f.src=f.src;} else if(tab.url) chromeLoadUrl(tab.url); }
+}
+
+function newChromeTab() {
+    const id = chromeTabCounter++;
+    chromeTabs.push({ id, url: '', title: 'New Tab', history: [], histIdx: -1 });
+    const bar = document.getElementById('chrome-tabs-bar');
+    const addBtn = bar.querySelector('button');
+    const t = document.createElement('div');
+    t.className = 'chrome-tab';
+    t.id = 'chrome-tab-' + id;
+    t.innerHTML = `<span class="chrome-tab-favicon">🌐</span><span class="chrome-tab-title">New Tab</span><span class="chrome-tab-close" onclick="closeChromeTab(event,${id})">✕</span>`;
+    t.onclick = () => switchChromeTab(id);
+    bar.insertBefore(t, addBtn);
+    switchChromeTab(id);
+}
+
+function switchChromeTab(id) {
+    chromeActiveTab = id;
+    document.querySelectorAll('.chrome-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('chrome-tab-' + id)?.classList.add('active');
+    const tab = chromeTabs.find(t => t.id === id);
+    const bar = document.getElementById('chrome-url-input');
+    if (bar && tab) bar.value = tab.url;
+    const content = document.getElementById('chrome-content');
+    if (content) content.innerHTML = tab?.url ? `<iframe src="${tab.url}" style="width:100%;height:100%;border:none;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>` : chromeNewTabPage();
+}
+
+function closeChromeTab(e, id) {
+    e.stopPropagation();
+    if (chromeTabs.length === 1) { closeWindow('chrome'); return; }
+    chromeTabs = chromeTabs.filter(t => t.id !== id);
+    document.getElementById('chrome-tab-' + id)?.remove();
+    if (chromeActiveTab === id) switchChromeTab(chromeTabs[0].id);
+}
+
+function chromeBookmark() {
+    const tab = chromeTabs.find(t => t.id === chromeActiveTab);
+    if (tab?.url) addNotification('☆', 'Bookmark Added', tab.title || tab.url);
+}
+
+function navigateChrome() { chromeGoUrl(); }
+function chromeBack() { chromeNavAction('back'); }
+function chromeForward() { chromeNavAction('forward'); }
+function chromeRefresh() { chromeNavAction('refresh'); }
 
 function navigateChrome() {
     const urlInput = document.getElementById('chrome-url-input');
@@ -2081,97 +2392,270 @@ function handleCMDInput(e) {
     }
 }
 
+let cmdCurrentPath = 'C:\\Users\\' + (userData?.username || 'User');
+
 function executeCMDCommand(cmd) {
-    const parts = cmd.toLowerCase().trim().split(' ');
+    const rawParts = cmd.trim().split(' ');
+    const parts = rawParts.map(p => p.toLowerCase());
     const command = parts[0];
+    const args = rawParts.slice(1);
     
     switch(command) {
         case 'help':
-            return `Available commands:
-  help      - Show this help message
-  dir       - List directory contents
-  cls       - Clear screen
-  echo      - Display message
-  date      - Display current date
-  time      - Display current time
-  whoami    - Display current user
-  hostname  - Display computer name
-  ver       - Display Windows version
-  ping      - Test network connection
-  color     - Change console colors (e.g. color 0a)
-  title     - Change window title
-  exit      - Close command prompt`;
-        case 'dir':
-            return ` Volume in drive C has no label.
- Volume Serial Number is 1234-5678
+            return `
+Microsoft Windows [Version 10.0.19045.3803]
+(c) Microsoft Corporation. All rights reserved.
 
- Directory of C:\\Users\\${userData.username}
+Available commands:
+  help       - Show this help
+  dir        - List directory contents
+  cd         - Change directory
+  cls        - Clear screen
+  echo       - Display message
+  type       - Display file contents
+  mkdir / md - Create directory
+  del        - Delete file (simulated)
+  copy       - Copy file (simulated)
+  move       - Move file (simulated)
+  ren        - Rename file (simulated)
+  date       - Display current date
+  time       - Display current time
+  whoami     - Display current user
+  hostname   - Display computer name
+  ver        - Display Windows version
+  ping       - Test network connectivity
+  tracert    - Trace route to host
+  ipconfig   - Network configuration
+  netstat    - Network connections
+  tasklist   - Running processes
+  taskkill   - Kill a process
+  systeminfo - System information
+  set        - Environment variables
+  path       - Show PATH variable
+  color      - Change console colors
+  title      - Change window title
+  tree       - Show directory tree
+  attrib     - File attributes
+  format     - Format drive (simulated)
+  shutdown   - Shutdown/restart PC
+  chkdsk     - Check disk
+  sfc        - System file checker
+  reg        - Registry operations
+  net        - Network commands
+  runas      - Run as administrator
+  start      - Start application
+  exit       - Close command prompt`;
 
-01/29/2026  10:00 AM    <DIR>          .
-01/29/2026  10:00 AM    <DIR>          ..
-01/29/2026  10:00 AM    <DIR>          Desktop
-01/29/2026  10:00 AM    <DIR>          Documents
-01/29/2026  10:00 AM    <DIR>          Downloads
-01/29/2026  10:00 AM    <DIR>          Pictures
-               0 File(s)              0 bytes
-               6 Dir(s)  237,000,000,000 bytes free`;
-        case 'cls':
-            const out = document.getElementById('cmd-output');
+        case 'dir': {
+            const date = new Date().toLocaleDateString('en-US', {month:'2-digit',day:'2-digit',year:'numeric'});
+            const time = new Date().toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',hour12:true});
+            return ` Volume in drive C has no label.\n Volume Serial Number is A1B2-C3D4\n\n Directory of ${cmdCurrentPath}\n\n${date}  ${time}    <DIR>          .\n${date}  ${time}    <DIR>          ..\n${date}  ${time}    <DIR>          Desktop\n${date}  ${time}    <DIR>          Documents\n${date}  ${time}    <DIR>          Downloads\n${date}  ${time}    <DIR>          Pictures\n${date}  ${time}    <DIR>          Music\n${date}  ${time}    <DIR>          Videos\n${date}  ${time}         4,096   NTUSER.DAT\n               1 File(s)          4,096 bytes\n               7 Dir(s)  237,410,172,928 bytes free`;
+        }
+
+        case 'cd': {
+            if (!args[0] || args[0] === '.') return cmdCurrentPath;
+            if (args[0] === '..') {
+                const parts2 = cmdCurrentPath.split('\\');
+                if (parts2.length > 1) parts2.pop();
+                cmdCurrentPath = parts2.join('\\');
+                updateCMDPrompt();
+                return '';
+            }
+            if (args[0].includes(':')) { cmdCurrentPath = args[0].toUpperCase(); updateCMDPrompt(); return ''; }
+            cmdCurrentPath = cmdCurrentPath + '\\' + args[0];
+            updateCMDPrompt();
+            return '';
+        }
+
+        case 'cls': {
+            const out = document.getElementById('cmd-output') || document.getElementById('ps-output');
             if (out) out.textContent = '';
             return '';
+        }
+
         case 'echo':
-            return parts.slice(1).join(' ');
+            if (args.length === 0) return 'ECHO is on.';
+            return args.join(' ');
+
+        case 'mkdir': case 'md':
+            if (!args[0]) return 'The syntax of the command is incorrect.';
+            return ``;
+
+        case 'del':
+            if (!args[0]) return 'The syntax of the command is incorrect.';
+            return `Could Not Find ${cmdCurrentPath}\\${args[0]}`;
+
+        case 'copy':
+            if (args.length < 2) return 'The syntax of the command is incorrect.';
+            return `        1 file(s) copied.`;
+
+        case 'move': case 'ren':
+            if (args.length < 2) return 'The syntax of the command is incorrect.';
+            return ``;
+
+        case 'type':
+            if (!args[0]) return 'The syntax of the command is incorrect.';
+            return `The system cannot find the file specified: ${args[0]}`;
+
         case 'date':
-            return `The current date is: ${new Date().toLocaleDateString()}`;
+            return `The current date is: ${new Date().toLocaleDateString('en-US', {weekday:'short',month:'2-digit',day:'2-digit',year:'numeric'})}`;
+
         case 'time':
             return `The current time is: ${new Date().toLocaleTimeString()}`;
+
         case 'whoami':
-            return `DESKTOP-WIN10SIM\\${userData.username}`;
+            return `desktop-win10sim\\${userData?.username || 'user'}`;
+
         case 'hostname':
             return 'DESKTOP-WIN10SIM';
+
         case 'ver':
             return 'Microsoft Windows [Version 10.0.19045.3803]';
-        case 'ping':
-            if (!parts[1]) return 'Usage: ping <hostname>';
-            return `Pinging ${parts[1]} with 32 bytes of data:
-Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*20)+5}ms TTL=64
-Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*20)+5}ms TTL=64
-Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*20)+5}ms TTL=64
-Reply from ${parts[1]}: bytes=32 time=${Math.floor(Math.random()*20)+5}ms TTL=64
 
-Ping statistics for ${parts[1]}:
-    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss)`;
+        case 'ping': {
+            if (!args[0]) return 'Usage: ping <hostname>';
+            const host = args[0];
+            const ip = `192.168.1.${Math.floor(Math.random()*254)+1}`;
+            return `\nPinging ${host} [${ip}] with 32 bytes of data:\nReply from ${ip}: bytes=32 time=${Math.floor(Math.random()*15)+5}ms TTL=55\nReply from ${ip}: bytes=32 time=${Math.floor(Math.random()*15)+5}ms TTL=55\nReply from ${ip}: bytes=32 time=${Math.floor(Math.random()*15)+5}ms TTL=55\nReply from ${ip}: bytes=32 time=${Math.floor(Math.random()*15)+5}ms TTL=55\n\nPing statistics for ${ip}:\n    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss),\nApproximate round trip times in milli-seconds:\n    Minimum = 5ms, Maximum = 20ms, Average = ${Math.floor(Math.random()*10)+8}ms`;
+        }
+
+        case 'tracert': {
+            if (!args[0]) return 'Usage: tracert <hostname>';
+            let hops = `\nTracing route to ${args[0]} over a maximum of 30 hops:\n\n`;
+            for (let i = 1; i <= 8; i++) {
+                const ms = Math.floor(Math.random()*30)+i*5;
+                hops += `  ${String(i).padStart(2)}    ${ms} ms    ${ms+2} ms    ${ms+1} ms  ${i===1?'192.168.1.1':i===2?'10.0.0.1':`${Math.floor(Math.random()*200)}.${Math.floor(Math.random()*200)}.${Math.floor(Math.random()*200)}.${Math.floor(Math.random()*200)}`}\n`;
+            }
+            hops += `\nTrace complete.`;
+            return hops;
+        }
+
+        case 'ipconfig': {
+            const flags = parts.slice(1);
+            if (flags.includes('/all')) {
+                return `\nWindows IP Configuration\n\n   Host Name . . . . . . . . . . . . : DESKTOP-WIN10SIM\n   Primary Dns Suffix  . . . . . . . :\n   Node Type . . . . . . . . . . . . : Hybrid\n   IP Routing Enabled. . . . . . . . : No\n   WINS Proxy Enabled. . . . . . . . : No\n\nEthernet adapter Ethernet:\n\n   Connection-specific DNS Suffix  . : lan\n   Description . . . . . . . . . . . : Intel(R) Ethernet Connection I219-V\n   Physical Address. . . . . . . . . : A4-BB-6D-E2-1F-09\n   DHCP Enabled. . . . . . . . . . . : Yes\n   Autoconfiguration Enabled . . . . : Yes\n   IPv4 Address. . . . . . . . . . . : 192.168.1.105\n   Subnet Mask . . . . . . . . . . . : 255.255.255.0\n   Default Gateway . . . . . . . . . : 192.168.1.1\n   DNS Servers . . . . . . . . . . . : 8.8.8.8\n                                       8.8.4.4\n   Lease Obtained. . . . . . . . . . : ${new Date().toLocaleDateString()}\n   Lease Expires . . . . . . . . . . : ${new Date(Date.now()+86400000).toLocaleDateString()}`;
+            }
+            return `\nWindows IP Configuration\n\nEthernet adapter Ethernet:\n\n   Connection-specific DNS Suffix  . : lan\n   IPv4 Address. . . . . . . . . . . : 192.168.1.105\n   Subnet Mask . . . . . . . . . . . : 255.255.255.0\n   Default Gateway . . . . . . . . . : 192.168.1.1\n\nWireless LAN adapter Wi-Fi:\n\n   Connection-specific DNS Suffix  . :\n   IPv4 Address. . . . . . . . . . . : 192.168.1.108\n   Subnet Mask . . . . . . . . . . . : 255.255.255.0\n   Default Gateway . . . . . . . . . : 192.168.1.1`;
+        }
+
+        case 'netstat': {
+            return `\nActive Connections\n\n  Proto  Local Address          Foreign Address        State\n  TCP    0.0.0.0:80             0.0.0.0:0              LISTENING\n  TCP    0.0.0.0:443            0.0.0.0:0              LISTENING\n  TCP    127.0.0.1:5432         0.0.0.0:0              LISTENING\n  TCP    192.168.1.105:49672    142.250.80.46:443      ESTABLISHED\n  TCP    192.168.1.105:49673    151.101.1.140:443      ESTABLISHED\n  TCP    192.168.1.105:49680    52.114.132.73:443      ESTABLISHED\n  TCP    192.168.1.105:49685    13.107.42.14:443       TIME_WAIT\n  UDP    0.0.0.0:5353           *:*`;
+        }
+
+        case 'tasklist': {
+            const procs = [
+                ['System','4','0 K'],['smss.exe','308','1,024 K'],['csrss.exe','512','4,096 K'],
+                ['winlogon.exe','620','5,120 K'],['services.exe','668','6,144 K'],['lsass.exe','676','12,288 K'],
+                ['svchost.exe','872','18,432 K'],['svchost.exe','960','15,360 K'],['explorer.exe','2340','48,640 K'],
+                ['taskmgr.exe','3120','20,480 K'],['chrome.exe','4096','256,000 K'],['code.exe','5120','312,000 K'],
+                ['discord.exe','6144','128,000 K'],['MsMpEng.exe','1234','32,768 K']
+            ];
+            let out = `\nImage Name                     PID Session Name        Session#    Mem Usage\n========================= ======== ================ =========== ============\n`;
+            procs.forEach(([name,pid,mem]) => {
+                out += `${name.padEnd(25)} ${pid.padStart(8)} Console                    1 ${mem.padStart(12)}\n`;
+            });
+            return out;
+        }
+
+        case 'taskkill': {
+            const pidIdx = parts.indexOf('/pid');
+            const imIdx = parts.indexOf('/im');
+            if (pidIdx >= 0 && args[pidIdx]) return `SUCCESS: The process with PID ${rawParts[pidIdx+1]} has been terminated.`;
+            if (imIdx >= 0 && args[imIdx]) return `SUCCESS: Sent termination signal to the process "${rawParts[imIdx+1]}".`;
+            return 'ERROR: Invalid arguments.\nUsage: taskkill /PID <pid> or /IM <imagename>';
+        }
+
+        case 'systeminfo':
+            return `\nHost Name:                 DESKTOP-WIN10SIM\nOS Name:                   Microsoft Windows 10 Pro\nOS Version:                10.0.19045 N/A Build 19045\nOS Manufacturer:           Microsoft Corporation\nOS Configuration:          Standalone Workstation\nOS Build Type:             Multiprocessor Free\nRegistered Owner:          ${userData?.username || 'User'}\nRegistered Organization:   N/A\nProduct ID:                00331-10000-00001-AA837\nOriginal Install Date:     1/1/2024, 10:00:00 AM\nSystem Boot Time:          ${new Date().toLocaleString()}\nSystem Manufacturer:       Intel\nSystem Model:              Custom Build\nSystem Type:               x64-based PC\nProcessor(s):              1 Processor(s) Installed.\n                           [01]: Intel64 Family 6 Model 186 i7-13700K\nBIOS Version/Date:         American Megatrends Inc. 2.12, 1/1/2024\nWindows Directory:         C:\\Windows\nSystem Directory:          C:\\Windows\\system32\nBoot Device:               \\Device\\HarddiskVolume2\nSystem Locale:             en-us\nInput Locale:              en-us\nTime Zone:                 (UTC-05:00) Eastern Time\nTotal Physical Memory:     16,384 MB\nAvailable Physical Memory: 8,192 MB\nPage File Space:           20,480 MB\nDomain:                    WORKGROUP\nLogon Server:              \\\\DESKTOP-WIN10SIM`;
+
+        case 'set':
+            return `ALLUSERSPROFILE=C:\\ProgramData\nAPPDATA=C:\\Users\\${userData?.username||'User'}\\AppData\\Roaming\nCOMPUTERNAME=DESKTOP-WIN10SIM\nComSpec=C:\\Windows\\system32\\cmd.exe\nDRIVERDATA=C:\\Windows\\System32\\Drivers\\DriverData\nHOMEDRIVE=C:\\\nHOMEPATH=\\Users\\${userData?.username||'User'}\nLOCALAPPDATA=C:\\Users\\${userData?.username||'User'}\\AppData\\Local\nNUMBER_OF_PROCESSORS=16\nOS=Windows_NT\nPATH=C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem\nPROCESSOR_ARCHITECTURE=AMD64\nPROCESSOR_IDENTIFIER=Intel64 Family 6 Model 186\nPROGRAMFILES=C:\\Program Files\nSYSTEMDRIVE=C:\nSYSTEMROOT=C:\\Windows\nTEMP=C:\\Users\\${userData?.username||'User'}\\AppData\\Local\\Temp\nUSERDOMAIN=DESKTOP-WIN10SIM\nUSERNAME=${userData?.username||'User'}\nUSERPROFILE=C:\\Users\\${userData?.username||'User'}\nWINDIR=C:\\Windows`;
+
+        case 'path':
+            return `PATH=C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files\\Git\\bin;C:\\Program Files\\nodejs\\`;
+
+        case 'tree':
+            return `Folder PATH listing\nVolume serial number is A1B2-C3D4\n${cmdCurrentPath}\n├── Desktop\n│   ├── This PC.lnk\n│   └── Recycle Bin.lnk\n├── Documents\n│   ├── Work\n│   ├── Personal\n│   └── Resume.pdf\n├── Downloads\n│   ├── Setup.exe\n│   └── Photo.jpg\n├── Pictures\n│   ├── Wallpapers\n│   └── Screenshots\n├── Music\n└── Videos`;
+
+        case 'attrib':
+            if (!args[0]) return 'Error - No files found.';
+            return `  A    H       C:\\Users\\${userData?.username||'User'}\\${args[0]}`;
+
+        case 'chkdsk':
+            return `The type of the file system is NTFS.\nVolume label is OS.\n\nWARNING!  /F parameter not specified.\nRunning CHKDSK in read-only mode.\n\nStage 1: Examining basic file system structure ...\n  262144 file records processed.\nFile verification completed.\n  0 large file records processed.\n  0 bad file records processed.\n\nStage 2: Examining file name linkage ...\n  320521 index entries processed.\nIndex verification completed.\n\nStage 3: Examining security descriptors ...\nSecurity descriptor verification completed.\n  29810 data files processed.\nUSN Journal verification completed.\n\nWindows has scanned the file system and found no problems.\n256,026,623 KB total disk space.\n  9,720,832 KB in 108,412 files.\n    198,656 KB in 29,810 indexes.\n          0 KB in bad sectors.\n    386,431 KB in use by the system.\n245,720,704 KB available on disk.\n      4,096 bytes in each allocation unit.\n  64,006,655 total allocation units on disk.\n  61,430,176 allocation units available on disk.`;
+
+        case 'sfc':
+            return `Beginning system scan.  This process will take some time.\n\nBeginning verification phase of system scan.\nVerification 100% complete.\n\nWindows Resource Protection did not find any integrity violations.`;
+
+        case 'format':
+            return `ERROR: The disk drive is in use. Please try again later.\nAlternatively: Access denied. You do not have sufficient privileges.`;
+
+        case 'shutdown': {
+            if (parts.includes('/s')) { setTimeout(() => shutdown(), 2000); return 'Shutting down in 2 seconds...'; }
+            if (parts.includes('/r')) { setTimeout(() => restart(), 2000); return 'Restarting in 2 seconds...'; }
+            if (parts.includes('/l')) { signOut(); return ''; }
+            if (parts.includes('/a')) return 'Shutdown aborted.';
+            return 'Usage: shutdown /s (shutdown) /r (restart) /l (logoff) /a (abort)';
+        }
+
+        case 'reg':
+            return `The operation completed successfully.\n\nHKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\n    ProductName    REG_SZ    Windows 10 Pro\n    CurrentBuild   REG_SZ    19045`;
+
+        case 'net':
+            if (parts[1] === 'user') return `User accounts for \\\\DESKTOP-WIN10SIM\n\n-------------------------------------------------------------------------------\n${userData?.username||'User'}            Administrator            DefaultAccount\nGuest\nThe command completed successfully.`;
+            if (parts[1] === 'use') return `New connections will be remembered.\n\nStatus       Local     Remote                    Network\n-------------------------------------------------------------------------------\nOK           Z:        \\\\NAS\\Shared               Microsoft Windows Network\nThe command completed successfully.`;
+            return 'The syntax of this command is:\nNET [ ACCOUNTS | COMPUTER | CONFIG | CONTINUE | FILE | GROUP | HELP |\n    HELPMSG | LOCALGROUP | PAUSE | SESSION | SHARE | START |\n    STATISTICS | STOP | TIME | USE | USER | VIEW ]';
+
+        case 'runas':
+            return 'ERROR: The user account you selected is not logged on to this computer.\nPlease try with Administrator credentials.';
+
+        case 'start':
+            if (args[0]) {
+                const appMap = { notepad: 'notepad', calc: 'calculator', mspaint: 'paint', explorer: 'explorer', cmd: 'cmd', powershell: 'powershell' };
+                const appName = appMap[parts[1]];
+                if (appName) { setTimeout(() => openApp(appName), 100); return ''; }
+            }
+            return 'Usage: start [application]\nAvailable: notepad, calc, mspaint, explorer, cmd, powershell';
+
         case 'color':
             const colors = {'0':'#000','1':'#000080','2':'#008000','3':'#008080','4':'#800000','5':'#800080','6':'#808000','7':'#c0c0c0','8':'#808080','9':'#0000ff','a':'#00ff00','b':'#00ffff','c':'#ff0000','d':'#ff00ff','e':'#ffff00','f':'#fff'};
             if (parts[1] && parts[1].length === 2) {
-                const bg = colors[parts[1][0]];
-                const fg = colors[parts[1][1]];
+                const bg = colors[parts[1][0]], fg = colors[parts[1][1]];
                 if (bg && fg) {
                     const win = document.getElementById('cmd-container');
-                    if (win) {
-                        win.style.backgroundColor = bg;
-                        win.style.color = fg;
-                    }
-                    const input = document.getElementById('cmd-input');
-                    if (input) input.style.color = fg;
+                    if (win) { win.style.backgroundColor = bg; win.style.color = fg; }
+                    const inp = document.getElementById('cmd-input');
+                    if (inp) inp.style.color = fg;
                     return '';
                 }
             }
-            return 'Invalid color attribute';
-        case 'title':
-            const title = parts.slice(1).join(' ');
-            if (title) {
-                const win = document.querySelector('.window[data-app="cmd"] .window-title');
-                if (win) win.textContent = title;
+            return 'Invalid color attribute.\nUsage: color [attr]   (e.g. color 0a = black bg, green text)';
+
+        case 'title': {
+            const t2 = rawParts.slice(1).join(' ');
+            if (t2) {
+                const titleEl = document.querySelector('.window[data-app="cmd"] .window-title');
+                if (titleEl) titleEl.textContent = t2;
                 return '';
             }
             return 'Usage: title <string>';
+        }
+
         case 'exit':
             closeWindow('cmd');
             return '';
+
+        case '':
+            return '';
+
         default:
-            return `'${command}' is not recognized as an internal or external command, operable program or batch file.`;
+            return `'${command}' is not recognized as an internal or external command,\noperable program or batch file.`;
     }
+}
+
+function updateCMDPrompt() {
+    const prompt = document.querySelector('.cmd-prompt');
+    if (prompt) prompt.textContent = cmdCurrentPath + '>';
 }
 
 // Paint App
@@ -3423,4 +3907,774 @@ function createSystemInfo() {
             </div>
         </div>
     `;
+}
+
+// ============================================================
+// NEW APPS
+// ============================================================
+
+function createRecycleBin() {
+    return `
+    <div style="height:100%;display:flex;flex-direction:column;background:white;">
+      <div style="background:#f5f5f5;border-bottom:1px solid #ddd;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+        <button onclick="emptyRecycleBin()" style="padding:6px 14px;background:#d13438;color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px;">🗑️ Empty Recycle Bin</button>
+        <button style="padding:6px 14px;background:#f5f5f5;border:1px solid #ccc;border-radius:4px;cursor:pointer;font-size:13px;">Restore all items</button>
+      </div>
+      <div id="recycle-content" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#999;">
+        <div style="font-size:64px;margin-bottom:16px;">🗑️</div>
+        <p style="font-size:16px;">The Recycle Bin is empty.</p>
+      </div>
+    </div>`;
+}
+
+function emptyRecycleBin() {
+    addNotification('🗑️', 'Recycle Bin', 'Recycle Bin has been emptied.');
+}
+
+function createSearch() {
+    return `
+    <div style="height:100%;display:flex;flex-direction:column;background:#1a1a2e;color:white;">
+      <div style="padding:20px;background:#0f0f23;">
+        <div style="display:flex;align-items:center;background:#2a2a4a;border-radius:8px;padding:12px 16px;gap:10px;border:1px solid #444;">
+          <span style="font-size:18px;">🔍</span>
+          <input id="win-search-input" type="text" placeholder="Type to search apps, files, and settings..."
+            style="flex:1;background:none;border:none;color:white;font-size:15px;outline:none;"
+            oninput="updateWinSearch(this.value)"
+            onkeydown="if(event.key==='Enter')launchWinSearch()">
+        </div>
+      </div>
+      <div style="display:flex;flex:1;overflow:hidden;">
+        <div style="flex:1;padding:16px;overflow-y:auto;">
+          <div id="search-results">
+            <p style="color:#888;font-size:13px;margin-bottom:16px;">Top apps</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              ${[['🌐','Edge','browser'],['📁','File Explorer','explorer'],['⚙️','Settings','settings'],['⬛','CMD','cmd'],['🔢','Calculator','calculator'],['📝','Notepad','notepad'],['📊','Task Manager','taskmgr'],['🎨','Paint','paint']].map(([ic,nm,ap])=>`
+              <div onclick="openApp('${ap}');closeWindow('search')" style="display:flex;align-items:center;gap:10px;padding:10px;background:#2a2a4a;border-radius:6px;cursor:pointer;" onmouseover="this.style.background='#3a3a5a'" onmouseout="this.style.background='#2a2a4a'">
+                <span style="font-size:24px;">${ic}</span>
+                <span style="font-size:13px;">${nm}</span>
+              </div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function updateWinSearch(q) {
+    const allApps = [
+        {name:'Edge Browser',icon:'🌐',app:'browser'},{name:'Google Chrome',icon:'🔵',app:'chrome'},{name:'File Explorer',icon:'📁',app:'explorer'},
+        {name:'Settings',icon:'⚙️',app:'settings'},{name:'Task Manager',icon:'📊',app:'taskmgr'},{name:'Command Prompt',icon:'⬛',app:'cmd'},
+        {name:'PowerShell',icon:'🔷',app:'powershell'},{name:'Calculator',icon:'🔢',app:'calculator'},{name:'Notepad',icon:'📝',app:'notepad'},
+        {name:'WordPad',icon:'📄',app:'wordpad'},{name:'Paint',icon:'🎨',app:'paint'},{name:'Photos',icon:'🖼️',app:'photos'},
+        {name:'Calendar',icon:'📅',app:'calendar'},{name:'Clock',icon:'⏰',app:'clock'},{name:'Maps',icon:'🗺️',app:'maps'},
+        {name:'Weather',icon:'🌤️',app:'weather'},{name:'Music',icon:'🎵',app:'music'},{name:'Microsoft Store',icon:'🛍️',app:'store'},
+        {name:'Discord',icon:'💬',app:'discord'},{name:'Windows Security',icon:'🛡️',app:'defender'},{name:'Sticky Notes',icon:'🟡',app:'stickynotes'},
+        {name:'Control Panel',icon:'🎛️',app:'controlpanel'},{name:'Device Manager',icon:'🖥️',app:'devmgr'},{name:'Registry Editor',icon:'📋',app:'registry'},
+        {name:'Teams',icon:'👥',app:'teams'},{name:'Xbox',icon:'🎮',app:'xbox'},{name:'Mail',icon:'📧',app:'mail'},
+        {name:'VS Code',icon:'💻',app:'code'},{name:'System Info',icon:'ℹ️',app:'sysinfo'},{name:'Solitaire',icon:'🃏',app:'solitaire'}
+    ];
+    const res = document.getElementById('search-results');
+    if (!res) return;
+    if (!q) {
+        res.innerHTML = '<p style="color:#888;font-size:13px;margin-bottom:16px;">Top apps</p>';
+        return;
+    }
+    const matches = allApps.filter(a => a.name.toLowerCase().includes(q.toLowerCase()));
+    res.innerHTML = matches.length ? matches.map(a=>`
+        <div onclick="openApp('${a.app}');closeWindow('search')" style="display:flex;align-items:center;gap:12px;padding:12px;background:#2a2a4a;border-radius:6px;cursor:pointer;margin-bottom:6px;" onmouseover="this.style.background='#3a3a5a'" onmouseout="this.style.background='#2a2a4a'">
+          <span style="font-size:28px;">${a.icon}</span>
+          <div><div style="font-size:14px;">${a.name}</div><div style="font-size:11px;color:#888;">App</div></div>
+        </div>`).join('') : `<p style="color:#888;padding:20px;">No results for "${q}"</p>`;
+}
+
+function createWordPad() {
+    return `
+    <div style="height:100%;display:flex;flex-direction:column;background:white;">
+      <div style="background:#f5f5f5;border-bottom:1px solid #ddd;padding:6px 10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <button onclick="wordpadExec('bold')" title="Bold" style="font-weight:bold;padding:4px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:white;">B</button>
+        <button onclick="wordpadExec('italic')" title="Italic" style="font-style:italic;padding:4px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:white;">I</button>
+        <button onclick="wordpadExec('underline')" title="Underline" style="text-decoration:underline;padding:4px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:white;">U</button>
+        <span style="width:1px;background:#ccc;height:20px;margin:0 4px;"></span>
+        <button onclick="wordpadExec('justifyLeft')" title="Left" style="padding:4px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:white;">≡</button>
+        <button onclick="wordpadExec('justifyCenter')" title="Center" style="padding:4px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:white;">☰</button>
+        <button onclick="wordpadExec('justifyRight')" title="Right" style="padding:4px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:white;">▤</button>
+        <span style="width:1px;background:#ccc;height:20px;margin:0 4px;"></span>
+        <select onchange="wordpadFontSize(this.value)" style="padding:4px;border:1px solid #ccc;border-radius:3px;">
+          ${[8,10,12,14,16,18,20,24,28,36,48,72].map(s=>`<option value="${s}" ${s===14?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <select onchange="wordpadFontFamily(this.value)" style="padding:4px;border:1px solid #ccc;border-radius:3px;width:130px;">
+          ${['Arial','Times New Roman','Courier New','Georgia','Verdana','Segoe UI'].map(f=>`<option value="${f}">${f}</option>`).join('')}
+        </select>
+        <input type="color" onchange="wordpadExec('foreColor',this.value)" title="Text Color" style="width:32px;height:28px;border:1px solid #ccc;border-radius:3px;cursor:pointer;" value="#000000">
+        <span style="width:1px;background:#ccc;height:20px;margin:0 4px;"></span>
+        <button onclick="wordpadExec('insertOrderedList')" title="Numbered List" style="padding:4px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:white;">1.</button>
+        <button onclick="wordpadExec('insertUnorderedList')" title="Bullet List" style="padding:4px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:white;">•</button>
+        <span style="flex:1"></span>
+        <button onclick="wordpadSave()" style="padding:4px 14px;background:#0078d4;color:white;border:none;border-radius:3px;cursor:pointer;">💾 Save</button>
+      </div>
+      <div id="wordpad-editor" contenteditable="true" 
+        style="flex:1;padding:40px 60px;outline:none;overflow-y:auto;font-family:'Times New Roman';font-size:14px;line-height:1.8;caret-color:#0078d4;"
+        onkeydown="wordpadKeydown(event)">
+        <p>Welcome to WordPad! Start typing here...</p>
+      </div>
+      <div style="background:#f5f5f5;border-top:1px solid #ddd;padding:4px 12px;font-size:11px;color:#666;display:flex;gap:20px;">
+        <span id="wp-wordcount">Words: 0</span>
+        <span id="wp-charcount">Characters: 0</span>
+        <span>100%</span>
+      </div>
+    </div>`;
+}
+
+function wordpadExec(cmd, val) {
+    document.getElementById('wordpad-editor')?.focus();
+    document.execCommand(cmd, false, val || null);
+    updateWordpadCount();
+}
+function wordpadFontSize(s) { document.getElementById('wordpad-editor')?.focus(); document.execCommand('fontSize', false, '7'); document.querySelectorAll('#wordpad-editor font[size="7"]').forEach(f=>{f.removeAttribute('size');f.style.fontSize=s+'px';}); }
+function wordpadFontFamily(f) { wordpadExec('fontName', f); }
+function wordpadKeydown(e) { setTimeout(updateWordpadCount, 10); }
+function updateWordpadCount() {
+    const ed = document.getElementById('wordpad-editor');
+    if (!ed) return;
+    const text = ed.innerText || '';
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    const wc = document.getElementById('wp-wordcount');
+    const cc = document.getElementById('wp-charcount');
+    if (wc) wc.textContent = 'Words: ' + words;
+    if (cc) cc.textContent = 'Characters: ' + text.length;
+}
+function wordpadSave() { addNotification('📄', 'WordPad', 'Document saved successfully.'); }
+
+function createStickyNotes() {
+    const colors = ['#fff9c4','#f8bbd0','#c8e6c9','#bbdefb','#ffe0b2'];
+    return `
+    <div style="height:100%;background:#2d2d2d;padding:12px;overflow:auto;" id="sticky-board">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span style="color:white;font-size:16px;font-weight:500;">Sticky Notes</span>
+        <button onclick="addStickyNote()" style="background:#f9ca24;border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;font-weight:bold;">+</button>
+      </div>
+      <div id="sticky-notes-container" style="display:flex;flex-wrap:wrap;gap:12px;">
+        <div class="sticky-note" style="background:#fff9c4;width:220px;min-height:180px;border-radius:4px;padding:12px;box-shadow:3px 3px 12px rgba(0,0,0,0.3);position:relative;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-size:11px;color:#888;">${new Date().toLocaleDateString()}</span>
+            <button onclick="this.closest('.sticky-note').remove()" style="background:none;border:none;cursor:pointer;font-size:14px;color:#999;">✕</button>
+          </div>
+          <div contenteditable="true" style="outline:none;font-size:14px;color:#333;min-height:120px;font-family:'Segoe UI';">Click to type your note here...</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function addStickyNote() {
+    const colors = ['#fff9c4','#f8bbd0','#c8e6c9','#bbdefb','#ffe0b2','#e1bee7'];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const container = document.getElementById('sticky-notes-container');
+    if (!container) return;
+    const note = document.createElement('div');
+    note.className = 'sticky-note';
+    note.style.cssText = `background:${color};width:220px;min-height:180px;border-radius:4px;padding:12px;box-shadow:3px 3px 12px rgba(0,0,0,0.3);position:relative;`;
+    note.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:11px;color:#888;">${new Date().toLocaleDateString()}</span><button onclick="this.closest('.sticky-note').remove()" style="background:none;border:none;cursor:pointer;font-size:14px;color:#999;">✕</button></div><div contenteditable="true" style="outline:none;font-size:14px;color:#333;min-height:120px;font-family:'Segoe UI';">New note...</div>`;
+    container.appendChild(note);
+}
+
+function createPowerShell() {
+    setTimeout(() => {
+        const input = document.getElementById('ps-input');
+        if (input) {
+            input.focus();
+            input.addEventListener('keydown', handlePSInput);
+        }
+    }, 100);
+    return `
+    <div class="cmd-window" id="ps-container" style="background:#012456;color:#eeedf0;" onclick="document.getElementById('ps-input')?.focus()">
+      <div class="cmd-output" id="ps-output" style="color:#eeedf0;">Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Install the latest PowerShell for new features and improvements! https://aka.ms/PSWindows
+
+</div>
+      <div class="cmd-input-line">
+        <span class="cmd-prompt" style="color:#eeedf0;">PS ${userData?.username ? 'C:\\Users\\'+userData.username : 'C:\\Users\\User'}> </span>
+        <input type="text" class="cmd-input" id="ps-input" style="color:#eeedf0;" autocomplete="off">
+      </div>
+    </div>`;
+}
+
+let psHistory = [], psHistIdx = -1;
+function handlePSInput(e) {
+    const input = document.getElementById('ps-input');
+    const output = document.getElementById('ps-output');
+    if (e.key === 'Enter') {
+        const cmd = input.value.trim();
+        if (cmd) { psHistory.push(cmd); psHistIdx = psHistory.length; }
+        output.textContent += `PS C:\\Users\\${userData?.username||'User'}> ${cmd}\n`;
+        const result = executePSCommand(cmd);
+        if (result) output.textContent += result + '\n';
+        output.textContent += '\n';
+        input.value = '';
+        output.scrollTop = output.scrollHeight;
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (psHistIdx > 0) input.value = psHistory[--psHistIdx];
+    } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (psHistIdx < psHistory.length - 1) input.value = psHistory[++psHistIdx];
+        else { psHistIdx = psHistory.length; input.value = ''; }
+    }
+}
+
+function executePSCommand(cmd) {
+    const lower = cmd.toLowerCase().trim();
+    if (lower === 'help' || lower === 'get-help') return `PowerShell Commands:\n  Get-Process (ps)   - List processes\n  Get-Service        - List services\n  Get-Date           - Current date/time\n  Get-Location (pwd) - Current directory\n  Set-Location (cd)  - Change directory\n  Get-ChildItem (ls) - List files\n  Get-Content (cat)  - Read file\n  Write-Host         - Print text\n  Get-ComputerInfo   - System info\n  Clear-Host (cls)   - Clear screen\n  Invoke-WebRequest  - Web request\n  Start-Process      - Start app\n  Stop-Process       - Kill process\n  Exit               - Close PowerShell`;
+    if (lower === 'get-date' || lower === 'date') return new Date().toString();
+    if (lower === 'get-location' || lower === 'pwd') return `Path\n----\nC:\\Users\\${userData?.username||'User'}`;
+    if (lower === 'get-childitem' || lower === 'ls' || lower === 'dir') return `\n    Directory: C:\\Users\\${userData?.username||'User'}\n\nMode                 LastWriteTime         Length Name\n----                 -------------         ------ ----\nd----          ${new Date().toLocaleDateString()}  <DIR>          Desktop\nd----          ${new Date().toLocaleDateString()}  <DIR>          Documents\nd----          ${new Date().toLocaleDateString()}  <DIR>          Downloads\nd----          ${new Date().toLocaleDateString()}  <DIR>          Pictures`;
+    if (lower === 'clear-host' || lower === 'cls') { const o=document.getElementById('ps-output'); if(o)o.textContent=''; return ''; }
+    if (lower === 'get-process' || lower === 'ps') return `\nHandles  NPM(K)    PM(K)      WS(K) CPU(s)     Id  SI ProcessName\n-------  ------    -----      ----- ------     --  -- -----------\n    560      32    15244      41936   0.08   2340   1 explorer\n    324      18     8192      25600   0.05   4096   1 chrome\n    412      24    12288      35840   0.12   5120   1 code\n    128       8     4096      12288   0.01   3120   1 taskmgr`;
+    if (lower === 'get-service') return `\nStatus   Name               DisplayName\n------   ----               -----------\nRunning  AudioEndpointBuil… Windows Audio Endpoint Builder\nRunning  Audiosrv           Windows Audio\nRunning  BFE                Base Filtering Engine\nRunning  BITS               Background Intelligent Transfer\nStopped  fax                Fax\nRunning  MsMpSvc            Microsoft Defender Antivirus`;
+    if (lower.startsWith('write-host')) return cmd.replace(/write-host\s+/i,'').replace(/['"]/g,'');
+    if (lower === 'get-computerinfo') return `\nWindowsProductName : Windows 10 Pro\nWindowsVersion     : 2009\nWindowsBuildLabEx  : 19041.1.amd64fre\nOsHardwareAbstract : AT/AT COMPATIBLE\nCsProcessors       : Intel(R) Core(TM) i7-13700K\nCsNumberOfProcessor: 1\nCsNumberOfLogicPro : 16\nOsTotalVisibleMemo : 16,384 MB`;
+    if (lower.startsWith('invoke-webrequest') || lower.startsWith('curl')) return `StatusCode        : 200\nStatusDescription : OK\nContent           : {123, 34, 114, 101...}\nRawContent        : HTTP/1.1 200 OK\nHeaders           : {[Content-Type, application/json]}\nRawContentLength  : 1024`;
+    if (lower.startsWith('start-process')) { const app = lower.split(' ')[1]; if(app) openApp(app === 'notepad' ? 'notepad' : app === 'calc' ? 'calculator' : 'cmd'); return ''; }
+    if (lower === 'exit') { closeWindow('powershell'); return ''; }
+    if (lower === '') return '';
+    return `${cmd} : The term '${cmd.split(' ')[0]}' is not recognized as the name of a cmdlet, function,\nscript file, or operable program.`;
+}
+
+function createControlPanel() {
+    const items = [
+        {icon:'🖥️',name:'Display',desc:'Adjust resolution, brightness, and orientation'},
+        {icon:'🔊',name:'Sound',desc:'Manage audio devices and volume'},
+        {icon:'🌐',name:'Network',desc:'View network status and set up connections'},
+        {icon:'🖨️',name:'Printers',desc:'Add or manage printers and scanners'},
+        {icon:'👤',name:'User Accounts',desc:'Change account settings and passwords'},
+        {icon:'🛡️',name:'Security Center',desc:'Check security status',onclick:'controlpanel',app:'defender'},
+        {icon:'⏰',name:'Date & Time',desc:'Change date, time, and time zone'},
+        {icon:'🌍',name:'Region',desc:'Change location, number and currency formats'},
+        {icon:'♿',name:'Ease of Access',desc:'Adjust settings for vision, hearing, and mobility'},
+        {icon:'🔋',name:'Power Options',desc:'Change battery settings and sleep mode'},
+        {icon:'🗂️',name:'File History',desc:'Save backups of your files'},
+        {icon:'🔧',name:'Programs',desc:'Uninstall or change a program'},
+        {icon:'🖱️',name:'Mouse',desc:'Change mouse pointer and click settings'},
+        {icon:'⌨️',name:'Keyboard',desc:'Adjust keyboard repeat rate and cursor blink rate'},
+        {icon:'🖼️',name:'Personalization',desc:'Change themes, wallpaper, and colors',onclick:'settings'},
+        {icon:'🔍',name:'Indexing',desc:'Modify which locations are indexed for searching'}
+    ];
+    return `
+    <div style="height:100%;display:flex;flex-direction:column;background:white;">
+      <div style="background:#f5f5f5;border-bottom:1px solid #ddd;padding:8px 16px;display:flex;align-items:center;gap:12px;">
+        <span style="color:#0078d4;font-size:13px;">All Control Panel Items</span>
+        <input type="text" placeholder="🔍 Search Control Panel" style="margin-left:auto;padding:5px 12px;border:1px solid #ccc;border-radius:4px;font-size:13px;width:200px;">
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:16px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">
+          ${items.map(i=>`
+          <div onclick="${i.app?`openApp('${i.app}')`:'alert(\"'+i.name+' settings coming soon!\")'}" style="display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid transparent;border-radius:4px;cursor:pointer;" onmouseover="this.style.background='#e3f2fd';this.style.borderColor='#90caf9'" onmouseout="this.style.background='transparent';this.style.borderColor='transparent'">
+            <span style="font-size:32px;flex-shrink:0;">${i.icon}</span>
+            <div><div style="font-size:13px;font-weight:600;color:#0078d4;margin-bottom:2px;">${i.name}</div><div style="font-size:11px;color:#666;">${i.desc}</div></div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function createDeviceManager() {
+    const devices = [
+        {cat:'💻 Computer',items:['DESKTOP-WIN10SIM']},
+        {cat:'💾 Disk drives',items:['SAMSUNG SSD 980 PRO 476GB','Generic USB Flash Drive 16GB']},
+        {cat:'🖥️ Display adapters',items:['NVIDIA GeForce RTX 3080 Ti']},
+        {cat:'🌐 Network adapters',items:['Intel(R) Ethernet Connection I219-V','Intel(R) Wi-Fi 6 AX201 160MHz']},
+        {cat:'⌨️ Keyboards',items:['HID Keyboard Device']},
+        {cat:'🖱️ Mice and other pointing devices',items:['HID-compliant mouse']},
+        {cat:'🖨️ Print queues',items:['Microsoft Print to PDF','Microsoft XPS Document Writer']},
+        {cat:'🔊 Sound, video and game controllers',items:['Realtek High Definition Audio','AMD High Definition Audio Device']},
+        {cat:'🔌 Universal Serial Bus controllers',items:['USB Root Hub (USB 3.0)','Generic USB Hub']},
+        {cat:'📷 Cameras',items:['Integrated Webcam']},
+        {cat:'🔋 Batteries',items:['Microsoft ACPI-Compliant Control Method Battery']},
+        {cat:'⚙️ System devices',items:['ACPI Fan','ACPI Processor Aggregator','Direct memory access controller']}
+    ];
+    return `
+    <div style="height:100%;display:flex;flex-direction:column;background:white;">
+      <div style="background:#f5f5f5;border-bottom:1px solid #ddd;padding:6px 12px;display:flex;gap:8px;align-items:center;">
+        <button onclick="addNotification('🔍','Device Manager','Scanning for hardware changes...')" style="padding:4px 10px;border:1px solid #ccc;border-radius:3px;background:white;cursor:pointer;font-size:12px;">🔍 Scan for changes</button>
+        <button onclick="addNotification('📋','Device Manager','No driver updates found.')" style="padding:4px 10px;border:1px solid #ccc;border-radius:3px;background:white;cursor:pointer;font-size:12px;">🔄 Update drivers</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:8px;">
+        ${devices.map(d=>`
+        <div>
+          <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'"
+            style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;font-size:13px;user-select:none;" onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background='transparent'">
+            <span style="font-size:10px;">▶</span>${d.cat}
+          </div>
+          <div style="display:none;margin-left:24px;">
+            ${d.items.map(item=>`
+            <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;font-size:12px;color:#333;cursor:pointer;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='transparent'">
+              <span>✅</span>${item}
+            </div>`).join('')}
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function createRegistryEditor() {
+    return `
+    <div style="height:100%;display:flex;flex-direction:column;background:white;">
+      <div style="background:#f5f5f5;border-bottom:1px solid #ddd;padding:6px 12px;display:flex;gap:8px;align-items:center;">
+        <span style="font-size:12px;color:#666;">Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion</span>
+      </div>
+      <div style="display:flex;flex:1;overflow:hidden;">
+        <div style="width:280px;border-right:1px solid #ddd;overflow-y:auto;padding:4px;">
+          ${[
+            {key:'HKEY_CLASSES_ROOT',id:'hkcr'},
+            {key:'HKEY_CURRENT_USER',id:'hkcu'},
+            {key:'HKEY_LOCAL_MACHINE',id:'hklm'},
+            {key:'HKEY_USERS',id:'hku'},
+            {key:'HKEY_CURRENT_CONFIG',id:'hkcc'}
+          ].map(k=>`
+          <div onclick="expandRegKey('${k.id}')" style="display:flex;align-items:center;gap:6px;padding:4px 8px;cursor:pointer;font-size:12px;" onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background='transparent'">
+            <span id="arrow-${k.id}" style="font-size:10px;transition:transform 0.2s;">▶</span>
+            <span>🗂️</span><span>${k.key}</span>
+          </div>
+          <div id="sub-${k.id}" style="display:none;margin-left:20px;">
+            ${k.id==='hklm'?`
+            <div style="padding:3px 8px;font-size:12px;cursor:pointer;" onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background='transparent'">📁 HARDWARE</div>
+            <div style="padding:3px 8px;font-size:12px;cursor:pointer;" onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background='transparent'">📁 SAM</div>
+            <div style="padding:3px 8px;font-size:12px;cursor:pointer;" onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background='transparent'">📁 SECURITY</div>
+            <div onclick="loadRegValues()" style="padding:3px 8px;font-size:12px;cursor:pointer;color:#0078d4;" onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background='transparent'">📁 SOFTWARE ▶</div>
+            <div style="padding:3px 8px;font-size:12px;cursor:pointer;" onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background='transparent'">📁 SYSTEM</div>`:
+            '<div style="padding:3px 8px;font-size:12px;color:#999;">(empty)</div>'}
+          </div>`).join('')}
+        </div>
+        <div style="flex:1;overflow:auto;">
+          <table id="reg-values-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead><tr style="background:#f5f5f5;">
+              <th style="text-align:left;padding:6px 12px;border-bottom:1px solid #ddd;">Name</th>
+              <th style="text-align:left;padding:6px 12px;border-bottom:1px solid #ddd;">Type</th>
+              <th style="text-align:left;padding:6px 12px;border-bottom:1px solid #ddd;">Data</th>
+            </tr></thead>
+            <tbody id="reg-tbody">
+              <tr><td colspan="3" style="padding:20px;color:#999;text-align:center;">Select a key to view its values</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div style="background:#f5f5f5;border-top:1px solid #ddd;padding:4px 12px;font-size:11px;color:#666;">
+        ⚠️ Modifying the registry incorrectly can cause serious problems. This is a simulation.
+      </div>
+    </div>`;
+}
+
+function expandRegKey(id) {
+    const sub = document.getElementById('sub-' + id);
+    const arr = document.getElementById('arrow-' + id);
+    if (sub) sub.style.display = sub.style.display === 'none' ? 'block' : 'none';
+    if (arr) arr.style.transform = sub?.style.display === 'block' ? 'rotate(90deg)' : '';
+}
+
+function loadRegValues() {
+    const tbody = document.getElementById('reg-tbody');
+    if (!tbody) return;
+    const values = [
+        ['(Default)','REG_SZ','(value not set)'],
+        ['CurrentBuild','REG_SZ','19045'],
+        ['CurrentBuildNumber','REG_SZ','19045'],
+        ['CurrentType','REG_SZ','Multiprocessor Free'],
+        ['CurrentVersion','REG_SZ','6.3'],
+        ['EditionID','REG_SZ','Professional'],
+        ['InstallationType','REG_SZ','Client'],
+        ['InstallDate','REG_DWORD','0x65d3c500 (1708324096)'],
+        ['ProductName','REG_SZ','Windows 10 Pro'],
+        ['ReleaseId','REG_SZ','2009'],
+        ['RegisteredOwner','REG_SZ',userData?.username||'User'],
+        ['SystemRoot','REG_SZ','C:\\Windows'],
+        ['UBR','REG_DWORD','0x00000b2b (2859)']
+    ];
+    tbody.innerHTML = values.map(([name,type,data])=>`
+    <tr onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background='transparent'" style="cursor:pointer;">
+      <td style="padding:4px 12px;border-bottom:1px solid #f0f0f0;">${name}</td>
+      <td style="padding:4px 12px;border-bottom:1px solid #f0f0f0;color:#666;">${type}</td>
+      <td style="padding:4px 12px;border-bottom:1px solid #f0f0f0;">${data}</td>
+    </tr>`).join('');
+}
+
+function createMediaPlayer() {
+    const tracks = [
+        {title:'Blinding Lights',artist:'The Weeknd',duration:'3:20'},
+        {title:'Watermelon Sugar',artist:'Harry Styles',duration:'2:54'},
+        {title:'Levitating',artist:'Dua Lipa',duration:'3:23'},
+        {title:'Peaches',artist:'Justin Bieber ft. Daniel Caesar',duration:'3:18'},
+        {title:'Good 4 U',artist:'Olivia Rodrigo',duration:'2:58'},
+        {title:'Stay',artist:'The Kid LAROI & Justin Bieber',duration:'2:21'},
+        {title:'Industry Baby',artist:'Lil Nas X & Jack Harlow',duration:'3:32'},
+        {title:'Shivers',artist:'Ed Sheeran',duration:'3:27'}
+    ];
+    let currentTrack = 0;
+    return `
+    <div style="height:100%;display:flex;background:#1a1a2e;color:white;">
+      <div style="width:250px;background:#0f0f1a;padding:12px;overflow-y:auto;border-right:1px solid #2a2a4a;">
+        <div style="font-size:12px;color:#888;margin-bottom:8px;text-transform:uppercase;font-weight:600;">Library</div>
+        <div onclick="this.classList.toggle('active')" style="padding:8px;border-radius:4px;cursor:pointer;margin-bottom:2px;background:#1a2a4a;" onmouseover="this.style.background='#2a3a5a'" onmouseout="">🎵 Music</div>
+        <div style="padding:8px;border-radius:4px;cursor:pointer;margin-bottom:2px;" onmouseover="this.style.background='#1a2a4a'" onmouseout="this.style.background='transparent'">📀 Albums</div>
+        <div style="padding:8px;border-radius:4px;cursor:pointer;margin-bottom:2px;" onmouseover="this.style.background='#1a2a4a'" onmouseout="this.style.background='transparent'">🎤 Artists</div>
+        <div style="padding:8px;border-radius:4px;cursor:pointer;" onmouseover="this.style.background='#1a2a4a'" onmouseout="this.style.background='transparent'">📋 Playlists</div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;">
+        <div style="flex:1;overflow-y:auto;padding:12px;">
+          <div style="font-size:13px;color:#888;margin-bottom:12px;">All Music (${tracks.length} songs)</div>
+          ${tracks.map((t,i)=>`
+          <div onclick="playTrack(${i})" id="mp-track-${i}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:6px;cursor:pointer;margin-bottom:4px;" onmouseover="this.style.background='#1a2a4a'" onmouseout="this.style.background=${i===0?'\"#0f2040\"':'\"transparent\"'}">
+            <span style="width:24px;text-align:center;color:#888;font-size:13px;">${i+1}</span>
+            <div style="width:40px;height:40px;background:linear-gradient(135deg,#5865f2,#7289da);border-radius:4px;display:flex;align-items:center;justify-content:center;">🎵</div>
+            <div style="flex:1;">
+              <div style="font-size:14px;">${t.title}</div>
+              <div style="font-size:12px;color:#888;">${t.artist}</div>
+            </div>
+            <span style="font-size:12px;color:#888;">${t.duration}</span>
+          </div>`).join('')}
+        </div>
+        <div style="background:#0f0f1a;padding:16px;border-top:1px solid #2a2a4a;">
+          <div style="text-align:center;margin-bottom:12px;">
+            <div style="font-size:16px;" id="mp-title">${tracks[0].title}</div>
+            <div style="font-size:13px;color:#888;" id="mp-artist">${tracks[0].artist}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <span style="font-size:12px;color:#888;" id="mp-time">0:00</span>
+            <div style="flex:1;height:4px;background:#2a2a4a;border-radius:2px;cursor:pointer;" onclick="seekTrack(event,this)" id="mp-progress-bar">
+              <div id="mp-progress" style="height:100%;background:#5865f2;border-radius:2px;width:0%;transition:width 0.3s;"></div>
+            </div>
+            <span style="font-size:12px;color:#888;" id="mp-duration">${tracks[0].duration}</span>
+          </div>
+          <div style="display:flex;justify-content:center;gap:20px;align-items:center;">
+            <button onclick="mpShuffle()" title="Shuffle" style="background:none;border:none;cursor:pointer;font-size:20px;color:#888;">🔀</button>
+            <button onclick="playTrack(window.mpCurrent>0?window.mpCurrent-1:0)" title="Previous" style="background:none;border:none;cursor:pointer;font-size:24px;color:white;">⏮</button>
+            <button onclick="mpPlayPause()" id="mp-playbtn" title="Play/Pause" style="background:#5865f2;border:none;cursor:pointer;font-size:20px;width:44px;height:44px;border-radius:50%;color:white;">▶</button>
+            <button onclick="playTrack((window.mpCurrent||0)+1)" title="Next" style="background:none;border:none;cursor:pointer;font-size:24px;color:white;">⏭</button>
+            <button onclick="mpRepeat()" title="Repeat" style="background:none;border:none;cursor:pointer;font-size:20px;color:#888;">🔁</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+window.mpCurrent = 0;
+window.mpPlaying = false;
+window.mpInterval = null;
+window.mpProgress = 0;
+
+const mpTracks = [
+    {title:'Blinding Lights',artist:'The Weeknd',duration:'3:20',secs:200},
+    {title:'Watermelon Sugar',artist:'Harry Styles',duration:'2:54',secs:174},
+    {title:'Levitating',artist:'Dua Lipa',duration:'3:23',secs:203},
+    {title:'Peaches',artist:'Justin Bieber',duration:'3:18',secs:198},
+    {title:'Good 4 U',artist:'Olivia Rodrigo',duration:'2:58',secs:178},
+    {title:'Stay',artist:'The Kid LAROI',duration:'2:21',secs:141},
+    {title:'Industry Baby',artist:'Lil Nas X',duration:'3:32',secs:212},
+    {title:'Shivers',artist:'Ed Sheeran',duration:'3:27',secs:207}
+];
+
+function playTrack(idx) {
+    if (idx < 0 || idx >= mpTracks.length) return;
+    window.mpCurrent = idx;
+    window.mpProgress = 0;
+    window.mpPlaying = true;
+    if (window.mpInterval) clearInterval(window.mpInterval);
+    const track = mpTracks[idx];
+    document.getElementById('mp-title').textContent = track.title;
+    document.getElementById('mp-artist').textContent = track.artist;
+    document.getElementById('mp-duration').textContent = track.duration;
+    document.getElementById('mp-playbtn').textContent = '⏸';
+    window.mpInterval = setInterval(() => {
+        if (!window.mpPlaying) return;
+        window.mpProgress = Math.min(window.mpProgress + 1, track.secs);
+        const pct = (window.mpProgress / track.secs) * 100;
+        const prog = document.getElementById('mp-progress');
+        if (prog) prog.style.width = pct + '%';
+        const min = Math.floor(window.mpProgress / 60);
+        const sec = window.mpProgress % 60;
+        const timeEl = document.getElementById('mp-time');
+        if (timeEl) timeEl.textContent = min + ':' + String(sec).padStart(2,'0');
+        if (window.mpProgress >= track.secs) playTrack((idx + 1) % mpTracks.length);
+    }, 1000);
+}
+
+function mpPlayPause() {
+    window.mpPlaying = !window.mpPlaying;
+    document.getElementById('mp-playbtn').textContent = window.mpPlaying ? '⏸' : '▶';
+    if (window.mpPlaying && !window.mpInterval) playTrack(window.mpCurrent);
+}
+
+function mpShuffle() { playTrack(Math.floor(Math.random() * mpTracks.length)); }
+function mpRepeat() { window.mpProgress = 0; }
+function seekTrack(e, bar) {
+    const rect = bar.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    const track = mpTracks[window.mpCurrent];
+    window.mpProgress = Math.floor(pct * track.secs);
+}
+
+function createTeams() {
+    const channels = ['General','Announcements','Development','Design','Marketing','Support'];
+    const messages = [
+        {user:'Alice Chen',avatar:'👩',time:'10:30 AM',msg:'Good morning everyone! Ready for the standup? 👋'},
+        {user:'Bob Smith',avatar:'👨',time:'10:31 AM',msg:'Morning! Yes, be right there in 5 mins.'},
+        {user:'Alice Chen',avatar:'👩',time:'10:32 AM',msg:'The new feature deployment went smoothly last night! 🚀'},
+        {user:'Carol Davis',avatar:'👩‍💼',time:'10:35 AM',msg:'Great news! I\'ll update the stakeholders. Also, quick reminder: team lunch at 12pm today 🍕'},
+        {user:'Dave Wilson',avatar:'🧑',time:'10:38 AM',msg:'@Carol Thanks for the reminder! See everyone at lunch.'},
+        {user:userData?.username||'You',avatar:'😊',time:'Just now',msg:'Just joined the channel!',isMe:true}
+    ];
+    return `
+    <div style="height:100%;display:flex;background:#1d1f2b;color:#d1d2d4;">
+      <div style="width:60px;background:#1b1c26;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:8px;">
+        <div style="width:44px;height:44px;background:linear-gradient(135deg,#6264a7,#4f52a5);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;">👤</div>
+        <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;">
+          ${['💬','📅','📞','📁','⚙️'].map(ic=>`<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;font-size:22px;" onmouseover="this.style.background='#2a2b3a'" onmouseout="this.style.background='transparent'">${ic}</div>`).join('')}
+        </div>
+      </div>
+      <div style="width:200px;background:#1d1f2b;border-right:1px solid #2a2b3a;padding:12px;">
+        <div style="font-size:14px;font-weight:600;margin-bottom:12px;color:white;">Teams</div>
+        <div style="font-size:11px;color:#888;margin-bottom:6px;text-transform:uppercase;">Channels</div>
+        ${channels.map((c,i)=>`
+        <div onclick="switchTeamsChannel('${c}')" style="padding:6px 8px;border-radius:4px;cursor:pointer;font-size:13px;margin-bottom:2px;${i===0?'background:#2a2b3a;':''}" onmouseover="this.style.background='#2a2b3a'" onmouseout="this.style.background=${i===0?'\"#2a2b3a\"':'\"transparent\"'}">
+          # ${c}
+        </div>`).join('')}
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;">
+        <div style="padding:12px 16px;border-bottom:1px solid #2a2b3a;font-weight:600;color:white;"># General</div>
+        <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;" id="teams-messages">
+          ${messages.map(m=>`
+          <div style="display:flex;gap:10px;align-items:flex-start;${m.isMe?'flex-direction:row-reverse;':''}" >
+            <div style="width:36px;height:36px;background:${m.isMe?'#6264a7':'#424242'};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${m.avatar}</div>
+            <div style="max-width:70%;${m.isMe?'align-items:flex-end;':''}">
+              <div style="font-size:11px;color:#888;margin-bottom:3px;${m.isMe?'text-align:right;':''}">${m.user} • ${m.time}</div>
+              <div style="background:${m.isMe?'#6264a7':'#2a2b3a'};padding:10px 14px;border-radius:${m.isMe?'12px 12px 2px 12px':'12px 12px 12px 2px'};font-size:13px;">${m.msg}</div>
+            </div>
+          </div>`).join('')}
+        </div>
+        <div style="padding:12px 16px;border-top:1px solid #2a2b3a;display:flex;gap:8px;align-items:center;">
+          <div style="flex:1;background:#2a2b3a;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:8px;">
+            <input id="teams-msg-input" type="text" placeholder="Type a new message" 
+              style="flex:1;background:none;border:none;color:#d1d2d4;outline:none;font-size:14px;"
+              onkeydown="if(event.key==='Enter')sendTeamsMessage()">
+            <span style="color:#888;">😊</span>
+            <span style="color:#888;">📎</span>
+          </div>
+          <button onclick="sendTeamsMessage()" style="background:#6264a7;border:none;border-radius:8px;width:40px;height:40px;cursor:pointer;color:white;font-size:18px;">➤</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function sendTeamsMessage() {
+    const input = document.getElementById('teams-msg-input');
+    const msgs = document.getElementById('teams-messages');
+    if (!input || !msgs || !input.value.trim()) return;
+    const text = input.value.trim();
+    input.value = '';
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;gap:10px;align-items:flex-start;flex-direction:row-reverse;';
+    div.innerHTML = `<div style="width:36px;height:36px;background:#6264a7;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">😊</div><div style="max-width:70%;align-items:flex-end;"><div style="font-size:11px;color:#888;margin-bottom:3px;text-align:right;">${userData?.username||'You'} • Just now</div><div style="background:#6264a7;padding:10px 14px;border-radius:12px 12px 2px 12px;font-size:13px;">${text}</div></div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+    setTimeout(() => {
+        const replies = ['Got it! 👍','That sounds great!','Thanks for sharing!','Will do!','Let me check on that.','On it! 🚀'];
+        const reply = replies[Math.floor(Math.random()*replies.length)];
+        const names = [['Alice Chen','👩'],['Bob Smith','👨'],['Carol Davis','👩‍💼']];
+        const [name,av] = names[Math.floor(Math.random()*names.length)];
+        const rdiv = document.createElement('div');
+        rdiv.style.cssText = 'display:flex;gap:10px;align-items:flex-start;';
+        rdiv.innerHTML = `<div style="width:36px;height:36px;background:#424242;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${av}</div><div><div style="font-size:11px;color:#888;margin-bottom:3px;">${name} • Just now</div><div style="background:#2a2b3a;padding:10px 14px;border-radius:12px 12px 12px 2px;font-size:13px;">${reply}</div></div>`;
+        msgs.appendChild(rdiv);
+        msgs.scrollTop = msgs.scrollHeight;
+    }, 1000 + Math.random()*1500);
+}
+
+function switchTeamsChannel(name) {}
+
+function createSpeedTest() {
+    return `
+    <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f0f1a,#1a1a2e);color:white;">
+      <h2 style="margin-bottom:6px;font-weight:300;font-size:28px;">Internet Speed Test</h2>
+      <p style="color:#888;margin-bottom:40px;font-size:14px;">Test your connection speed</p>
+      <div style="position:relative;width:240px;height:240px;margin-bottom:30px;">
+        <svg viewBox="0 0 200 200" style="width:240px;height:240px;">
+          <circle cx="100" cy="100" r="90" fill="none" stroke="#1a2a4a" stroke-width="12"/>
+          <circle id="st-ring" cx="100" cy="100" r="90" fill="none" stroke="#00d4ff" stroke-width="12"
+            stroke-dasharray="565" stroke-dashoffset="565" stroke-linecap="round"
+            transform="rotate(-90 100 100)" style="transition:stroke-dashoffset 0.1s;"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <div id="st-speed" style="font-size:42px;font-weight:300;color:#00d4ff;">--</div>
+          <div id="st-unit" style="font-size:13px;color:#888;margin-top:2px;">Mbps</div>
+          <div id="st-label" style="font-size:12px;color:#555;margin-top:4px;">Download</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:40px;margin-bottom:30px;">
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:#888;margin-bottom:4px;">📥 Download</div>
+          <div id="st-dl" style="font-size:20px;color:white;">--</div>
+          <div style="font-size:11px;color:#888;">Mbps</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:#888;margin-bottom:4px;">📤 Upload</div>
+          <div id="st-ul" style="font-size:20px;color:white;">--</div>
+          <div style="font-size:11px;color:#888;">Mbps</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:#888;margin-bottom:4px;">⏱️ Ping</div>
+          <div id="st-ping" style="font-size:20px;color:white;">--</div>
+          <div style="font-size:11px;color:#888;">ms</div>
+        </div>
+      </div>
+      <button id="st-btn" onclick="runSpeedTest()" style="background:linear-gradient(135deg,#00d4ff,#0078d4);border:none;border-radius:30px;padding:14px 48px;color:white;font-size:18px;font-weight:600;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">GO</button>
+      <p id="st-status" style="color:#888;font-size:13px;margin-top:16px;"> </p>
+    </div>`;
+}
+
+function runSpeedTest() {
+    const btn = document.getElementById('st-btn');
+    const status = document.getElementById('st-status');
+    const ring = document.getElementById('st-ring');
+    const speedEl = document.getElementById('st-speed');
+    const dlEl = document.getElementById('st-dl');
+    const ulEl = document.getElementById('st-ul');
+    const pingEl = document.getElementById('st-ping');
+    const labelEl = document.getElementById('st-label');
+    if (btn) btn.disabled = true;
+    
+    const dl = (Math.random() * 400 + 50).toFixed(1);
+    const ul = (Math.random() * 100 + 20).toFixed(1);
+    const ping = Math.floor(Math.random() * 20 + 5);
+    
+    if (status) status.textContent = 'Testing ping...';
+    if (pingEl) setTimeout(() => { pingEl.textContent = ping; if(status) status.textContent = 'Testing download speed...'; }, 800);
+    
+    let current = 0, target = parseFloat(dl);
+    const interval = setInterval(() => {
+        current = Math.min(current + target/60, target);
+        if (speedEl) speedEl.textContent = current.toFixed(0);
+        if (ring) ring.style.strokeDashoffset = 565 - (current/400)*565;
+        if (current >= target) {
+            clearInterval(interval);
+            if (dlEl) dlEl.textContent = dl;
+            if (status) status.textContent = 'Testing upload speed...';
+            setTimeout(() => {
+                if (ulEl) ulEl.textContent = ul;
+                if (speedEl) speedEl.textContent = ul;
+                if (labelEl) labelEl.textContent = 'Upload';
+                if (ring) ring.style.stroke = '#00ff88';
+                setTimeout(() => {
+                    if (status) status.textContent = `✅ Speed test complete! Server: New York, NY`;
+                    if (btn) btn.disabled = false;
+                }, 1500);
+            }, 2000);
+        }
+    }, 50);
+}
+
+function createMail() {
+    const emails = [
+        {from:'Microsoft',subject:'Welcome to Windows 10!',time:'9:00 AM',preview:'Thank you for using Windows 10. Get started with...',read:false},
+        {from:'GitHub',subject:'[github] Action required: Verify your email',time:'Yesterday',preview:'Please verify your email address to continue...',read:false},
+        {from:'LinkedIn',subject:'You have 5 new profile views',time:'Mon',preview:'See who\'s been looking at your profile this week...',read:true},
+        {from:'Google',subject:'Security alert: New device signed in',time:'Sun',preview:'A new device was signed in to your Google Account...',read:true},
+        {from:'No-Reply',subject:'Your order has shipped!',time:'Sat',preview:'Your order #12345 has been shipped and is on its way...',read:true},
+        {from:'Team Newsletter',subject:'Weekly Digest - Top stories this week',time:'Fri',preview:'Here are the top stories from this week in tech...',read:true}
+    ];
+    return `
+    <div style="height:100%;display:flex;background:white;">
+      <div style="width:60px;background:#0078d4;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:12px;">
+        ${['📬','📅','👤','⚙️'].map(ic=>`<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:8px;font-size:22px;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='transparent'">${ic}</div>`).join('')}
+      </div>
+      <div style="width:260px;border-right:1px solid #eee;display:flex;flex-direction:column;">
+        <div style="padding:12px;border-bottom:1px solid #eee;">
+          <button onclick="addNotification('📧','Mail','New email composition opened')" style="width:100%;padding:10px;background:#0078d4;color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600;">+ New Mail</button>
+        </div>
+        <div style="padding:8px;border-bottom:1px solid #eee;">
+          ${['📥 Inbox','⭐ Flagged','📤 Sent','📝 Drafts','🗑️ Deleted','📂 Archive'].map((f,i)=>`<div style="padding:8px;border-radius:4px;cursor:pointer;font-size:13px;${i===0?'background:#e3f2fd;color:#0078d4;':''}" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='${i===0?'#e3f2fd':'transparent'}'">${f}</div>`).join('')}
+        </div>
+      </div>
+      <div style="width:320px;border-right:1px solid #eee;overflow-y:auto;">
+        ${emails.map((e,i)=>`
+        <div onclick="openEmail(${i})" style="padding:14px;border-bottom:1px solid #f5f5f5;cursor:pointer;${!e.read?'background:#f0f7ff;':''}" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='${!e.read?'#f0f7ff':'transparent'}'">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:13px;font-weight:${!e.read?'700':'500'};">${e.from}</span>
+            <span style="font-size:11px;color:#888;">${e.time}</span>
+          </div>
+          <div style="font-size:13px;${!e.read?'font-weight:600;':''}color:#333;margin-bottom:3px;">${e.subject}</div>
+          <div style="font-size:12px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.preview}</div>
+        </div>`).join('')}
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#999;">
+        <div style="text-align:center;">
+          <div style="font-size:48px;margin-bottom:12px;">📧</div>
+          <p>Select an email to read</p>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openEmail(idx) {
+    const emails = [
+        {from:'Microsoft',subject:'Welcome to Windows 10!',body:'<h3>Welcome to Windows 10!</h3><p>Thank you for upgrading to the latest version of Windows. We\'re excited to have you here!</p><p>Get started by exploring the new features:</p><ul><li>The new Start Menu</li><li>Cortana virtual assistant</li><li>Microsoft Edge browser</li><li>Action Center notifications</li></ul><p>Best regards,<br>The Windows Team</p>'},
+        {from:'GitHub',subject:'Action required: Verify your email',body:'<h3>Verify your GitHub email address</h3><p>Please verify your email address to access all features of GitHub.</p><p><a href="#">Click here to verify</a></p>'},
+        {from:'LinkedIn',subject:'You have 5 new profile views',body:'<h3>5 people viewed your profile</h3><p>See who\'s interested in your work and experience.</p>'},
+        {from:'Google',subject:'Security alert: New device signed in',body:'<h3>New sign-in detected</h3><p>A new device recently signed in to your Google Account. If this was you, you can ignore this email.</p>'},
+        {from:'Shipping',subject:'Your order has shipped!',body:'<h3>Your order is on its way!</h3><p>Order #12345 has been shipped via FedEx. Expected delivery: 2-3 business days.</p>'},
+        {from:'Newsletter',subject:'Weekly Digest',body:'<h3>This week in tech</h3><p>Top stories from the tech world this week...</p>'}
+    ];
+    const email = emails[idx];
+    const content = document.querySelector('[style*="Select an email"]')?.parentElement;
+    if (!content) return;
+    content.innerHTML = `<div style="padding:24px;overflow-y:auto;height:100%;"><h2 style="font-size:18px;margin-bottom:8px;">${email.subject}</h2><div style="color:#666;font-size:13px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #eee;"><strong>From:</strong> ${email.from}<br><strong>To:</strong> ${userData?.username||'User'}@windows10sim.com</div><div style="font-size:14px;line-height:1.8;">${email.body}</div></div>`;
+}
+
+function createXbox() {
+    const games = [
+        {name:'Halo Infinite',icon:'🎮',genre:'FPS',rating:'★★★★★',players:'Multiplayer'},
+        {name:'Forza Horizon 5',icon:'🏎️',genre:'Racing',rating:'★★★★★',players:'Multiplayer'},
+        {name:'Sea of Thieves',icon:'🏴‍☠️',genre:'Adventure',rating:'★★★★☆',players:'Multiplayer'},
+        {name:'Minecraft',icon:'⛏️',genre:'Sandbox',rating:'★★★★★',players:'Multiplayer'},
+        {name:'Age of Empires IV',icon:'⚔️',genre:'Strategy',rating:'★★★★☆',players:'Multiplayer'},
+        {name:'Ori and the Wild',icon:'🦊',genre:'Adventure',rating:'★★★★★',players:'Single Player'},
+        {name:'Microsoft Flight Simulator',icon:'✈️',genre:'Simulation',rating:'★★★★★',players:'Single/Multi'},
+        {name:'Gears 5',icon:'🔫',genre:'TPS',rating:'★★★★☆',players:'Multiplayer'}
+    ];
+    return `
+    <div style="height:100%;display:flex;flex-direction:column;background:#107c10;color:white;">
+      <div style="background:rgba(0,0,0,0.2);padding:12px 20px;display:flex;align-items:center;gap:16px;">
+        <span style="font-size:28px;">🎮</span>
+        <span style="font-size:20px;font-weight:600;">Xbox</span>
+        <nav style="display:flex;gap:24px;margin-left:20px;">
+          ${['Home','My Games','Game Pass','Store','Friends'].map((n,i)=>`<a style="color:white;text-decoration:none;font-size:14px;opacity:${i===0?1:0.7};border-bottom:${i===0?'2px solid white':'none'};padding-bottom:2px;cursor:pointer;">${n}</a>`).join('')}
+        </nav>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:12px;">
+          <span style="font-size:20px;">🔔</span>
+          <div style="width:36px;height:36px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;">😊</div>
+        </div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:20px;">
+        <div style="background:linear-gradient(135deg,#0e7a0e,#1db91d);border-radius:12px;padding:24px;margin-bottom:24px;display:flex;gap:20px;align-items:center;">
+          <span style="font-size:64px;">🎮</span>
+          <div>
+            <div style="font-size:12px;opacity:0.8;text-transform:uppercase;letter-spacing:1px;">Xbox Game Pass Ultimate</div>
+            <div style="font-size:24px;font-weight:700;margin:4px 0;">Play 100+ Games</div>
+            <div style="font-size:14px;opacity:0.9;">Access hundreds of games on console, PC, and mobile</div>
+            <button style="margin-top:12px;padding:8px 20px;background:white;color:#107c10;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:14px;">Join Game Pass</button>
+          </div>
+        </div>
+        <h3 style="margin-bottom:16px;font-size:18px;">My Games & Apps</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
+          ${games.map(g=>`
+          <div onclick="addNotification('🎮','Xbox','Launching ${g.name}...')" style="background:rgba(0,0,0,0.3);border-radius:8px;overflow:hidden;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+            <div style="height:100px;background:linear-gradient(135deg,rgba(0,0,0,0.2),rgba(0,0,0,0.5));display:flex;align-items:center;justify-content:center;font-size:48px;">${g.icon}</div>
+            <div style="padding:10px 12px;">
+              <div style="font-size:13px;font-weight:600;margin-bottom:2px;">${g.name}</div>
+              <div style="font-size:11px;opacity:0.7;">${g.genre} • ${g.players}</div>
+              <div style="font-size:12px;margin-top:4px;">${g.rating}</div>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
 }
