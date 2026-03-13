@@ -272,9 +272,9 @@
                     document.getElementById("progress-percent");
                 const updateStage = document.getElementById("update-stage");
 
-                progress += 28;
+                progress += 1.9;
 
-                if (progress <= 500) {
+                if (progress <= 100) {
                     progressFill.style.width = progress + "%";
                     progressPercent.textContent = progress + "%";
 
@@ -286,7 +286,7 @@
                         }
                     }
 
-                    setTimeout(updateProgress, 100);
+                    setTimeout(updateProgress, 2000);
                 } else {
                     document.getElementById("updating").style.display = "none";
                     document.getElementById("complete").style.display = "block";
@@ -294,7 +294,7 @@
             }
 
             function finishUpdate() {
-                window.location.href = "index.html";
+                window.location.href = "index.html?opened=settings";
             }
 
             setTimeout(updateProgress, 2000);
