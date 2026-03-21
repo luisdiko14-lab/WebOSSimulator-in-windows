@@ -1,10 +1,7 @@
- // wrangler.json
 {
-  // wrangler.json
   "name": "windows-10-simulation",
   "main": "build.js",
   "compatibility_date": "2026-03-20",
-  "compatibility_flags": [],
   "vars": {
     "ENV": "production"
   }
