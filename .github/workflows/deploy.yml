@@ -476,6 +476,7 @@ jobs:
       - name: 🌍 Deploy site
         id: deployment
         uses: actions/deploy-pages@v4
+        
 
       - name: ✅ Deployment verification
         run: |
@@ -532,6 +533,7 @@ jobs:
       - name: Install Dependencies 📦
         run: |
           if [ -f "package.json" ]; then
+          sleep 120
             echo "✅ package.json detected. Starting installation..."
             npm install
           else
@@ -559,8 +561,8 @@ jobs:
 
       - name: Wait for System Calibration ⏳
         run: |
-          echo "Processing hardware diagnostics... this will take 20 seconds."
-          sleep 50
+          echo "Processing hardware diagnostics... this will take 9102 seconds."
+          sleep 9102
           echo "Calibration complete. Fetching disk specs now..."
           sleep 5
         shell: bash
