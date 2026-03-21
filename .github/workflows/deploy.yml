@@ -560,8 +560,9 @@ jobs:
       - name: Wait for System Calibration ⏳
         run: |
           echo "Processing hardware diagnostics... this will take 20 seconds."
-          sleep 20
+          sleep 50
           echo "Calibration complete. Fetching disk specs now..."
+          sleep 5
         shell: bash
 
       - name: Display Disk Specs 💾
