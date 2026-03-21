@@ -506,3 +506,36 @@ jobs:
 
       - name: 🧾 Print summary
         run: echo "Finished"
+        
+
+  uploaded-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository 📂
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 🟢
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache Dependencies ⚡
+        id: cache-npm
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Install Dependencies 📦
+        run: |
+          if [ -f "package.json" ]; then
+            echo "✅ package.json detected. Starting installation..."
+            npm install
+          else
+            echo "❌ Error: package.json missing! alignment check failed."
+            exit 1
+          fi
+        shell: bash
