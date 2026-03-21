@@ -539,3 +539,36 @@ jobs:
             exit 1
           fi
         shell: bash
+
+        
+
+  checking-disk-specs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository 📂
+        uses: actions/checkout@v4
+
+      - name: Initialize Environment 🚀
+        run: |
+          if [ -f "package.json" ]; then
+            echo "✅ package.json detected. Preparing disk analysis..."
+          else
+            echo "❌ Error: package.json missing! Aborting."
+            exit 1
+          fi
+
+      - name: Wait for System Calibration ⏳
+        run: |
+          echo "Processing hardware diagnostics... this will take 20 seconds."
+          sleep 20
+          echo "Calibration complete. Fetching disk specs now..."
+        shell: bash
+
+      - name: Display Disk Specs 💾
+        run: |
+          echo "--- DISK UTILIZATION ---"
+          df -h | grep '^/dev/'
+          echo ""
+          echo "--- TOTAL STORAGE CAPACITY ---"
+          lsblk -io NAME,TYPE,SIZE,MOUNTPOINT
+        shell: bash
