@@ -1,0 +1,71 @@
+modules = ["nodejs-20", "python-3.11"]
+[agent]
+expertMode = true
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Windows 10 Simulator"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "File Watcher"
+
+[[workflows.workflow]]
+name = "Windows 10 Simulator"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m http.server 5000"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow]]
+name = "Discord bot"
+mode = "sequential"
+author = 45837744
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd bot && python bot.py"
+
+[[workflows.workflow]]
+name = "Run webhook"
+mode = "sequential"
+author = 45837744
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node discord-webhook.js"
+
+[[workflows.workflow]]
+name = "File Watcher"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node file-watcher.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[ports]]
+localPort = 3000
+externalPort = 3001
+
+[[ports]]
+localPort = 5000
+externalPort = 80
