@@ -11,6 +11,7 @@
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "fs": "^0.0.1-security",
+    "hetrixtools": "^1.0.2",
     "node-fetch": "^2.7.0",
     "web": "^0.0.2",
     "windows": "^0.1.2"
