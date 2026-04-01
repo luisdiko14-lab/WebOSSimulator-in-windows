@@ -4223,13 +4223,10 @@ window.addEventListener('message', (e) => {
 function discordStartOAuth() {
     localStorage.removeItem('discord_user_data');
 
-    // Open the server-side OAuth start endpoint in a popup (server manages state securely)
+    // Open the server-side OAuth start endpoint in a new tab (server manages state securely)
     const authUrl = '/api/auth/discord';
 
-    const w = 480, h = 720;
-    const left = window.screen.width / 2 - w / 2;
-    const top = window.screen.height / 2 - h / 2;
-    _discordAuthWindow = window.open(authUrl, 'DiscordOAuth', `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
+    _discordAuthWindow = window.open(authUrl, '_blank');
 
     // Show "waiting for auth" UI in Discord window
     const body = document.getElementById('discord-app-body');
@@ -4238,7 +4235,7 @@ function discordStartOAuth() {
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:40px;">
           <div style="font-size:60px;margin-bottom:20px;animation:spin 2s linear infinite;">⏳</div>
           <h3 style="color:white;margin-bottom:8px;">Waiting for authorization...</h3>
-          <p style="color:#b9bbbe;font-size:14px;margin-bottom:24px;">A Discord login window has been opened. Please complete the login in that window.</p>
+          <p style="color:#b9bbbe;font-size:14px;margin-bottom:24px;">A new tab has opened. Complete the Discord login there, then come back here.</p>
           <div style="display:flex;gap:8px;">
             <button onclick="discordCheckAuth()" style="background:#5865f2;border:none;border-radius:4px;padding:10px 20px;color:white;cursor:pointer;font-size:14px;">Check Status</button>
             <button onclick="discordCancelAuth()" style="background:#4f545c;border:none;border-radius:4px;padding:10px 20px;color:white;cursor:pointer;font-size:14px;">Cancel</button>

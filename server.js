@@ -119,9 +119,8 @@ const generate55CharState = () => {
 /* =======================
    🔗 ROUTES
 ======================= */
-// Helper: build the redirect URI from the current request (or fall back to env var)
+// Always build the redirect URI from the request headers — never trust a misconfigured env var
 function getRedirectUri(req) {
-    if (REDIRECT_URI) return REDIRECT_URI;
     const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
     const host = req.headers['x-forwarded-host'] || req.headers.host;
     return `${proto}://${host}/api/auth/discord-callback`;
