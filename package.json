@@ -1,8 +1,8 @@
 {
   "scripts": {
-    "build": "node build.js",
-    "start": "npm run build",
-    "dev": "npm run build",
+    "main": "node server.js",
+    "start": "node server.js",
+    "dev": "node server.js",
     "oauth": "node discord-oauth.js"
   },
   "dependencies": {
