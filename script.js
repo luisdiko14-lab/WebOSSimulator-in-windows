@@ -648,49 +648,50 @@ function createWindow(appName) {
     windowEl.style.width = size.w + 'px';
     windowEl.style.height = size.h + 'px';
     
-    const apps = {
-        calculator: { title: '🔢 Calculator', content: createCalculator() },
-        notepad: { title: '📝 Notepad', content: createNotepad() },
-        wordpad: { title: '📄 WordPad', content: createWordPad() },
-        explorer: { title: '📁 File Explorer', content: createExplorer() },
-        settings: { title: '⚙️ Settings', content: createSettings() },
-        taskmgr: { title: '📊 Task Manager', content: createTaskManager() },
-        browser: { title: '🌐 Microsoft Edge', content: createBrowser() },
-        computer: { title: '💻 This PC', content: createComputer() },
-        trash: { title: '🗑️ Recycle Bin', content: createRecycleBin() },
-        search: { title: '🔍 Search', content: createSearch() },
-        google_setup: { title: '🌐 Google Chrome Setup', content: createGoogleSetup() },
-        chrome: { title: '🔵 Google Chrome', content: createChrome() },
-        cmd: { title: '⬛ Command Prompt', content: createCMD() },
-        powershell: { title: '🔷 Windows PowerShell', content: createPowerShell() },
-        paint: { title: '🎨 Paint', content: createPaint() },
-        weather: { title: '🌤️ Weather', content: createWeather() },
-        snipping: { title: '✂️ Snipping Tool', content: createSnipping() },
-        photos: { title: '🖼️ Photos', content: createPhotos() },
-        calendar: { title: '📅 Calendar', content: createCalendar() },
-        clock: { title: '⏰ Alarms & Clock', content: createClockApp() },
-        maps: { title: '🗺️ Maps', content: createMaps() },
-        store: { title: '🛍️ Microsoft Store', content: createStore() },
-        wifi: { title: '📶 Network & Internet', content: createWifiSettings() },
-        defender: { title: '🛡️ Windows Security', content: createDefender() },
-        music: { title: '🎵 Groove Music', content: createMusicPlayer() },
-        solitaire: { title: '🃏 Solitaire', content: createSolitaire() },
-        discord: { title: '💬 Discord', content: createDiscordApp() },
-        advanced: { title: '⚙️ Advanced Settings', content: createAdvancedSettings() },
-        code: { title: '💻 VS Code', content: createCodeEditor() },
-        sysinfo: { title: 'ℹ️ System Information', content: createSystemInfo() },
-        stickynotes: { title: '🟡 Sticky Notes', content: createStickyNotes() },
-        controlpanel: { title: '🎛️ Control Panel', content: createControlPanel() },
-        devmgr: { title: '🖥️ Device Manager', content: createDeviceManager() },
-        registry: { title: '📋 Registry Editor', content: createRegistryEditor() },
-        mediaplayer: { title: '▶️ Windows Media Player', content: createMediaPlayer() },
-        teams: { title: '👥 Microsoft Teams', content: createTeams() },
-        speedtest: { title: '⚡ Speed Test', content: createSpeedTest() },
-        mail: { title: '📧 Mail', content: createMail() },
-        xbox: { title: '🎮 Xbox', content: createXbox() }
+    // LAZY: only create the requested app — prevents all timers/setIntervals from running on every openApp call
+    const appFactories = {
+        calculator:   () => ({ title: '🔢 Calculator',            content: createCalculator() }),
+        notepad:      () => ({ title: '📝 Notepad',               content: createNotepad() }),
+        wordpad:      () => ({ title: '📄 WordPad',               content: createWordPad() }),
+        explorer:     () => ({ title: '📁 File Explorer',         content: createExplorer() }),
+        settings:     () => ({ title: '⚙️ Settings',              content: createSettings() }),
+        taskmgr:      () => ({ title: '📊 Task Manager',          content: createTaskManager() }),
+        browser:      () => ({ title: '🌐 Microsoft Edge',        content: createBrowser() }),
+        computer:     () => ({ title: '💻 This PC',               content: createComputer() }),
+        trash:        () => ({ title: '🗑️ Recycle Bin',           content: createRecycleBin() }),
+        search:       () => ({ title: '🔍 Search',                content: createSearch() }),
+        google_setup: () => ({ title: '🌐 Google Chrome Setup',   content: createGoogleSetup() }),
+        chrome:       () => ({ title: '🔵 Google Chrome',         content: createChrome() }),
+        cmd:          () => ({ title: '⬛ Command Prompt',         content: createCMD() }),
+        powershell:   () => ({ title: '🔷 Windows PowerShell',    content: createPowerShell() }),
+        paint:        () => ({ title: '🎨 Paint',                 content: createPaint() }),
+        weather:      () => ({ title: '🌤️ Weather',               content: createWeather() }),
+        snipping:     () => ({ title: '✂️ Snipping Tool',          content: createSnipping() }),
+        photos:       () => ({ title: '🖼️ Photos',                content: createPhotos() }),
+        calendar:     () => ({ title: '📅 Calendar',              content: createCalendar() }),
+        clock:        () => ({ title: '⏰ Alarms & Clock',         content: createClockApp() }),
+        maps:         () => ({ title: '🗺️ Maps',                  content: createMaps() }),
+        store:        () => ({ title: '🛍️ Microsoft Store',       content: createStore() }),
+        wifi:         () => ({ title: '📶 Network & Internet',     content: createWifiSettings() }),
+        defender:     () => ({ title: '🛡️ Windows Security',      content: createDefender() }),
+        music:        () => ({ title: '🎵 Groove Music',           content: createMusicPlayer() }),
+        solitaire:    () => ({ title: '🃏 Solitaire',             content: createSolitaire() }),
+        discord:      () => ({ title: '💬 Discord',               content: createDiscordApp() }),
+        advanced:     () => ({ title: '⚙️ Advanced Settings',     content: createAdvancedSettings() }),
+        code:         () => ({ title: '💻 VS Code',               content: createCodeEditor() }),
+        sysinfo:      () => ({ title: 'ℹ️ System Information',     content: createSystemInfo() }),
+        stickynotes:  () => ({ title: '🟡 Sticky Notes',          content: createStickyNotes() }),
+        controlpanel: () => ({ title: '🎛️ Control Panel',         content: createControlPanel() }),
+        devmgr:       () => ({ title: '🖥️ Device Manager',        content: createDeviceManager() }),
+        registry:     () => ({ title: '📋 Registry Editor',       content: createRegistryEditor() }),
+        mediaplayer:  () => ({ title: '▶️ Windows Media Player',  content: createMediaPlayer() }),
+        teams:        () => ({ title: '👥 Microsoft Teams',       content: createTeams() }),
+        speedtest:    () => ({ title: '⚡ Speed Test',            content: createSpeedTest() }),
+        mail:         () => ({ title: '📧 Mail',                  content: createMail() }),
+        xbox:         () => ({ title: '🎮 Xbox',                  content: createXbox() }),
     };
-    
-    const appData = apps[appName] || { title: '🪟 Window', content: '<div style="padding:20px">App not found</div>' };
+
+    const appData = (appFactories[appName] || (() => ({ title: '🪟 Window', content: '<div style="padding:20px;color:#666;">App not found: ' + appName + '</div>' })))();
     
     windowEl.innerHTML = `
         <div class="window-resize-n"></div>
@@ -718,6 +719,9 @@ function createWindow(appName) {
     
     if (appName === 'paint') {
         setTimeout(setupPaint, 100);
+    }
+    if (appName === 'discord') {
+        setTimeout(discordInitIfLoggedIn, 50);
     }
     
     windowEl.addEventListener('mousedown', () => focusWindow({ appName, element: windowEl }));
@@ -2414,21 +2418,90 @@ function edgeBookmark() {
 }
 
 function createComputer() {
+    const drives = [
+        { icon: '💿', letter: 'C:', name: 'Windows (C:)', total: 476, free: 237, color: '#0078d4' },
+        { icon: '💾', letter: 'D:', name: 'Data (D:)', total: 1000, free: 648, color: '#107c10' },
+        { icon: '📀', letter: 'E:', name: 'Backup (E:)', total: 2000, free: 1820, color: '#8764b8' },
+        { icon: '🔌', letter: 'F:', name: 'USB Drive (F:)', total: 32, free: 18, color: '#ca5010' },
+    ];
+    const folders = [
+        { icon: '🖥️', name: 'Desktop', count: '4 items' },
+        { icon: '📄', name: 'Documents', count: '23 items' },
+        { icon: '📥', name: 'Downloads', count: '12 items' },
+        { icon: '🎵', name: 'Music', count: '148 items' },
+        { icon: '🖼️', name: 'Pictures', count: '56 items' },
+        { icon: '🎬', name: 'Videos', count: '8 items' },
+    ];
     return `
-        <div class="explorer-content">
-            <div class="explorer-sidebar">
-                <div class="folder-item">💻 This PC</div>
-                <div class="folder-item">📁 Desktop</div>
-                <div class="folder-item">📁 Documents</div>
-                <div class="folder-item">📁 Downloads</div>
-            </div>
-            <div class="explorer-main">
-                <h3 style="margin-bottom: 20px;">Devices and drives</h3>
-                <div class="file-item">💿 <strong>Local Disk (C:)</strong><br><small>237 GB free of 476 GB</small></div>
-                <div class="file-item">💿 <strong>Local Disk (D:)</strong><br><small>150 GB free of 500 GB</small></div>
-            </div>
+    <div style="height:100%;display:flex;flex-direction:column;background:#fff;font-family:'Segoe UI',sans-serif;">
+      <div style="background:#f5f5f5;border-bottom:1px solid #e0e0e0;padding:6px 12px;display:flex;align-items:center;gap:8px;font-size:12px;">
+        <button style="background:none;border:none;cursor:pointer;font-size:16px;color:#555;">←</button>
+        <button style="background:none;border:none;cursor:pointer;font-size:16px;color:#555;">→</button>
+        <button style="background:none;border:none;cursor:pointer;font-size:16px;color:#555;">↑</button>
+        <div style="flex:1;background:white;border:1px solid #ccc;border-radius:3px;padding:3px 10px;font-size:12px;">
+          💻 This PC
         </div>
-    `;
+        <input type="text" placeholder="🔍 Search This PC" style="padding:4px 10px;border:1px solid #ccc;border-radius:3px;font-size:12px;width:180px;">
+      </div>
+      <div style="display:flex;flex:1;overflow:hidden;">
+        <div style="width:180px;border-right:1px solid #e8e8e8;overflow-y:auto;padding:8px 0;background:#fafafa;">
+          <div style="padding:4px 12px;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;margin-top:4px;">Quick access</div>
+          ${folders.map(f=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 16px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='#e8f4ff'" onmouseout="this.style.background='transparent'">${f.icon} ${f.name}</div>`).join('')}
+          <div style="padding:4px 12px;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;margin-top:8px;">This PC</div>
+          ${drives.map(d=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 16px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='#e8f4ff'" onmouseout="this.style.background='transparent'">${d.icon} ${d.letter}</div>`).join('')}
+          <div style="padding:4px 12px;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;margin-top:8px;">Network</div>
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 16px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='#e8f4ff'" onmouseout="this.style.background='transparent'">🌐 Network</div>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:16px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <div style="font-size:13px;font-weight:600;color:#333;">Folders (${folders.length})</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:20px;">
+            ${folders.map(f=>`
+            <div onclick="addNotification('${f.icon}','File Explorer','Opening ${f.name}...')" style="display:flex;flex-direction:column;align-items:center;padding:12px 8px;border:1px solid transparent;border-radius:4px;cursor:pointer;text-align:center;" onmouseover="this.style.background='#e8f4ff';this.style.borderColor='#90caf9'" onmouseout="this.style.background='transparent';this.style.borderColor='transparent'">
+              <span style="font-size:40px;margin-bottom:6px;">${f.icon}</span>
+              <span style="font-size:12px;color:#333;">${f.name}</span>
+              <span style="font-size:10px;color:#888;">${f.count}</span>
+            </div>`).join('')}
+          </div>
+          <div style="font-size:13px;font-weight:600;color:#333;margin-bottom:12px;">Devices and drives (${drives.length})</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            ${drives.map(d=>{
+              const usedPct = Math.round((1 - d.free/d.total)*100);
+              const barColor = usedPct > 90 ? '#d13438' : usedPct > 70 ? '#ca5010' : d.color;
+              return `
+              <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;border:1px solid #e0e0e0;border-radius:4px;cursor:pointer;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='white'">
+                <span style="font-size:36px;">${d.icon}</span>
+                <div style="flex:1;">
+                  <div style="font-size:13px;font-weight:600;">${d.name}</div>
+                  <div style="height:8px;background:#e0e0e0;border-radius:4px;margin:5px 0;overflow:hidden;">
+                    <div style="height:100%;width:${usedPct}%;background:${barColor};border-radius:4px;transition:width 0.3s;"></div>
+                  </div>
+                  <div style="font-size:11px;color:#666;">${d.free} GB free of ${d.total} GB</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:13px;font-weight:600;color:${barColor};">${usedPct}%</div>
+                  <div style="font-size:10px;color:#888;">used</div>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+          <div style="font-size:13px;font-weight:600;color:#333;margin:16px 0 10px;">System Info</div>
+          <div style="background:#f8f8f8;border:1px solid #e0e0e0;border-radius:6px;padding:14px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+              <div><span style="color:#888;">Computer name: </span><strong>DESKTOP-WIN10SIM</strong></div>
+              <div><span style="color:#888;">User: </span><strong>${userData?.username||'User'}</strong></div>
+              <div><span style="color:#888;">OS: </span><strong>Windows 10 Pro</strong></div>
+              <div><span style="color:#888;">Build: </span><strong>19045.3803</strong></div>
+              <div><span style="color:#888;">CPU: </span><strong>Intel Core i9-14900K @ 8.0 GHz</strong></div>
+              <div><span style="color:#888;">RAM: </span><strong>500 GB DDR5</strong></div>
+              <div><span style="color:#888;">GPU: </span><strong>NVIDIA RTX 4090 24GB</strong></div>
+              <div><span style="color:#888;">Storage: </span><strong>100 TB NVMe SSD</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
 }
 
 function createGoogleSetup() {
@@ -4133,123 +4206,342 @@ function createWifiSettings() {
     `;
 }
 
-function createDiscordApp() {
-    let discordUser = null;
-    let discordGuilds = [];
-    
-    const params = new URLSearchParams(window.location.search);
-    const userParam = params.get('user');
-    const tokenParam = params.get('discord_token');
-    
-    if (userParam && tokenParam) {
+// ── Discord OAuth2 state management ──────────────────────────────────────────
+let _discordAuthWindow = null;
+let _discordPollInterval = null;
+
+// Listen for postMessage from the success popup page
+window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'discord_auth_success' && e.data.user) {
+        clearInterval(_discordPollInterval);
+        window._discordLoggedInUser = e.data.user;
+        localStorage.setItem('discord_user_data', JSON.stringify(e.data.user));
+        discordShowProfile(e.data.user);
+    }
+});
+
+function discordStartOAuth() {
+    localStorage.removeItem('discord_user_data');
+
+    // Open the server-side OAuth start endpoint in a popup (server manages state securely)
+    const authUrl = '/api/auth/discord';
+
+    const w = 480, h = 720;
+    const left = window.screen.width / 2 - w / 2;
+    const top = window.screen.height / 2 - h / 2;
+    _discordAuthWindow = window.open(authUrl, 'DiscordOAuth', `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
+
+    // Show "waiting for auth" UI in Discord window
+    const body = document.getElementById('discord-app-body');
+    if (body) {
+        body.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:40px;">
+          <div style="font-size:60px;margin-bottom:20px;animation:spin 2s linear infinite;">⏳</div>
+          <h3 style="color:white;margin-bottom:8px;">Waiting for authorization...</h3>
+          <p style="color:#b9bbbe;font-size:14px;margin-bottom:24px;">A Discord login window has been opened. Please complete the login in that window.</p>
+          <div style="display:flex;gap:8px;">
+            <button onclick="discordCheckAuth()" style="background:#5865f2;border:none;border-radius:4px;padding:10px 20px;color:white;cursor:pointer;font-size:14px;">Check Status</button>
+            <button onclick="discordCancelAuth()" style="background:#4f545c;border:none;border-radius:4px;padding:10px 20px;color:white;cursor:pointer;font-size:14px;">Cancel</button>
+          </div>
+          <p style="color:#72767d;font-size:12px;margin-top:20px;">Secured via server-side OAuth2 state</p>
+        </div>`;
+    }
+
+    // Poll localStorage for auth completion (the callback page will write there)
+    if (_discordPollInterval) clearInterval(_discordPollInterval);
+    _discordPollInterval = setInterval(discordCheckAuth, 1500);
+}
+
+function discordCheckAuth() {
+    // 1. Check localStorage (written by discord-success.html)
+    const data = localStorage.getItem('discord_user_data');
+    if (data) {
+        clearInterval(_discordPollInterval);
+        _discordPollInterval = null;
+        if (_discordAuthWindow && !_discordAuthWindow.closed) _discordAuthWindow.close();
         try {
-            discordUser = JSON.parse(decodeURIComponent(userParam));
-            discordGuilds = discordUser.guilds || [];
-        } catch (e) {
-            console.error('Failed to parse Discord user:', e);
+            const user = JSON.parse(data);
+            window._discordLoggedInUser = user;
+            discordShowProfile(user);
+        } catch(e) { console.error('Discord parse error:', e); }
+        return;
+    }
+    // 2. Fallback: try server session endpoint
+    fetch('/api/auth/user').then(r => r.json()).then(user => {
+        if (user && user.id) {
+            clearInterval(_discordPollInterval);
+            _discordPollInterval = null;
+            localStorage.setItem('discord_user_data', JSON.stringify(user));
+            window._discordLoggedInUser = user;
+            discordShowProfile(user);
         }
-    }
-    
-    if (discordUser && discordUser.id) {
-        return `
-            <div style="height: 100%; display: flex; flex-direction: column; background: #36393f; color: white;">
-                <div style="padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                    <div style="width: 80px; height: 80px; background: url('${discordUser.avatar}') center/cover no-repeat; border-radius: 50%; margin-bottom: 20px; border: 3px solid #5865f2;"></div>
-                    <h2 style="margin-bottom: 5px; font-size: 28px;">${discordUser.username}</h2>
-                    <p style="color: #b9bbbe; margin-bottom: 30px;">ID: ${discordUser.id}</p>
-                    
-                    <div style="width: 90%; max-width: 500px; background: #2f3136; padding: 20px; border-radius: 8px; text-align: left;">
-                        <div style="font-weight: bold; margin-bottom: 15px; font-size: 14px; text-transform: uppercase; color: #8e9297;">Your Servers</div>
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-height: 200px; overflow-y: auto;">
-                            ${discordGuilds.map(g => `
-                                <div style="background: #36393f; padding: 12px; border-radius: 4px; text-align: center; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#40444b'" onmouseout="this.style.background='#36393f';">
-                                    <div style="font-size: 28px; margin-bottom: 4px;">${g.icon || '🎮'}</div>
-                                    <div style="font-size: 11px; color: #b9bbbe; overflow: hidden; text-overflow: ellipsis;">${g.name}</div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    
-                    <button onclick="discordLogout()" style="margin-top: 30px; padding: 10px 24px; background: #ed4245; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Logout</button>
-                </div>
-            </div>
-        `;
-    }
-    
-    const clientId = '1370655950310080522';
-    const redirectUri = 'https://dc97442b-2e83-447c-806e-1718dc226361-00-ry3rm930k0c5.worf.replit.dev/api/auth/discord-callback';
-    const scopes = 'identify+email+guilds';
-    const authUrl = `https://discord.com/oauth2/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}`;
-    
-    return `
-        <div style="height: 100%; display: flex; flex-direction: column; background: #36393f; color: white;">
-            <div style="padding: 20px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: linear-gradient(135deg, #2c2f33 0%, #36393f 100%);">
-                <div style="font-size: 80px; margin-bottom: 20px;">💬</div>
-                <h2 style="margin-bottom: 10px; font-size: 28px;">Welcome to Discord</h2>
-                <p style="color: #b9bbbe; margin-bottom: 30px;">Login with your Discord account via OAuth2</p>
-                <a href="${authUrl}" style="padding: 12px 32px; background: #5865f2; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px; text-decoration: none; display: inline-block;">Login with Discord</a>
-                <p style="color: #72767d; font-size: 12px; margin-top: 20px;">Using OAuth2 with Discord API</p>
-            </div>
-        </div>
-    `;
+    }).catch(() => {});
+}
+
+function discordCancelAuth() {
+    clearInterval(_discordPollInterval);
+    if (_discordAuthWindow) _discordAuthWindow.close();
+    const body = document.getElementById('discord-app-body');
+    if (body) body.innerHTML = discordLoginPageHTML();
 }
 
 function discordLogout() {
-    window.location.href = '/api/auth/logout';
+    localStorage.removeItem('discord_user_data');
+    window._discordLoggedInUser = null;
+    const body = document.getElementById('discord-app-body');
+    if (body) body.innerHTML = discordLoginPageHTML();
+}
+
+function discordLoginPageHTML() {
+    return `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:40px;background:linear-gradient(135deg,#1a1d23,#23272a);">
+      <div style="width:80px;height:80px;background:linear-gradient(135deg,#5865f2,#7289da);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:24px;box-shadow:0 8px 32px rgba(88,101,242,0.4);">💬</div>
+      <h2 style="color:white;font-size:28px;margin-bottom:8px;font-weight:700;">Welcome back!</h2>
+      <p style="color:#b9bbbe;margin-bottom:32px;font-size:15px;">Connect your Discord account to get started.</p>
+      <button onclick="discordStartOAuth()" style="background:#5865f2;border:none;border-radius:8px;padding:14px 40px;color:white;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(88,101,242,0.4);transition:transform 0.1s;" onmouseover="this.style.background='#4752c4'" onmouseout="this.style.background='#5865f2'">
+        🔗 Login with Discord
+      </button>
+      <p style="color:#72767d;font-size:12px;margin-top:20px;">Opens a secure popup window • OAuth2 with state</p>
+    </div>`;
+}
+
+function discordShowProfile(user) {
+    const guilds = user.guilds || [];
+    const body = document.getElementById('discord-app-body');
+    if (!body) return;
+    body.innerHTML = `
+    <div style="display:flex;height:100%;">
+      <!-- Server list sidebar -->
+      <div style="width:72px;background:#202225;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:2px;overflow-y:auto;">
+        <div style="width:48px;height:48px;background:linear-gradient(135deg,#5865f2,#7289da);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;margin-bottom:8px;" title="Direct Messages">💬</div>
+        <div style="width:32px;height:2px;background:#3c3f43;border-radius:1px;margin:4px 0;"></div>
+        ${guilds.slice(0,8).map((g,i)=>`
+        <div title="${g.name}" style="width:48px;height:48px;background:${['#3ba55d','#5865f2','#eb459e','#faa61a','#ed4245'][i%5]};border-radius:${i===0?'50%':'24px'};display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;margin:2px 0;transition:border-radius 0.2s;" onmouseover="this.style.borderRadius='12px'" onmouseout="this.style.borderRadius='${i===0?'50%':'24px'}'">
+          ${g.icon && !g.icon.startsWith('https') ? g.icon : g.name.slice(0,2).toUpperCase()}
+        </div>`).join('')}
+        <div style="width:48px;height:48px;background:#36393f;border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;margin-top:4px;color:#3ba55d;transition:border-radius 0.2s;" onmouseover="this.style.borderRadius='12px';this.style.background='#3ba55d';this.style.color='white'" onmouseout="this.style.borderRadius='24px';this.style.background='#36393f';this.style.color='#3ba55d'" title="Add a Server">+</div>
+      </div>
+      <!-- Channel sidebar -->
+      <div style="width:240px;background:#2f3136;display:flex;flex-direction:column;">
+        <div style="padding:16px;font-size:15px;font-weight:700;color:white;border-bottom:1px solid #202225;display:flex;align-items:center;justify-content:space-between;">
+          <span>Your Server</span>
+          <span style="cursor:pointer;color:#b9bbbe;">⋮</span>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:8px 0;">
+          <div style="padding:6px 8px;font-size:11px;font-weight:600;color:#8e9297;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onmouseover="this.style.color='#dcddde'" onmouseout="this.style.color='#8e9297'">
+            <span>▾ Text Channels</span><span>+</span>
+          </div>
+          ${['# general','# announcements','# memes','# dev-talk','# off-topic'].map((c,i)=>`
+          <div onclick="discordSwitchChannel(this,'${c}')" style="display:flex;align-items:center;gap:6px;padding:6px 16px;color:${i===0?'#fff':'#8e9297'};cursor:pointer;border-radius:4px;margin:0 8px;${i===0?'background:rgba(79,84,92,0.4);':''}" onmouseover="this.style.background='rgba(79,84,92,0.3)';this.style.color='#dcddde'" onmouseout="this.style.background='${i===0?'rgba(79,84,92,0.4)':'transparent'}';this.style.color='${i===0?'#fff':'#8e9297'}'">
+            <span style="font-size:13px;">${c}</span>
+          </div>`).join('')}
+          <div style="padding:6px 8px;font-size:11px;font-weight:600;color:#8e9297;text-transform:uppercase;letter-spacing:0.5px;margin-top:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onmouseover="this.style.color='#dcddde'" onmouseout="this.style.color='#8e9297'">
+            <span>▾ Voice Channels</span><span>+</span>
+          </div>
+          ${['🔊 General','🔊 Gaming','🔊 Music Bot'].map(c=>`
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 16px;color:#8e9297;cursor:pointer;border-radius:4px;margin:0 8px;" onmouseover="this.style.background='rgba(79,84,92,0.3)';this.style.color='#dcddde'" onmouseout="this.style.background='transparent';this.style.color='#8e9297'">
+            <span style="font-size:13px;">${c}</span>
+          </div>`).join('')}
+        </div>
+        <!-- User panel -->
+        <div style="background:#292b2f;padding:8px 8px;display:flex;align-items:center;gap:8px;border-top:1px solid #202225;">
+          <div style="position:relative;">
+            <div style="width:32px;height:32px;background:linear-gradient(135deg,#5865f2,#7289da);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;">😊</div>
+            <div style="position:absolute;bottom:-1px;right:-1px;width:12px;height:12px;background:#3ba55d;border-radius:50%;border:2px solid #292b2f;"></div>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${user.username}</div>
+            <div style="font-size:11px;color:#b9bbbe;">#${String(user.id||'0000').slice(-4)}</div>
+          </div>
+          <div style="display:flex;gap:4px;">
+            <button onclick="addNotification('🎤','Discord','Muted')" style="background:none;border:none;cursor:pointer;font-size:16px;color:#b9bbbe;" title="Mute">🎤</button>
+            <button onclick="addNotification('🎧','Discord','Deafened')" style="background:none;border:none;cursor:pointer;font-size:16px;color:#b9bbbe;" title="Deafen">🎧</button>
+            <button onclick="discordLogout()" style="background:none;border:none;cursor:pointer;font-size:16px;color:#b9bbbe;" title="Settings">⚙️</button>
+          </div>
+        </div>
+      </div>
+      <!-- Main chat area -->
+      <div style="flex:1;display:flex;flex-direction:column;background:#36393f;">
+        <div style="padding:12px 16px;border-bottom:1px solid #202225;display:flex;align-items:center;gap:8px;">
+          <span style="color:#8e9297;font-size:18px;">#</span>
+          <span style="font-weight:700;color:white;font-size:15px;">general</span>
+          <span style="color:#72767d;font-size:13px;">│ Welcome to the server! 🎉</span>
+          <div style="margin-left:auto;display:flex;gap:12px;color:#b9bbbe;">
+            <span style="cursor:pointer;" title="Start Voice Call">📞</span>
+            <span style="cursor:pointer;" title="Members">👥</span>
+            <span style="cursor:pointer;" title="Search">🔍</span>
+          </div>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;" id="discord-chat-messages">
+          ${discordGetMessages(user.username)}
+        </div>
+        <div style="padding:8px 16px 16px;">
+          <div style="background:#40444b;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+            <button onclick="addNotification('📎','Discord','File picker')" style="background:none;border:none;cursor:pointer;font-size:20px;color:#b9bbbe;">+</button>
+            <input id="discord-msg-input" type="text" placeholder="Message #general" style="flex:1;background:none;border:none;color:#dcddde;font-size:14px;outline:none;"
+              onkeydown="if(event.key==='Enter')discordSendMsg()">
+            <span style="color:#b9bbbe;cursor:pointer;font-size:18px;" onclick="addNotification('😀','Discord','Emoji picker')">😀</span>
+            <span style="color:#b9bbbe;cursor:pointer;font-size:18px;" onclick="discordSendMsg()">➤</span>
+          </div>
+        </div>
+      </div>
+      <!-- Members list -->
+      <div style="width:240px;background:#2f3136;overflow-y:auto;padding:16px 8px;">
+        <div style="font-size:11px;font-weight:600;color:#8e9297;text-transform:uppercase;margin-bottom:8px;">Online — ${2 + guilds.length}</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;cursor:pointer;" onmouseover="this.style.background='rgba(79,84,92,0.4)'" onmouseout="this.style.background='transparent'">
+          <div style="position:relative;"><div style="width:32px;height:32px;background:linear-gradient(135deg,#5865f2,#7289da);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;">😊</div><div style="position:absolute;bottom:0;right:0;width:10px;height:10px;background:#3ba55d;border-radius:50%;border:2px solid #2f3136;"></div></div>
+          <div><div style="font-size:13px;color:#dcddde;font-weight:600;">${user.username}</div><div style="font-size:11px;color:#8e9297;">You</div></div>
+        </div>
+        ${['Alice','Bob','Carol','Dave','Eve'].map((n,i)=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;cursor:pointer;" onmouseover="this.style.background='rgba(79,84,92,0.4)'" onmouseout="this.style.background='transparent'">
+          <div style="position:relative;"><div style="width:32px;height:32px;background:${['#3ba55d','#5865f2','#eb459e','#faa61a','#ed4245'][i]};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;">${n[0]}</div><div style="position:absolute;bottom:0;right:0;width:10px;height:10px;background:#3ba55d;border-radius:50%;border:2px solid #2f3136;"></div></div>
+          <div><div style="font-size:13px;color:#dcddde;">${n}</div><div style="font-size:11px;color:#8e9297;">Member</div></div>
+        </div>`).join('')}
+        <div style="font-size:11px;font-weight:600;color:#8e9297;text-transform:uppercase;margin:12px 0 8px;">Offline — 3</div>
+        ${['Frank','Grace','Henry'].map(n=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;cursor:pointer;opacity:0.5;" onmouseover="this.style.background='rgba(79,84,92,0.4)'" onmouseout="this.style.background='transparent'">
+          <div style="width:32px;height:32px;background:#4f545c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;">${n[0]}</div>
+          <div style="font-size:13px;color:#dcddde;">${n}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function discordGetMessages(username) {
+    const msgs = [
+        {user:'Alice',color:'#3ba55d',av:'A',time:'Today at 9:00 AM',text:'Good morning everyone! 👋'},
+        {user:'Bob',color:'#5865f2',av:'B',time:'Today at 9:02 AM',text:'Morning! Ready for the stream tonight?'},
+        {user:'Carol',color:'#eb459e',av:'C',time:'Today at 9:05 AM',text:'Yep! Can\'t wait 🎮'},
+        {user:'Dave',color:'#faa61a',av:'D',time:'Today at 9:10 AM',text:'What game are we playing? 👀'},
+        {user:'Alice',color:'#3ba55d',av:'A',time:'Today at 9:11 AM',text:'Halo Infinite! Ranked matches'},
+        {user:username,color:'#5865f2',av:username[0]||'?',time:'Today at 9:12 AM',text:'Count me in! 🙌',isMe:true},
+    ];
+    return msgs.map(m=>`
+    <div style="display:flex;gap:12px;padding:2px 0;${m.isMe?'flex-direction:row-reverse;text-align:right;':''}" onmouseover="this.style.background='rgba(79,84,92,0.1)'" onmouseout="this.style.background='transparent'">
+      <div style="width:40px;height:40px;background:${m.color};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;">${m.av}</div>
+      <div>
+        <div style="display:flex;align-items:baseline;gap:8px;${m.isMe?'flex-direction:row-reverse;':''};margin-bottom:4px;">
+          <span style="font-size:14px;font-weight:600;color:${m.color};">${m.user}</span>
+          <span style="font-size:11px;color:#72767d;">${m.time}</span>
+        </div>
+        <div style="font-size:14px;color:#dcddde;line-height:1.4;">${m.text}</div>
+      </div>
+    </div>`).join('');
+}
+
+function discordSwitchChannel(el, channel) {}
+
+function discordSendMsg() {
+    const input = document.getElementById('discord-msg-input');
+    const messages = document.getElementById('discord-chat-messages');
+    if (!input || !messages || !input.value.trim()) return;
+    const text = input.value.trim();
+    const user = window._discordLoggedInUser || { username: userData?.username || 'User', id: '0' };
+    input.value = '';
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;gap:12px;padding:2px 0;flex-direction:row-reverse;text-align:right;';
+    div.innerHTML = `<div style="width:40px;height:40px;background:#5865f2;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;">${(user.username||'?')[0]}</div><div><div style="display:flex;align-items:baseline;gap:8px;flex-direction:row-reverse;margin-bottom:4px;"><span style="font-size:14px;font-weight:600;color:#5865f2;">${user.username}</span><span style="font-size:11px;color:#72767d;">Just now</span></div><div style="font-size:14px;color:#dcddde;">${text}</div></div>`;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+    const replies = ['Nice! 🔥','Sounds good!','lol 😂','💯','That\'s crazy','Let\'s goo!','Facts 🙌'];
+    const names = [['Alice','#3ba55d','A'],['Bob','#5865f2','B'],['Carol','#eb459e','C']];
+    const [name,color,av] = names[Math.floor(Math.random()*names.length)];
+    setTimeout(() => {
+        const rdiv = document.createElement('div');
+        rdiv.style.cssText = 'display:flex;gap:12px;padding:2px 0;';
+        rdiv.innerHTML = `<div style="width:40px;height:40px;background:${color};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;">${av}</div><div><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;"><span style="font-size:14px;font-weight:600;color:${color};">${name}</span><span style="font-size:11px;color:#72767d;">Just now</span></div><div style="font-size:14px;color:#dcddde;">${replies[Math.floor(Math.random()*replies.length)]}</div></div>`;
+        messages.appendChild(rdiv);
+        messages.scrollTop = messages.scrollHeight;
+    }, 800 + Math.random()*1200);
+}
+
+function createDiscordApp() {
+    // Check for previously stored auth or URL params
+    const stored = localStorage.getItem('discord_user_data');
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlUser = urlParams.get('user');
+    const urlToken = urlParams.get('discord_token');
+
+    let loggedInUser = null;
+    if (stored) {
+        try { loggedInUser = JSON.parse(stored); } catch(e) {}
+    } else if (urlUser && urlToken) {
+        try {
+            loggedInUser = JSON.parse(decodeURIComponent(urlUser));
+            loggedInUser.guilds = loggedInUser.guilds || [];
+            localStorage.setItem('discord_user_data', JSON.stringify(loggedInUser));
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } catch(e) {}
+    }
+
+    window._discordLoggedInUser = loggedInUser;
+
+    return `<div style="height:100%;background:#36393f;" id="discord-app-body">${
+        loggedInUser ? '' : discordLoginPageHTML()
+    }</div>`;
+}
+
+// Called after rendering — shows profile if already logged in (localStorage or server session)
+function discordInitIfLoggedIn() {
+    if (window._discordLoggedInUser) {
+        discordShowProfile(window._discordLoggedInUser);
+        return;
+    }
+    // Also try server session (in case page was refreshed after OAuth)
+    fetch('/api/auth/user').then(r => r.json()).then(user => {
+        if (user && user.id) {
+            localStorage.setItem('discord_user_data', JSON.stringify(user));
+            window._discordLoggedInUser = user;
+            discordShowProfile(user);
+        }
+    }).catch(() => {});
 }
 
 async function handleDiscordCallback() {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
+    const returnedState = params.get('state');
     if (!code) return;
-
-    // In a real app, this would be a server-side exchange
-    // Since we are frontend-only, we simulate the flow
-    console.log("Discord Auth Code received:", code);
-    
-    // Clear the URL
+    const savedState = localStorage.getItem('discord_oauth_state');
+    if (returnedState && savedState && returnedState !== savedState) {
+        console.warn('Discord OAuth state mismatch — possible CSRF');
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+    }
+    localStorage.removeItem('discord_oauth_state');
     window.history.replaceState({}, document.title, window.location.pathname);
-    
-    // Show loading in Discord app if open
-    const discordProfile = document.getElementById('discord-profile');
-    if (discordProfile) {
-        discordProfile.style.display = 'block';
-        discordProfile.innerHTML = '<p>Loading profile...</p>';
+
+    // Try to exchange code via our backend handler (if running)
+    // The callback handler on port 3001 will redirect back with user data in URL,
+    // but since we may not have that backend running, we fallback to simulation.
+
+    // Check if URL has user data (redirected back from backend)
+    const userParam = params.get('user');
+    if (userParam) {
+        try {
+            const user = JSON.parse(decodeURIComponent(userParam));
+            localStorage.setItem('discord_user_data', JSON.stringify(user));
+        } catch(e) {}
+        return;
     }
 
-    // Mock data for simulation
-    setTimeout(() => {
-        const mockUser = {
-            username: "ReplitUser",
-            id: "123456789",
-            avatar: "https://cdn.discordapp.com/embed/avatars/0.png"
-        };
-        const mockGuilds = [
-            { name: "Replit Community", icon: "🌐" },
-            { name: "Windows 10 Sim Fans", icon: "💻" }
-        ];
-
-        if (discordProfile) {
-            discordProfile.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <img src="${mockUser.avatar}" style="width: 50px; height: 50px; border-radius: 50%;">
-                    <div>
-                        <div style="font-weight: bold; font-size: 18px;">${mockUser.username}</div>
-                        <div id="discord-id" style="color: #b9bbbe; font-size: 12px;">ID: ${mockUser.id}</div>
-                    </div>
-                </div>
-                <div style="margin-top: 15px;">
-                    <div style="font-weight: bold; margin-bottom: 8px; font-size: 14px; text-transform: uppercase; color: #8e9297;">Servers</div>
-                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                        ${mockGuilds.map(g => `<div title="${g.name}" style="width: 40px; height: 40px; background: #36393f; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer;">${g.icon}</div>`).join('')}
-                    </div>
-                </div>
-            `;
-        }
-    }, 1500);
+    // Simulate auth success (frontend-only fallback)
+    const simulatedUser = {
+        username: userData?.username || 'ReplitUser',
+        id: Math.floor(Math.random() * 900000000000000 + 100000000000000).toString(),
+        email: (userData?.email) || 'user@example.com',
+        avatar: '',
+        guilds: [
+            { name: 'Windows 10 Sim', icon: '💻' },
+            { name: 'Replit Community', icon: '🌐' },
+            { name: 'Gaming Hub', icon: '🎮' },
+            { name: 'Dev Server', icon: '⚡' },
+        ]
+    };
+    localStorage.setItem('discord_user_data', JSON.stringify(simulatedUser));
 }
 
-// Add to checkUrlParams or DOMContentLoaded
+// Handle OAuth callback code on page load
 if (window.location.search.includes('code=')) {
     handleDiscordCallback();
 }

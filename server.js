@@ -107,9 +107,9 @@ app.post('/windows_defender', async (req, res) => {
 /* =======================
    🔑 ENV & HELPERS
 ======================= */
-const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
-const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
-const REDIRECT_URI = process.env.REDIRECT_URI;
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1370655950310080522';
+const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
+const REDIRECT_URI = process.env.REDIRECT_URI || 'https://dc97442b-2e83-447c-806e-1718dc226361-00-ry3rm930k0c5.worf.replit.dev/api/auth/discord-callback';
 
 // Generates an exact 55-character cryptographically secure random string
 const generate55CharState = () => {
@@ -192,8 +192,8 @@ app.get('/api/auth/discord-callback', async (req, res) => {
 
         log.success(`User successfully logged in: ${userData.username}`);
 
-        // Clean redirect to the home page (data is safely in the session now)
-        res.redirect('/');
+        // Redirect to the success page (it will fetch /api/auth/user, write localStorage, and close the popup)
+        res.redirect('/discord-success.html');
 
     } catch (error) {
         log.error(`OAuth error: ${error.message}`);

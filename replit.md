@@ -2,42 +2,75 @@
 
 ## Overview
 
-This is a web-based Windows 10 simulator that recreates the complete Windows installation experience and desktop environment using HTML, CSS, and JavaScript with a Node.js/Express backend for Discord OAuth2.
+This is a web-based Windows 10 simulator that recreates the complete Windows installation experience and desktop environment using HTML, CSS, and JavaScript, backed by a Node.js/Express server for Discord OAuth2.
 
 ## Recent Fixes & Features
-- **Real Tabbed Browser**: Microsoft Edge and Chrome both have working tabs, bookmarks bar, history nav, new tab page with tiles, and actual iframe loading of real websites
-- **30+ Apps**: WordPad (rich text + formatting), Sticky Notes, PowerShell, Control Panel, Device Manager, Registry Editor, Media Player, Teams (chat), Xbox, Mail, Speed Test, and all previous apps
-- **CMD Expanded**: 30+ commands including ipconfig /all, tracert, netstat, tasklist, taskkill, systeminfo, shutdown, sfc, reg, net, cd, mkdir, tree, attrib, set, and more
-- **Window Resize**: All windows have drag handles on all 8 edges/corners for resizing
-- **Pinned Taskbar**: 8 pinned app icons always visible in the taskbar
-- **Discord OAuth2**: Full Discord integration with client ID/secret, state parameter, and real guild data
+- **Lazy App Factory**: All 40+ apps use a lazy `appFactories` pattern — only the requested app's constructor runs on open. Fixes Chrome/media timers firing on every window open.
+- **Discord OAuth2 Reworked**: Opens a server-side OAuth popup (`/api/auth/discord`), server manages state (CSRF safe), popup lands on `discord-success.html` which writes `localStorage`, main window polls and shows full Discord UI.
+- **Full Discord UI**: Server sidebar with guilds, channel list (text + voice), live chat with auto-replies, members panel, user panel with mute/deafen/settings.
+- **This PC Upgraded**: Drive usage bars, 4 drives (C/D/E/F), 6 quick-access folders, system info panel with all specs.
+- **Switched to Express**: Workflow now runs `node server.js` instead of Python — enables `/api/auth/discord`, `/api/auth/discord-callback`, `/api/auth/user`, `/api/auth/logout`.
+- **Real Tabbed Browser**: Microsoft Edge and Chrome both have working tabs, bookmarks bar, history nav, new tab page with tiles, and actual iframe loading of real websites.
+- **30+ Apps**: WordPad, Sticky Notes, PowerShell, Control Panel, Device Manager, Registry Editor, Media Player, Teams, Xbox, Mail, Speed Test, and all previous apps.
+- **CMD Expanded**: 30+ commands including ipconfig /all, tracert, netstat, tasklist, taskkill, systeminfo, shutdown, sfc, reg, net, cd, mkdir, tree, attrib, set, and more.
+- **Window Resize**: All windows have drag handles on all 8 edges/corners for resizing.
+- **Pinned Taskbar**: 8 pinned app icons always visible in the taskbar.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend-Only Architecture
-- **Technology Stack**: Pure HTML, CSS, and JavaScript with no frameworks
-- **Design Pattern**: Multi-screen single-page application using visibility toggling
+### Backend: Node.js / Express (`server.js`)
+- Serves all static files from root
+- Discord OAuth2 routes: `/api/auth/discord`, `/api/auth/discord-callback`, `/api/auth/user`, `/api/auth/logout`
+- Session-based user storage (`express-session`)
+- Port 5000
 
-### Screen Management System
-- Multiple "screen" divs represent different states (boot, lock, login, desktop, setup steps)
-- Screens are toggled via CSS classes (`.active`) controlled by JavaScript
+### Frontend: Pure HTML/CSS/JS
+- No frameworks — all vanilla JS
+- Multi-screen SPA using visibility toggling (`.active` class + `style.display`)
+
+### App Window System
+- `createWindow(appName)` in `script.js` — **lazy** `appFactories` object (only creates the requested app)
+- Each app has a `create*()` function that returns HTML string
+- Windows are draggable/resizable, z-stacked, minimizable/maximizable
+
+### Discord OAuth Flow
+1. User clicks "Login with Discord" in Discord app
+2. `discordStartOAuth()` opens `/api/auth/discord` in a popup (server generates state)
+3. Server redirects to Discord OAuth URL
+4. Discord redirects back to `/api/auth/discord-callback`
+5. Server exchanges code for token, saves user to session, redirects popup to `/discord-success.html`
+6. `discord-success.html` calls `/api/auth/user`, writes to `localStorage`, closes popup
+7. Main window's `_discordPollInterval` detects `localStorage` and calls `discordShowProfile(user)`
+
+### Screen Management
+- Multiple "screen" divs for boot, lock, login, desktop, setup steps
+- `showScreen()` toggles `.active` class + `style.display`
 
 ### State Management
-- Global JavaScript variables track application state (`userData`, `openWindows`, `calculatorDisplay`, etc.)
-- User data object stores: username, password, email, account type, selected drive, WiFi network
+- `userData` — logged-in Windows user (username, password, email, etc.)
+- `openWindows` — array of open window objects
+- `window._discordLoggedInUser` — logged-in Discord user (also mirrored in localStorage)
+- All data persisted via `localStorage`
 
-### File Structure
-- `index.html` - Main desktop and login experience
-- `setup_1.html`, `setup_2.html` - Windows installation wizard steps
-- `styles.css` - All styling including Windows 10 visual design
-- `script.js` - Core application logic and interactivity
+## File Structure
+- `index.html` — Main desktop and login experience
+- `setup_1.html`, `setup_2.html` — Windows installation wizard steps
+- `styles.css` — All styling including Windows 10 visual design
+- `script.js` — Core application logic, all app `create*()` functions, event handlers
+- `server.js` — Express server, Discord OAuth2 backend (port 5000)
+- `discord-success.html` — OAuth popup landing page (fetches user, writes localStorage, closes)
+- `discord-callback-handler.js` — Standalone alt handler on port 3001 (not used in main flow)
 
-## Features
-- Desktop Experience with shortcuts and context menu
-- System Tray (WiFi, Volume, Battery, Action Center)
-- Working Apps: Calculator, Notepad, File Explorer, Settings, Task Manager, Edge, Paint, etc.
-- Security Simulations: Ransomware and BSOD for educational purposes
-- Persistent Data: Users and settings saved in `localStorage`
+## Specs in the Simulator
+- CPU: Intel Core i9-14900K @ 8.0 GHz (24-core)
+- RAM: 500 GB DDR5
+- GPU: NVIDIA RTX 4090 24 GB
+- Storage: 100 TB Samsung 990 Pro NVMe SSD
+
+## Required Environment Secrets
+- `SESSION_SECRET` — for express-session
+- `DISCORD_CLIENT_SECRET` — Discord OAuth2 (client ID is hardcoded: `1370655950310080522`)
+- `REDIRECT_URI` (optional, defaults to the worf.replit.dev callback URL)
