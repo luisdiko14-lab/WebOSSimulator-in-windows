@@ -119,15 +119,25 @@ const generate55CharState = () => {
 /* =======================
    🔗 ROUTES
 ======================= */
+// Helper: build the redirect URI from the current request (or fall back to env var)
+function getRedirectUri(req) {
+    if (REDIRECT_URI) return REDIRECT_URI;
+    const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    return `${proto}://${host}/api/auth/discord-callback`;
+}
+
 app.get('/api/auth/discord', (req, res) => {
     const state = generate55CharState();
-    req.session.oauthState = state; // Save state to session to verify later
+    req.session.oauthState = state;
+    req.session.save(); // force session save before redirect
 
-    log.info(`Starting Discord OAuth flow. State length: ${state.length}`);
+    const redirectUri = getRedirectUri(req);
+    log.info(`Starting Discord OAuth flow. redirect_uri: ${redirectUri}`);
 
     const params = new URLSearchParams({
         client_id: DISCORD_CLIENT_ID,
-        redirect_uri: REDIRECT_URI,
+        redirect_uri: redirectUri,
         response_type: 'code',
         scope: 'identify guilds',
         state: state
@@ -145,8 +155,11 @@ app.get('/api/auth/discord-callback', async (req, res) => {
         return res.status(400).send('Invalid state or missing code');
     }
 
+    // Use same redirect URI as was sent in the auth start (must match exactly for token exchange)
+    const dynamicRedirectUri = getRedirectUri(req);
+
     try {
-        log.info('Exchanging code for token...');
+        log.info(`Exchanging code for token... (redirect_uri: ${dynamicRedirectUri})`);
 
         // 1. Get the Access Token
         const tokenResponse = await fetch('https://discord.com/api/v10/oauth2/token', {
@@ -157,15 +170,22 @@ app.get('/api/auth/discord-callback', async (req, res) => {
                 client_secret: DISCORD_CLIENT_SECRET,
                 code,
                 grant_type: 'authorization_code',
-                redirect_uri: REDIRECT_URI
+                redirect_uri: dynamicRedirectUri
             })
         });
 
         const tokenData = await tokenResponse.json();
 
         if (!tokenData.access_token) {
-            log.error('Failed to get access token from Discord');
-            return res.status(401).send('Failed to authenticate');
+            log.error(`Discord token error: ${JSON.stringify(tokenData)}`);
+            const errMsg = tokenData.error_description || tokenData.error || 'Unknown error from Discord';
+            return res.status(401).send(`
+                <!DOCTYPE html><html><head><title>Auth Error</title>
+                <style>body{font-family:sans-serif;background:#23272a;color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px;}
+                h2{color:#ed4245;} p{color:#b9bbbe;} button{background:#5865f2;border:none;border-radius:6px;padding:10px 24px;color:white;cursor:pointer;margin-top:16px;font-size:14px;}</style></head>
+                <body><h2>❌ Login Failed</h2><p>${errMsg}</p>
+                <button onclick="window.close()">Close Window</button></body></html>
+            `);
         }
 
         log.success('Access token received!');
@@ -176,28 +196,46 @@ app.get('/api/auth/discord-callback', async (req, res) => {
         });
         const userData = await userResponse.json();
 
-        // 3. Fetch User Guilds
-        const guildsResponse = await fetch('https://discord.com/api/v10/users/@me/guilds', {
-            headers: { Authorization: `Bearer ${tokenData.access_token}` }
-        });
-        const guildsData = await guildsResponse.json();
+        // 3. Fetch User Guilds (best-effort — don't crash if it fails)
+        let guildsData = [];
+        try {
+            const guildsResponse = await fetch('https://discord.com/api/v10/users/@me/guilds', {
+                headers: { Authorization: `Bearer ${tokenData.access_token}` }
+            });
+            const rawGuilds = await guildsResponse.json();
+            guildsData = Array.isArray(rawGuilds) ? rawGuilds.slice(0, 10) : [];
+        } catch (guildsErr) {
+            log.warn(`Could not fetch guilds: ${guildsErr.message}`);
+        }
 
         // 4. Save to Session (Cleanly)
         req.session.user = {
             id: userData.id,
             username: userData.username,
+            discriminator: userData.discriminator || '0',
+            email: userData.email || null,
             avatar: userData.avatar ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png` : null,
-            guilds: guildsData.slice(0, 10)
+            guilds: guildsData.map(g => ({
+                id: g.id,
+                name: g.name,
+                icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : null
+            }))
         };
 
         log.success(`User successfully logged in: ${userData.username}`);
 
-        // Redirect to the success page (it will fetch /api/auth/user, write localStorage, and close the popup)
+        // Redirect to the success page (it fetches /api/auth/user, writes localStorage, closes the popup)
         res.redirect('/discord-success.html');
 
     } catch (error) {
         log.error(`OAuth error: ${error.message}`);
-        res.status(500).send('Authentication failed');
+        res.status(500).send(`
+            <!DOCTYPE html><html><head><title>Auth Error</title>
+            <style>body{font-family:sans-serif;background:#23272a;color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px;}
+            h2{color:#ed4245;} p{color:#b9bbbe;} button{background:#5865f2;border:none;border-radius:6px;padding:10px 24px;color:white;cursor:pointer;margin-top:16px;font-size:14px;}</style></head>
+            <body><h2>❌ Authentication Failed</h2><p>${error.message}</p>
+            <button onclick="window.close()">Close Window</button></body></html>
+        `);
     }
 });
 
