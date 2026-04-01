@@ -1,3 +1,21 @@
+// ── VM Plan specs from URL params (?plan=pro&ram=100&cpu=7.5&gpu=RTX+4090&storage=10000) ──
+(function() {
+    const p = new URLSearchParams(window.location.search);
+    const plan = p.get('plan');
+    window._vmSpecs = {
+        plan:    plan || 'free',
+        ram:     p.get('ram')     || null,
+        cpu:     p.get('cpu')     || null,
+        gpu:     p.get('gpu')     || null,
+        storage: p.get('storage') || null,
+    };
+    // Strip plan params from URL bar without reloading
+    if (plan) {
+        const clean = window.location.pathname;
+        window.history.replaceState({}, document.title, clean);
+    }
+})();
+
 let currentSetupStep = 0;
 let users = [
     {
@@ -1883,32 +1901,54 @@ function tmStartUpdater() {
 function tmRenderProcs() {
     const list = document.getElementById('tm-proc-list');
     if (!list) return;
-    const procs = (window._tmProcs || []).concat(
-        (openWindows || []).filter(w => !(window._tmProcs||[]).find(p=>p.name.includes(w.title.replace(/[^a-zA-Z]/g,'')))).map(w=>({
-            name: w.title, icon: '🪟', pid: 10000 + Math.floor(Math.random()*9000),
-            cpu: Math.random()*5, mem: 30000 + Math.random()*80000, status:'Running', type:'App'
-        }))
-    );
-    // jitter cpu values
-    procs.forEach(p => { p.cpu = Math.max(0, p.cpu + (Math.random()-0.5)*0.4); });
 
-    const totalCpu = procs.reduce((a,b)=>a+b.cpu,0);
-    const totalMem = procs.reduce((a,b)=>a+b.mem,0);
+    // Give open windows stable PIDs stored on the window object itself
+    const windowProcs = (openWindows || []).map(w => {
+        if (!w._tmPid) w._tmPid = 10000 + Math.floor(Math.random() * 89999);
+        if (w._tmCpu === undefined) w._tmCpu = Math.random() * 5;
+        if (w._tmMem === undefined) w._tmMem = 30000 + Math.random() * 80000;
+        // small jitter each render
+        w._tmCpu = Math.max(0, w._tmCpu + (Math.random() - 0.5) * 0.4);
+        return {
+            name: w.title, icon: '🪟', pid: w._tmPid,
+            cpu: w._tmCpu, mem: w._tmMem,
+            status: 'Running', type: 'App',
+            _appName: w.appName   // used by tmEndTask to actually close the window
+        };
+    });
+
+    const sysProcNames = new Set(windowProcs.map(p => p.name.replace(/[^a-zA-Z]/g, '').toLowerCase()));
+    const sysProcs = (window._tmProcs || []).filter(p => !sysProcNames.has(p.name.replace(/[^a-zA-Z]/g, '').toLowerCase()));
+    sysProcs.forEach(p => { p.cpu = Math.max(0, p.cpu + (Math.random() - 0.5) * 0.4); });
+
+    const procs = [...windowProcs, ...sysProcs];
+
+    // Store full rendered list so tmEndTask can look up any proc by pid
+    window._tmAllRendered = procs;
+
+    const totalCpu = procs.reduce((a, b) => a + b.cpu, 0);
+    const totalMem = procs.reduce((a, b) => a + b.mem, 0);
     const countEl = document.getElementById('tm-proc-count');
-    if (countEl) countEl.textContent = `${procs.length} processes  |  CPU ${Math.min(totalCpu,100).toFixed(1)}%  |  Memory ${(totalMem/1024).toFixed(0)} MB`;
+    if (countEl) countEl.textContent = `${procs.length} processes  |  CPU ${Math.min(totalCpu, 100).toFixed(1)}%  |  Memory ${(totalMem / 1024).toFixed(0)} MB`;
 
     const userCpu = document.getElementById('tm-user-cpu');
     const userMem = document.getElementById('tm-user-mem');
-    if (userCpu) userCpu.textContent = Math.min(totalCpu,100).toFixed(1) + '%';
-    if (userMem) userMem.textContent = (totalMem/1024).toFixed(0) + ' MB';
+    if (userCpu) userCpu.textContent = Math.min(totalCpu, 100).toFixed(1) + '%';
+    if (userMem) userMem.textContent = (totalMem / 1024).toFixed(0) + ' MB';
 
     list.innerHTML = procs.map(p => {
         const cpuPct = Math.min(p.cpu, 100);
         const cpuColor = cpuPct > 50 ? '#d13438' : cpuPct > 20 ? '#ca5010' : '#107c10';
-        const memMb = (p.mem/1024).toFixed(0);
+        const memMb = (p.mem / 1024).toFixed(0);
         const isSelected = _tmSelectedPid === p.pid;
-        return `<div onclick="tmSelectProc(${p.pid})" style="display:grid;grid-template-columns:1fr 80px 100px 90px 90px;padding:5px 10px;border-bottom:1px solid #f5f5f5;cursor:pointer;${isSelected?'background:#cce4ff;':''}align-items:center;" onmouseover="if(${!isSelected})this.style.background='#f0f7ff'" onmouseout="if(${!isSelected})this.style.background='${isSelected?'#cce4ff':'transparent'}'">
-          <span style="display:flex;align-items:center;gap:6px;overflow:hidden;"><span style="font-size:15px;">${p.icon||'⚙️'}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</span></span>
+        const bg = isSelected ? 'background:#cce4ff;' : '';
+        return `<div onclick="tmSelectProc(${p.pid})" style="display:grid;grid-template-columns:1fr 80px 100px 90px 90px;padding:5px 10px;border-bottom:1px solid #f5f5f5;cursor:pointer;${bg}align-items:center;"
+            onmouseover="if(!${isSelected})this.style.background='#f0f7ff'"
+            onmouseout="this.style.background='${isSelected ? '#cce4ff' : 'transparent'}'">
+          <span style="display:flex;align-items:center;gap:6px;overflow:hidden;">
+            <span style="font-size:15px;">${p.icon || '⚙️'}</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</span>
+          </span>
           <span style="text-align:right;color:${cpuColor};font-size:12px;">${cpuPct.toFixed(1)}%</span>
           <span style="text-align:right;font-size:12px;">${memMb} MB</span>
           <span style="text-align:right;color:#888;font-size:12px;">${p.pid}</span>
@@ -1926,25 +1966,36 @@ function tmSelectProc(pid) {
 
 function tmEndTask() {
     if (!_tmSelectedPid) return;
-    const procs = window._tmProcs || [];
-    const proc = procs.find(p => p.pid === _tmSelectedPid);
-    if (proc) {
-        if (['System','smss.exe','winlogon.exe','csrss.exe','lsass.exe'].includes(proc.name)) {
-            if (confirm(`Warning: Ending "${proc.name}" may cause system instability or a BSOD.\n\nAre you sure?`)) {
-                triggerBSOD();
-                return;
-            }
-            return;
+
+    // Search ALL rendered procs (system + open windows)
+    const allProcs = window._tmAllRendered || [];
+    const proc = allProcs.find(p => p.pid === _tmSelectedPid);
+    if (!proc) return;
+
+    const systemProcs = ['System', 'smss.exe', 'winlogon.exe', 'csrss.exe', 'lsass.exe'];
+    if (systemProcs.includes(proc.name)) {
+        if (confirm(`⚠️ Warning: Ending "${proc.name}" may cause system instability or a BSOD.\n\nAre you sure?`)) {
+            triggerBSOD();
         }
-        const idx = procs.indexOf(proc);
-        if (idx > -1) procs.splice(idx, 1);
-        window._tmProcs = procs;
-        _tmSelectedPid = null;
-        const btn = document.getElementById('tm-end-btn');
-        if (btn) btn.disabled = true;
-        addNotification('📊', 'Task Manager', `"${proc.name}" (PID ${proc.pid}) was ended.`);
-        tmRenderProcs();
+        return;
     }
+
+    // Close the actual window if it came from openWindows
+    if (proc._appName) {
+        closeWindow(proc._appName);
+    }
+
+    // Also remove from _tmProcs (simulated system procs)
+    const sysProcs = window._tmProcs || [];
+    const sysIdx = sysProcs.findIndex(p => p.pid === _tmSelectedPid);
+    if (sysIdx > -1) sysProcs.splice(sysIdx, 1);
+    window._tmProcs = sysProcs;
+
+    addNotification('📊', 'Task Manager', `"${proc.name}" (PID ${proc.pid}) was ended.`);
+    _tmSelectedPid = null;
+    const btn = document.getElementById('tm-end-btn');
+    if (btn) btn.disabled = true;
+    tmRenderProcs();
 }
 
 function tmSortBy(col) {
@@ -2488,16 +2539,25 @@ function createComputer() {
           </div>
           <div style="font-size:13px;font-weight:600;color:#333;margin:16px 0 10px;">System Info</div>
           <div style="background:#f8f8f8;border:1px solid #e0e0e0;border-radius:6px;padding:14px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
-              <div><span style="color:#888;">Computer name: </span><strong>DESKTOP-WIN10SIM</strong></div>
-              <div><span style="color:#888;">User: </span><strong>${userData?.username||'User'}</strong></div>
-              <div><span style="color:#888;">OS: </span><strong>Windows 10 Pro</strong></div>
-              <div><span style="color:#888;">Build: </span><strong>19045.3803</strong></div>
-              <div><span style="color:#888;">CPU: </span><strong>Intel Core i9-14900K @ 8.0 GHz</strong></div>
-              <div><span style="color:#888;">RAM: </span><strong>500 GB DDR5</strong></div>
-              <div><span style="color:#888;">GPU: </span><strong>NVIDIA RTX 4090 24GB</strong></div>
-              <div><span style="color:#888;">Storage: </span><strong>100 TB NVMe SSD</strong></div>
-            </div>
+            ${(function(){
+              const s = window._vmSpecs || {};
+              const plan = s.plan || 'free';
+              const ram = s.ram ? s.ram + ' GB DDR5' : '500 GB DDR5';
+              const cpu = s.cpu ? 'Intel Core @ ' + s.cpu + ' GHz' : 'Intel Core i9-14900K @ 8.0 GHz';
+              const gpu = s.gpu ? 'NVIDIA ' + s.gpu : 'NVIDIA RTX 4090 24GB';
+              const storage = s.storage ? (s.storage >= 1000 ? (s.storage/1000).toFixed(0)+' TB' : s.storage+' GB') + ' NVMe SSD' : '100 TB NVMe SSD';
+              const planBadge = plan !== 'free' ? `<span style="background:linear-gradient(135deg,#5865f2,#9b59b6);color:white;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;margin-left:6px;">${plan}</span>` : '';
+              return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+                <div><span style="color:#888;">Computer name: </span><strong>DESKTOP-WIN10SIM</strong></div>
+                <div><span style="color:#888;">User: </span><strong>${userData?.username||'User'}${planBadge}</strong></div>
+                <div><span style="color:#888;">OS: </span><strong>Windows 10 Pro</strong></div>
+                <div><span style="color:#888;">Build: </span><strong>19045.3803</strong></div>
+                <div><span style="color:#888;">CPU: </span><strong>${cpu}</strong></div>
+                <div><span style="color:#888;">RAM: </span><strong>${ram}</strong></div>
+                <div><span style="color:#888;">GPU: </span><strong>${gpu}</strong></div>
+                <div><span style="color:#888;">Storage: </span><strong>${storage}</strong></div>
+              </div>`;
+            })()}
           </div>
         </div>
       </div>
