@@ -38,12 +38,16 @@ Preferred communication style: Simple, everyday language.
 
 ### Discord OAuth Flow
 1. User clicks "Login with Discord" in Discord app
-2. `discordStartOAuth()` opens `/api/auth/discord` in a popup (server generates state)
-3. Server redirects to Discord OAuth URL
-4. Discord redirects back to `/api/auth/discord-callback`
-5. Server exchanges code for token, saves user to session, redirects popup to `/discord-success.html`
-6. `discord-success.html` calls `/api/auth/user`, writes to `localStorage`, closes popup
-7. Main window's `_discordPollInterval` detects `localStorage` and calls `discordShowProfile(user)`
+2. `discordStartOAuth()` opens `/api/auth/discord` in a **new tab** (server generates CSRF state)
+3. Server redirects the new tab to Discord's OAuth page
+4. Discord redirects back to `/api/auth/discord-callback` with `?code=&state=`
+5. Server **verifies state** (CSRF protection), then redirects new tab to `/?discord_code={code}&discord_state={state}`
+6. New tab lands on main app; `script.js` detects params, strips them from URL bar, stores as `window._discordPendingCode/State`
+7. When the desktop is shown (`showScreen('screen-desktop')`), `_discordAutoExchange()` is called
+8. `_discordAutoExchange()` calls `/api/auth/exchange?code=&state=` — server verifies state again, exchanges code for token (client secret stays server-side), fetches user + guilds, stores in session, returns user JSON
+9. User is stored in `localStorage` + `window._discordLoggedInUser`; Discord app shows profile instantly
+10. The original tab (if still open) detects `localStorage` via `_discordPollInterval` polling and also logs in
+11. **Fallback chain**: if exchange fails → try `/api/auth/user` (existing session) → show error toast
 
 ### Screen Management
 - Multiple "screen" divs for boot, lock, login, desktop, setup steps

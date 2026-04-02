@@ -145,96 +145,135 @@ app.get('/api/auth/discord', (req, res) => {
     res.redirect(`https://discord.com/api/v10/oauth2/authorize?${params.toString()}`);
 });
 
+/* ─────────────────────────────────────────────────────────────────
+   SHARED: exchange a Discord code for user data, store in session
+───────────────────────────────────────────────────────────────── */
+async function exchangeDiscordCode(code, req) {
+    const dynamicRedirectUri = getRedirectUri(req);
+    log.info(`Exchanging Discord code... redirect_uri: ${dynamicRedirectUri}`);
+
+    const tokenResponse = await fetch('https://discord.com/api/v10/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            client_id: DISCORD_CLIENT_ID,
+            client_secret: DISCORD_CLIENT_SECRET,
+            code,
+            grant_type: 'authorization_code',
+            redirect_uri: dynamicRedirectUri
+        })
+    });
+
+    const tokenData = await tokenResponse.json();
+    if (!tokenData.access_token) {
+        const msg = tokenData.error_description || tokenData.error || 'Unknown Discord error';
+        log.error(`Token exchange failed: ${msg}`);
+        throw new Error(msg);
+    }
+
+    log.success('Access token received!');
+
+    const [userResponse, guildsResponse] = await Promise.allSettled([
+        fetch('https://discord.com/api/v10/users/@me', {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` }
+        }),
+        fetch('https://discord.com/api/v10/users/@me/guilds', {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` }
+        })
+    ]);
+
+    const discordUser = userResponse.status === 'fulfilled' ? await userResponse.value.json() : {};
+    let guildsData = [];
+    if (guildsResponse.status === 'fulfilled') {
+        const raw = await guildsResponse.value.json();
+        guildsData = Array.isArray(raw) ? raw.slice(0, 10) : [];
+    }
+
+    const sessionUser = {
+        id: discordUser.id,
+        username: discordUser.username,
+        discriminator: discordUser.discriminator || '0',
+        email: discordUser.email || null,
+        avatar: discordUser.avatar
+            ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
+            : null,
+        guilds: guildsData.map(g => ({
+            id: g.id,
+            name: g.name,
+            icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : null
+        }))
+    };
+
+    req.session.user = sessionUser;
+    log.success(`Logged in: ${discordUser.username}`);
+    return sessionUser;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   STEP 1 — Discord redirects here with ?code=&state=
+   We verify state then pass code+state to the main app via URL.
+   The main app handles the exchange (keeping UX seamless).
+───────────────────────────────────────────────────────────────── */
 app.get('/api/auth/discord-callback', async (req, res) => {
     const { code, state } = req.query;
 
-    // Verify the state matches exactly what we generated
     if (!code || state !== req.session.oauthState) {
-        log.warn('Invalid OAuth state or missing code (Potential CSRF attack)');
-        return res.status(400).send('Invalid state or missing code');
-    }
-
-    // Use same redirect URI as was sent in the auth start (must match exactly for token exchange)
-    const dynamicRedirectUri = getRedirectUri(req);
-
-    try {
-        log.info(`Exchanging code for token... (redirect_uri: ${dynamicRedirectUri})`);
-
-        // 1. Get the Access Token
-        const tokenResponse = await fetch('https://discord.com/api/v10/oauth2/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                client_id: DISCORD_CLIENT_ID,
-                client_secret: DISCORD_CLIENT_SECRET,
-                code,
-                grant_type: 'authorization_code',
-                redirect_uri: dynamicRedirectUri
-            })
-        });
-
-        const tokenData = await tokenResponse.json();
-
-        if (!tokenData.access_token) {
-            log.error(`Discord token error: ${JSON.stringify(tokenData)}`);
-            const errMsg = tokenData.error_description || tokenData.error || 'Unknown error from Discord';
-            return res.status(401).send(`
-                <!DOCTYPE html><html><head><title>Auth Error</title>
-                <style>body{font-family:sans-serif;background:#23272a;color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px;}
-                h2{color:#ed4245;} p{color:#b9bbbe;} button{background:#5865f2;border:none;border-radius:6px;padding:10px 24px;color:white;cursor:pointer;margin-top:16px;font-size:14px;}</style></head>
-                <body><h2>❌ Login Failed</h2><p>${errMsg}</p>
-                <button onclick="window.close()">Close Window</button></body></html>
-            `);
-        }
-
-        log.success('Access token received!');
-
-        // 2. Fetch User Profile
-        const userResponse = await fetch('https://discord.com/api/v10/users/@me', {
-            headers: { Authorization: `Bearer ${tokenData.access_token}` }
-        });
-        const userData = await userResponse.json();
-
-        // 3. Fetch User Guilds (best-effort — don't crash if it fails)
-        let guildsData = [];
-        try {
-            const guildsResponse = await fetch('https://discord.com/api/v10/users/@me/guilds', {
-                headers: { Authorization: `Bearer ${tokenData.access_token}` }
-            });
-            const rawGuilds = await guildsResponse.json();
-            guildsData = Array.isArray(rawGuilds) ? rawGuilds.slice(0, 10) : [];
-        } catch (guildsErr) {
-            log.warn(`Could not fetch guilds: ${guildsErr.message}`);
-        }
-
-        // 4. Save to Session (Cleanly)
-        req.session.user = {
-            id: userData.id,
-            username: userData.username,
-            discriminator: userData.discriminator || '0',
-            email: userData.email || null,
-            avatar: userData.avatar ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png` : null,
-            guilds: guildsData.map(g => ({
-                id: g.id,
-                name: g.name,
-                icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : null
-            }))
-        };
-
-        log.success(`User successfully logged in: ${userData.username}`);
-
-        // Redirect to the success page (it fetches /api/auth/user, writes localStorage, closes the popup)
-        res.redirect('/discord-success.html');
-
-    } catch (error) {
-        log.error(`OAuth error: ${error.message}`);
-        res.status(500).send(`
+        log.warn('Invalid OAuth state or missing code');
+        return res.status(400).send(`
             <!DOCTYPE html><html><head><title>Auth Error</title>
             <style>body{font-family:sans-serif;background:#23272a;color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px;}
-            h2{color:#ed4245;} p{color:#b9bbbe;} button{background:#5865f2;border:none;border-radius:6px;padding:10px 24px;color:white;cursor:pointer;margin-top:16px;font-size:14px;}</style></head>
-            <body><h2>❌ Authentication Failed</h2><p>${error.message}</p>
-            <button onclick="window.close()">Close Window</button></body></html>
+            h2{color:#ed4245;}p{color:#b9bbbe;}</style></head>
+            <body><h2>❌ Invalid login link</h2><p>State mismatch. Please try logging in again.</p>
+            <script>setTimeout(()=>window.close(),3000)</script></body></html>
         `);
+    }
+
+    // Mark state as used so it can't be replayed
+    req.session.pendingCode = code;
+    req.session.oauthStateVerified = true;
+
+    // Redirect to the main app — it will auto-exchange using /api/auth/exchange
+    log.info(`State verified, redirecting to main app with code`);
+    res.redirect(`/?discord_code=${encodeURIComponent(code)}&discord_state=${encodeURIComponent(state)}`);
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   STEP 2 — Main app calls this to exchange the code for a user.
+   Client secret never leaves the server.
+───────────────────────────────────────────────────────────────── */
+app.get('/api/auth/exchange', async (req, res) => {
+    const { code, state } = req.query;
+
+    // Must match the verified state stored in session
+    if (!code || !req.session.oauthStateVerified || state !== req.session.oauthState) {
+        log.warn('/api/auth/exchange: state mismatch or missing code');
+        // Fallback: if user is already in session (e.g. came from old flow), return them
+        if (req.session.user) {
+            log.info('Exchange fallback: returning existing session user');
+            return res.json(req.session.user);
+        }
+        return res.status(401).json({ error: 'Invalid or expired auth link. Please log in again.' });
+    }
+
+    try {
+        const user = await exchangeDiscordCode(code, req);
+
+        // Clear one-time state to prevent replay attacks
+        delete req.session.oauthStateVerified;
+        delete req.session.oauthState;
+        delete req.session.pendingCode;
+
+        res.json(user);
+    } catch (err) {
+        log.error(`Exchange failed: ${err.message}`);
+
+        // Last-resort fallback — check if session already has user from a previous exchange
+        if (req.session.user) {
+            log.info('Exchange error fallback: returning cached session user');
+            return res.json(req.session.user);
+        }
+
+        res.status(500).json({ error: err.message || 'Exchange failed' });
     }
 });
 

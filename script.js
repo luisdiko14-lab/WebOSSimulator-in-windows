@@ -1,6 +1,8 @@
-// ── VM Plan specs from URL params (?plan=pro&ram=100&cpu=7.5&gpu=RTX+4090&storage=10000) ──
+// ── Parse all URL params once at startup ──
 (function() {
     const p = new URLSearchParams(window.location.search);
+
+    // VM plan specs
     const plan = p.get('plan');
     window._vmSpecs = {
         plan:    plan || 'free',
@@ -9,12 +11,94 @@
         gpu:     p.get('gpu')     || null,
         storage: p.get('storage') || null,
     };
-    // Strip plan params from URL bar without reloading
-    if (plan) {
-        const clean = window.location.pathname;
-        window.history.replaceState({}, document.title, clean);
+
+    // Discord OAuth callback params — set by server after state verification
+    const discordCode  = p.get('discord_code');
+    const discordState = p.get('discord_state');
+    if (discordCode && discordState) {
+        window._discordPendingCode  = discordCode;
+        window._discordPendingState = discordState;
+    }
+
+    // Strip all recognised params from the URL bar without reloading
+    if (plan || discordCode) {
+        window.history.replaceState({}, document.title, window.location.pathname);
     }
 })();
+
+// ── Auto-exchange Discord code once the desktop is ready ──
+// Called from showScreen('screen-desktop') or DOMContentLoaded fallback
+function _discordAutoExchange() {
+    const code  = window._discordPendingCode;
+    const state = window._discordPendingState;
+    if (!code || !state) return;
+
+    // Clear so we don't try again
+    delete window._discordPendingCode;
+    delete window._discordPendingState;
+
+    console.log('[Discord] Auto-exchanging OAuth code from URL params...');
+
+    // Show a subtle loading toast if possible
+    const toastId = 'discord-auto-login-toast';
+    const toast = document.createElement('div');
+    toast.id = toastId;
+    toast.style.cssText = 'position:fixed;bottom:60px;right:16px;z-index:99999;background:#5865f2;color:white;padding:10px 18px;border-radius:8px;font-size:13px;font-family:Segoe UI,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;';
+    toast.innerHTML = '<span style="font-size:16px;">💬</span> Signing you into Discord...';
+    document.body.appendChild(toast);
+
+    fetch(`/api/auth/exchange?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`)
+        .then(r => r.json())
+        .then(user => {
+            if (user && user.id) {
+                // Persist to localStorage so other tabs and polling pick it up
+                localStorage.setItem('discord_user_data', JSON.stringify(user));
+                window._discordLoggedInUser = user;
+
+                toast.innerHTML = '<span style="font-size:16px;">✅</span> Signed into Discord as <strong>' + (user.username || 'you') + '</strong>!';
+                toast.style.background = '#3ba55d';
+                setTimeout(() => toast.remove(), 3500);
+
+                // If Discord window is open, show profile immediately
+                const discordBody = document.getElementById('discord-app-body');
+                if (discordBody) discordShowProfile(user);
+
+                // Clear any lingering poll
+                if (_discordPollInterval) { clearInterval(_discordPollInterval); _discordPollInterval = null; }
+            } else {
+                throw new Error((user && user.error) || 'No user returned');
+            }
+        })
+        .catch(err => {
+            console.warn('[Discord] Exchange failed, trying session fallback:', err.message);
+            toast.innerHTML = '<span style="font-size:16px;">⚠️</span> Retrying Discord login...';
+            toast.style.background = '#ca5010';
+
+            // Fallback: try the session endpoint directly
+            fetch('/api/auth/user')
+                .then(r => r.json())
+                .then(user => {
+                    if (user && user.id) {
+                        localStorage.setItem('discord_user_data', JSON.stringify(user));
+                        window._discordLoggedInUser = user;
+                        toast.innerHTML = '<span style="font-size:16px;">✅</span> Discord session restored!';
+                        toast.style.background = '#3ba55d';
+                        setTimeout(() => toast.remove(), 3000);
+                        const discordBody = document.getElementById('discord-app-body');
+                        if (discordBody) discordShowProfile(user);
+                    } else {
+                        toast.innerHTML = '<span style="font-size:16px;">❌</span> Discord login failed. Try again.';
+                        toast.style.background = '#ed4245';
+                        setTimeout(() => toast.remove(), 4000);
+                    }
+                })
+                .catch(() => {
+                    toast.innerHTML = '<span style="font-size:16px;">❌</span> Discord login failed. Try again.';
+                    toast.style.background = '#ed4245';
+                    setTimeout(() => toast.remove(), 4000);
+                });
+        });
+}
 
 let currentSetupStep = 0;
 let users = [
@@ -289,6 +373,10 @@ function showScreen(screenId) {
     if (target) {
         target.classList.add('active');
         target.style.display = 'flex';
+    }
+    // Auto-exchange Discord OAuth code when the desktop first becomes visible
+    if (screenId === 'screen-desktop') {
+        setTimeout(_discordAutoExchange, 600);
     }
 }
 
@@ -4293,14 +4381,14 @@ function discordStartOAuth() {
     if (body) {
         body.innerHTML = `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:40px;">
-          <div style="font-size:60px;margin-bottom:20px;animation:spin 2s linear infinite;">⏳</div>
-          <h3 style="color:white;margin-bottom:8px;">Waiting for authorization...</h3>
-          <p style="color:#b9bbbe;font-size:14px;margin-bottom:24px;">A new tab has opened. Complete the Discord login there, then come back here.</p>
+          <div style="font-size:60px;margin-bottom:20px;">🔗</div>
+          <h3 style="color:white;margin-bottom:8px;">Authorize in the new tab</h3>
+          <p style="color:#b9bbbe;font-size:14px;margin-bottom:8px;">A new tab opened for Discord login. After you approve, it will<br>redirect you back to this app and log you in automatically.</p>
+          <p style="color:#72767d;font-size:12px;margin-bottom:24px;">You can also switch back here first — login syncs automatically.</p>
           <div style="display:flex;gap:8px;">
-            <button onclick="discordCheckAuth()" style="background:#5865f2;border:none;border-radius:4px;padding:10px 20px;color:white;cursor:pointer;font-size:14px;">Check Status</button>
+            <button onclick="discordCheckAuth()" style="background:#5865f2;border:none;border-radius:4px;padding:10px 20px;color:white;cursor:pointer;font-size:14px;">Check Now</button>
             <button onclick="discordCancelAuth()" style="background:#4f545c;border:none;border-radius:4px;padding:10px 20px;color:white;cursor:pointer;font-size:14px;">Cancel</button>
           </div>
-          <p style="color:#72767d;font-size:12px;margin-top:20px;">Secured via server-side OAuth2 state</p>
         </div>`;
     }
 
@@ -4358,7 +4446,7 @@ function discordLoginPageHTML() {
       <button onclick="discordStartOAuth()" style="background:#5865f2;border:none;border-radius:8px;padding:14px 40px;color:white;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(88,101,242,0.4);transition:transform 0.1s;" onmouseover="this.style.background='#4752c4'" onmouseout="this.style.background='#5865f2'">
         🔗 Login with Discord
       </button>
-      <p style="color:#72767d;font-size:12px;margin-top:20px;">Opens a secure popup window • OAuth2 with state</p>
+      <p style="color:#72767d;font-size:12px;margin-top:20px;">Opens in a new tab • Returns you directly to the desktop • Auto-login</p>
     </div>`;
 }
 
