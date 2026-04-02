@@ -795,6 +795,7 @@ function createWindow(appName) {
         speedtest:    () => ({ title: '⚡ Speed Test',            content: createSpeedTest() }),
         mail:         () => ({ title: '📧 Mail',                  content: createMail() }),
         xbox:         () => ({ title: '🎮 Xbox',                  content: createXbox() }),
+        imagegen:     () => ({ title: '🎨 AI Image Generator',    content: createImageGenerator() }),
     };
 
     const appData = (appFactories[appName] || (() => ({ title: '🪟 Window', content: '<div style="padding:20px;color:#666;">App not found: ' + appName + '</div>' })))();
@@ -986,32 +987,196 @@ function createCalculator() {
     setTimeout(() => {
         calculatorDisplay = '0';
         updateCalculatorDisplay();
+        window._calcMode = 'standard';
+        window._calcHistory = window._calcHistory || [];
     }, 10);
-    
+
     return `
-        <div class="calculator-grid">
-            <div class="calculator-display" id="calc-display">0</div>
-            <button class="calc-btn" onclick="calcClear()">C</button>
-            <button class="calc-btn" onclick="calcClearEntry()">CE</button>
-            <button class="calc-btn operator" onclick="calcDelete()">⌫</button>
-            <button class="calc-btn operator" onclick="calcOperation('/')">÷</button>
-            <button class="calc-btn" onclick="calcNumber('7')">7</button>
-            <button class="calc-btn" onclick="calcNumber('8')">8</button>
-            <button class="calc-btn" onclick="calcNumber('9')">9</button>
-            <button class="calc-btn operator" onclick="calcOperation('*')">×</button>
-            <button class="calc-btn" onclick="calcNumber('4')">4</button>
-            <button class="calc-btn" onclick="calcNumber('5')">5</button>
-            <button class="calc-btn" onclick="calcNumber('6')">6</button>
-            <button class="calc-btn operator" onclick="calcOperation('-')">−</button>
-            <button class="calc-btn" onclick="calcNumber('1')">1</button>
-            <button class="calc-btn" onclick="calcNumber('2')">2</button>
-            <button class="calc-btn" onclick="calcNumber('3')">3</button>
-            <button class="calc-btn operator" onclick="calcOperation('+')">+</button>
-            <button class="calc-btn" onclick="calcNumber('0')">0</button>
-            <button class="calc-btn" onclick="calcDecimal()">.</button>
-            <button class="calc-btn equals" onclick="calcEquals()" style="grid-column: span 2">=</button>
+    <div style="display:flex;flex-direction:column;height:100%;background:#1c1c1c;font-family:Segoe UI,sans-serif;user-select:none;">
+      <!-- Mode tabs -->
+      <div style="display:flex;background:#2d2d2d;border-bottom:1px solid #444;">
+        <button id="calc-tab-std" onclick="calcSetMode('standard',this)" style="flex:1;padding:8px;border:none;background:#0078d4;color:white;cursor:pointer;font-size:13px;font-weight:600;">Standard</button>
+        <button id="calc-tab-sci" onclick="calcSetMode('scientific',this)" style="flex:1;padding:8px;border:none;background:transparent;color:#aaa;cursor:pointer;font-size:13px;">Scientific</button>
+        <button id="calc-tab-his" onclick="calcSetMode('history',this)" style="flex:1;padding:8px;border:none;background:transparent;color:#aaa;cursor:pointer;font-size:13px;">History</button>
+      </div>
+
+      <!-- Display -->
+      <div style="padding:16px 20px 8px;text-align:right;">
+        <div id="calc-expr" style="font-size:12px;color:#888;min-height:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+        <div id="calc-display" style="font-size:40px;font-weight:300;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">0</div>
+      </div>
+
+      <!-- Standard buttons -->
+      <div id="calc-panel-standard" style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:1px;background:#444;padding-top:1px;">
+        <button class="calc-btn2" onclick="calcPercent()" style="grid-column:1">%</button>
+        <button class="calc-btn2" onclick="calcClearEntry()">CE</button>
+        <button class="calc-btn2" onclick="calcClear()">C</button>
+        <button class="calc-btn2 op2" onclick="calcDelete()">⌫</button>
+
+        <button class="calc-btn2" onclick="calcSpecial('1/x')">¹/x</button>
+        <button class="calc-btn2" onclick="calcSpecial('x²')">x²</button>
+        <button class="calc-btn2" onclick="calcSpecial('√x')">²√x</button>
+        <button class="calc-btn2 op2" onclick="calcOperation('/')">÷</button>
+
+        <button class="calc-btn2 num2" onclick="calcNumber('7')">7</button>
+        <button class="calc-btn2 num2" onclick="calcNumber('8')">8</button>
+        <button class="calc-btn2 num2" onclick="calcNumber('9')">9</button>
+        <button class="calc-btn2 op2" onclick="calcOperation('*')">×</button>
+
+        <button class="calc-btn2 num2" onclick="calcNumber('4')">4</button>
+        <button class="calc-btn2 num2" onclick="calcNumber('5')">5</button>
+        <button class="calc-btn2 num2" onclick="calcNumber('6')">6</button>
+        <button class="calc-btn2 op2" onclick="calcOperation('-')">−</button>
+
+        <button class="calc-btn2 num2" onclick="calcNumber('1')">1</button>
+        <button class="calc-btn2 num2" onclick="calcNumber('2')">2</button>
+        <button class="calc-btn2 num2" onclick="calcNumber('3')">3</button>
+        <button class="calc-btn2 op2" onclick="calcOperation('+')">+</button>
+
+        <button class="calc-btn2" onclick="calcSign()">+/−</button>
+        <button class="calc-btn2 num2" onclick="calcNumber('0')">0</button>
+        <button class="calc-btn2" onclick="calcDecimal()">.</button>
+        <button class="calc-btn2" onclick="calcEquals()" style="background:#0078d4;color:white;">=</button>
+      </div>
+
+      <!-- Scientific panel (hidden by default) -->
+      <div id="calc-panel-scientific" style="flex:1;display:none;flex-direction:column;">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:#444;flex:1;">
+          <button class="calc-btn2" onclick="calcSci('sin')">sin</button>
+          <button class="calc-btn2" onclick="calcSci('cos')">cos</button>
+          <button class="calc-btn2" onclick="calcSci('tan')">tan</button>
+          <button class="calc-btn2" onclick="calcSci('log')">log</button>
+          <button class="calc-btn2" onclick="calcSci('ln')">ln</button>
+
+          <button class="calc-btn2" onclick="calcSci('asin')">sin⁻¹</button>
+          <button class="calc-btn2" onclick="calcSci('acos')">cos⁻¹</button>
+          <button class="calc-btn2" onclick="calcSci('atan')">tan⁻¹</button>
+          <button class="calc-btn2" onclick="calcSci('10^x')">10ˣ</button>
+          <button class="calc-btn2" onclick="calcSci('e^x')">eˣ</button>
+
+          <button class="calc-btn2" onclick="calcNumber(String(Math.PI.toFixed(10)))">π</button>
+          <button class="calc-btn2" onclick="calcNumber(String(Math.E.toFixed(10)))">e</button>
+          <button class="calc-btn2" onclick="calcSci('x³')">x³</button>
+          <button class="calc-btn2" onclick="calcSci('∛x')">∛x</button>
+          <button class="calc-btn2" onclick="calcSci('x!')">x!</button>
+
+          <button class="calc-btn2" onclick="calcPercent()">%</button>
+          <button class="calc-btn2" onclick="calcClearEntry()">CE</button>
+          <button class="calc-btn2" onclick="calcClear()">C</button>
+          <button class="calc-btn2 op2" style="grid-column:span 2" onclick="calcDelete()">⌫</button>
+
+          <button class="calc-btn2" onclick="calcSpecial('1/x')">¹/x</button>
+          <button class="calc-btn2" onclick="calcSpecial('x²')">x²</button>
+          <button class="calc-btn2" onclick="calcSpecial('√x')">²√x</button>
+          <button class="calc-btn2 op2" style="grid-column:span 2" onclick="calcOperation('/')">÷</button>
+
+          <button class="calc-btn2 num2" onclick="calcNumber('7')">7</button>
+          <button class="calc-btn2 num2" onclick="calcNumber('8')">8</button>
+          <button class="calc-btn2 num2" onclick="calcNumber('9')">9</button>
+          <button class="calc-btn2 op2" style="grid-column:span 2" onclick="calcOperation('*')">×</button>
+
+          <button class="calc-btn2 num2" onclick="calcNumber('4')">4</button>
+          <button class="calc-btn2 num2" onclick="calcNumber('5')">5</button>
+          <button class="calc-btn2 num2" onclick="calcNumber('6')">6</button>
+          <button class="calc-btn2 op2" style="grid-column:span 2" onclick="calcOperation('-')">−</button>
+
+          <button class="calc-btn2 num2" onclick="calcNumber('1')">1</button>
+          <button class="calc-btn2 num2" onclick="calcNumber('2')">2</button>
+          <button class="calc-btn2 num2" onclick="calcNumber('3')">3</button>
+          <button class="calc-btn2 op2" style="grid-column:span 2" onclick="calcOperation('+')">+</button>
+
+          <button class="calc-btn2" onclick="calcSign()">+/−</button>
+          <button class="calc-btn2 num2" onclick="calcNumber('0')">0</button>
+          <button class="calc-btn2" onclick="calcDecimal()">.</button>
+          <button class="calc-btn2" onclick="calcEquals()" style="background:#0078d4;color:white;grid-column:span 2">=</button>
         </div>
-    `;
+      </div>
+
+      <!-- History panel -->
+      <div id="calc-panel-history" style="flex:1;display:none;overflow-y:auto;padding:12px;background:#1c1c1c;">
+        <div id="calc-history-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <div style="text-align:center;margin-top:16px;"><button onclick="window._calcHistory=[];calcRenderHistory()" style="background:#444;border:none;border-radius:4px;padding:6px 16px;color:#aaa;cursor:pointer;font-size:12px;">Clear history</button></div>
+      </div>
+    </div>
+    <style>
+      .calc-btn2{background:#3d3d3d;border:none;color:white;font-size:16px;cursor:pointer;padding:0;transition:background 0.1s;}
+      .calc-btn2:hover{background:#525252;}
+      .calc-btn2:active{background:#6a6a6a;}
+      .calc-btn2.num2{background:#323232;}
+      .calc-btn2.num2:hover{background:#444;}
+      .calc-btn2.op2{background:#3d3d3d;color:#0078d4;font-size:20px;}
+      .calc-btn2.op2:hover{background:#525252;}
+    </style>`;
+}
+
+function calcSetMode(mode, btn) {
+    window._calcMode = mode;
+    ['standard','scientific','history'].forEach(m => {
+        const tab = document.getElementById('calc-tab-' + m.slice(0,3));
+        const panel = document.getElementById('calc-panel-' + m);
+        if (tab) { tab.style.background = m === mode ? '#0078d4' : 'transparent'; tab.style.color = m === mode ? 'white' : '#aaa'; }
+        if (panel) { panel.style.display = m === mode ? (m === 'history' ? 'block' : m === 'scientific' ? 'flex' : 'grid') : 'none'; }
+    });
+    if (mode === 'history') calcRenderHistory();
+}
+
+function calcRenderHistory() {
+    const list = document.getElementById('calc-history-list');
+    if (!list) return;
+    const h = window._calcHistory || [];
+    list.innerHTML = h.length === 0
+        ? '<div style="text-align:center;color:#666;padding:40px 0;font-size:14px;">No calculations yet</div>'
+        : h.map(e => `<div onclick="calculatorDisplay='${e.result}';updateCalculatorDisplay();calcSetMode('standard')" style="background:#2d2d2d;border-radius:6px;padding:10px 14px;cursor:pointer;" onmouseover="this.style.background='#3d3d3d'" onmouseout="this.style.background='#2d2d2d'">
+            <div style="font-size:12px;color:#888;">${e.expr}</div>
+            <div style="font-size:20px;color:white;">= ${e.result}</div>
+          </div>`).join('');
+}
+
+function calcSci(fn) {
+    const val = parseFloat(calculatorDisplay);
+    if (isNaN(val)) return;
+    let result;
+    const deg = val * Math.PI / 180;
+    switch(fn) {
+        case 'sin':   result = Math.sin(deg); break;
+        case 'cos':   result = Math.cos(deg); break;
+        case 'tan':   result = Math.tan(deg); break;
+        case 'asin':  result = Math.asin(val) * 180 / Math.PI; break;
+        case 'acos':  result = Math.acos(val) * 180 / Math.PI; break;
+        case 'atan':  result = Math.atan(val) * 180 / Math.PI; break;
+        case 'log':   result = Math.log10(val); break;
+        case 'ln':    result = Math.log(val); break;
+        case '10^x':  result = Math.pow(10, val); break;
+        case 'e^x':   result = Math.exp(val); break;
+        case 'x³':    result = Math.pow(val, 3); break;
+        case '∛x':    result = Math.cbrt(val); break;
+        case 'x!':
+            if (val < 0 || !Number.isInteger(val)) { result = NaN; break; }
+            result = 1; for (let i = 2; i <= val; i++) result *= i; break;
+        default: return;
+    }
+    const exprEl = document.getElementById('calc-expr');
+    if (exprEl) exprEl.textContent = `${fn}(${calculatorDisplay})`;
+    const r = parseFloat(result.toFixed(10));
+    (window._calcHistory = window._calcHistory || []).unshift({ expr: `${fn}(${calculatorDisplay})`, result: isNaN(r) ? 'Error' : String(r) });
+    calculatorDisplay = isNaN(r) ? 'Error' : String(r);
+    updateCalculatorDisplay();
+}
+
+function calcPercent() {
+    const val = parseFloat(calculatorDisplay);
+    if (!isNaN(val)) {
+        calculatorDisplay = String(val / 100);
+        updateCalculatorDisplay();
+    }
+}
+
+function calcSign() {
+    const val = parseFloat(calculatorDisplay);
+    if (!isNaN(val)) {
+        calculatorDisplay = String(-val);
+        updateCalculatorDisplay();
+    }
 }
 
 function calcNumber(num) {
@@ -5538,6 +5703,240 @@ function openEmail(idx) {
     const content = document.querySelector('[style*="Select an email"]')?.parentElement;
     if (!content) return;
     content.innerHTML = `<div style="padding:24px;overflow-y:auto;height:100%;"><h2 style="font-size:18px;margin-bottom:8px;">${email.subject}</h2><div style="color:#666;font-size:13px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #eee;"><strong>From:</strong> ${email.from}<br><strong>To:</strong> ${userData?.username||'User'}@windows10sim.com</div><div style="font-size:14px;line-height:1.8;">${email.body}</div></div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   🎨  AI IMAGE GENERATOR  (Pollinations.AI)
+═══════════════════════════════════════════════════════════════ */
+function createImageGenerator() {
+    setTimeout(() => initImageGenerator(), 100);
+    return `
+    <div style="display:flex;flex-direction:column;height:100%;background:#1a1a2e;color:#e0e0e0;font-family:Segoe UI,sans-serif;">
+
+      <!-- Top toolbar -->
+      <div style="background:#16213e;padding:12px 16px;border-bottom:1px solid #0f3460;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:20px;">🎨</span>
+        <span style="font-weight:700;font-size:15px;color:#e94560;">AI Image Generator</span>
+        <span style="font-size:11px;background:#0f3460;padding:2px 8px;border-radius:10px;color:#7fdbff;">Powered by Pollinations.AI</span>
+      </div>
+
+      <!-- Prompt area -->
+      <div style="padding:14px 16px;background:#16213e;border-bottom:1px solid #0f3460;">
+        <div style="display:flex;gap:10px;margin-bottom:10px;">
+          <input id="img-prompt" placeholder="Describe what you want to generate... (e.g. a futuristic city at night, neon lights)"
+            style="flex:1;background:#0f3460;border:1px solid #e94560;border-radius:6px;padding:10px 14px;color:white;font-size:14px;outline:none;"
+            onkeydown="if(event.key==='Enter')generateImages()">
+          <button onclick="generateImages()" id="img-gen-btn"
+            style="background:linear-gradient(135deg,#e94560,#c62a47);border:none;border-radius:6px;padding:10px 20px;color:white;font-weight:700;cursor:pointer;font-size:14px;white-space:nowrap;transition:opacity 0.2s;"
+            onmouseover="this.style.opacity=0.85" onmouseout="this.style.opacity=1">
+            ✨ Generate
+          </button>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <label style="font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;">Style</label>
+            <select id="img-style" style="background:#0f3460;border:1px solid #555;border-radius:4px;padding:5px 8px;color:white;font-size:13px;cursor:pointer;">
+              <option value="">✦ No style</option>
+              <option value="realistic photo, 8k, detailed">📷 Realistic Photo</option>
+              <option value="anime style, manga, detailed illustration">🎌 Anime / Manga</option>
+              <option value="oil painting, classical art, detailed brushwork">🖼️ Oil Painting</option>
+              <option value="watercolor painting, soft colors, artistic">💧 Watercolor</option>
+              <option value="cyberpunk art, neon lights, futuristic city">🌆 Cyberpunk</option>
+              <option value="cartoon style, vibrant colors, clean lines">🎨 Cartoon</option>
+              <option value="pixel art, 8-bit, retro game style">👾 Pixel Art</option>
+              <option value="fantasy art, magical, epic, dramatic lighting">🧙 Fantasy</option>
+              <option value="dark gothic art, horror, ominous atmosphere">🦇 Dark Gothic</option>
+              <option value="impressionist painting, monet style, soft strokes">🌸 Impressionist</option>
+              <option value="3D render, octane render, hyperrealistic, volumetric lighting">💎 3D Render</option>
+              <option value="flat design, minimalist, modern illustration">📐 Minimalist</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <label style="font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;">Model</label>
+            <select id="img-model" style="background:#0f3460;border:1px solid #555;border-radius:4px;padding:5px 8px;color:white;font-size:13px;cursor:pointer;">
+              <option value="flux">⚡ Flux (Default)</option>
+              <option value="turbo">🚀 Turbo (Fast)</option>
+              <option value="flux-realism">📸 Flux Realism</option>
+              <option value="flux-anime">🎌 Flux Anime</option>
+              <option value="flux-3d">💎 Flux 3D</option>
+              <option value="any-dark">🌑 Dark Moody</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <label style="font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;">Size</label>
+            <select id="img-size" style="background:#0f3460;border:1px solid #555;border-radius:4px;padding:5px 8px;color:white;font-size:13px;cursor:pointer;">
+              <option value="512,512">512×512 Square</option>
+              <option value="768,512">768×512 Landscape</option>
+              <option value="512,768">512×768 Portrait</option>
+              <option value="1024,512">1024×512 Wide</option>
+              <option value="512,1024">512×1024 Tall</option>
+              <option value="768,768">768×768 Square HD</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <label style="font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;">Count</label>
+            <select id="img-count" style="background:#0f3460;border:1px solid #555;border-radius:4px;padding:5px 8px;color:white;font-size:13px;cursor:pointer;">
+              <option value="1">1 image</option>
+              <option value="2">2 images</option>
+              <option value="4">4 images</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <label style="font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;">Negative prompt</label>
+            <input id="img-negative" placeholder="Exclude: blurry, ugly, low quality..."
+              style="background:#0f3460;border:1px solid #555;border-radius:4px;padding:5px 8px;color:white;font-size:13px;width:180px;outline:none;">
+          </div>
+        </div>
+        <!-- Quick prompt suggestions -->
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+          ${['🌅 Sunset over mountains','🤖 Robot barista in a coffee shop','🐉 Dragon in a neon city','🏯 Japanese temple in cherry blossom','🚀 Astronaut floating in space nebula','🦁 Portrait of a lion king','🌊 Underwater palace','🎭 Masquerade ball in Venice'].map(s=>`
+          <button onclick="document.getElementById('img-prompt').value='${s.slice(2)}'" style="background:#0f3460;border:1px solid #333;border-radius:16px;padding:4px 10px;color:#ccc;font-size:11px;cursor:pointer;white-space:nowrap;" onmouseover="this.style.borderColor='#e94560'" onmouseout="this.style.borderColor='#333'">${s}</button>`).join('')}
+        </div>
+      </div>
+
+      <!-- Gallery -->
+      <div style="flex:1;overflow-y:auto;padding:16px;" id="img-gallery">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;opacity:0.4;gap:12px;">
+          <div style="font-size:64px;">🖼️</div>
+          <div style="font-size:16px;">Enter a prompt and click Generate</div>
+          <div style="font-size:12px;">Powered by Pollinations.AI • Free • No API key needed</div>
+        </div>
+      </div>
+
+      <!-- Status bar -->
+      <div id="img-status" style="background:#0f3460;padding:6px 16px;font-size:12px;color:#aaa;border-top:1px solid #1a1a2e;">
+        Ready to generate images
+      </div>
+    </div>`;
+}
+
+function initImageGenerator() {
+    window._imgHistory = window._imgHistory || [];
+}
+
+async function generateImages() {
+    const prompt = document.getElementById('img-prompt')?.value?.trim();
+    if (!prompt) {
+        const p = document.getElementById('img-prompt');
+        if (p) { p.style.borderColor = '#ff4444'; setTimeout(() => p.style.borderColor = '#e94560', 1500); }
+        return;
+    }
+
+    const style   = document.getElementById('img-style')?.value || '';
+    const model   = document.getElementById('img-model')?.value || 'flux';
+    const sizeVal = document.getElementById('img-size')?.value || '512,512';
+    const count   = parseInt(document.getElementById('img-count')?.value || '1');
+    const negative = document.getElementById('img-negative')?.value?.trim() || '';
+
+    const [width, height] = sizeVal.split(',');
+    const fullPrompt = [prompt, style].filter(Boolean).join(', ');
+
+    const gallery = document.getElementById('img-gallery');
+    const statusEl = document.getElementById('img-status');
+    const btn = document.getElementById('img-gen-btn');
+
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating...'; }
+    if (statusEl) statusEl.textContent = `Generating ${count} image${count>1?'s':''} · Prompt: "${fullPrompt.slice(0,60)}${fullPrompt.length>60?'...':''}"`;
+
+    // Show loading grid
+    gallery.innerHTML = `
+      <div style="margin-bottom:12px;padding:8px 12px;background:#0f3460;border-radius:6px;border-left:3px solid #e94560;font-size:13px;">
+        <strong style="color:#e94560;">Generating:</strong> ${fullPrompt.slice(0,80)}${fullPrompt.length>80?'...':''}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(${count===1?1:2},1fr);gap:12px;">
+        ${Array(count).fill(0).map((_,i) => `
+        <div id="img-slot-${i}" style="background:#0f3460;border-radius:8px;overflow:hidden;position:relative;min-height:200px;display:flex;align-items:center;justify-content:center;">
+          <div style="text-align:center;color:#aaa;">
+            <div style="font-size:32px;animation:spin 1.5s linear infinite;display:inline-block;">⏳</div>
+            <div style="margin-top:8px;font-size:12px;">Generating image ${i+1}…</div>
+          </div>
+        </div>`).join('')}
+      </div>`;
+
+    // Generate each image
+    const seeds = Array(count).fill(0).map(() => Math.floor(Math.random() * 99999));
+
+    const promises = seeds.map((seed, i) => {
+        const urlPrompt = encodeURIComponent(fullPrompt + (negative ? ` --no ${negative}` : ''));
+        const url = `https://image.pollinations.ai/prompt/${urlPrompt}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=${model}`;
+
+        return new Promise(resolve => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                const slot = document.getElementById(`img-slot-${i}`);
+                if (slot) {
+                    slot.innerHTML = `
+                      <img src="${url}" style="width:100%;display:block;border-radius:8px;" title="${fullPrompt}">
+                      <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.8));padding:8px 10px;display:flex;gap:6px;align-items:center;">
+                        <span style="flex:1;font-size:11px;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Seed: ${seed}</span>
+                        <button onclick="imgDownload('${url}','ai-image-${seed}')" style="background:#e94560;border:none;border-radius:4px;padding:4px 8px;color:white;font-size:11px;cursor:pointer;" title="Download">⬇ Save</button>
+                        <button onclick="imgCopyUrl('${url}')" style="background:#0f3460;border:1px solid #555;border-radius:4px;padding:4px 8px;color:white;font-size:11px;cursor:pointer;" title="Copy URL">🔗 URL</button>
+                        <button onclick="imgVariation('${encodeURIComponent(fullPrompt)}','${width}','${height}','${model}',${i})" style="background:#0f3460;border:1px solid #555;border-radius:4px;padding:4px 8px;color:white;font-size:11px;cursor:pointer;" title="New variation">🔄</button>
+                      </div>`;
+                }
+                resolve();
+            };
+            img.onerror = () => {
+                const slot = document.getElementById(`img-slot-${i}`);
+                if (slot) slot.innerHTML = `<div style="text-align:center;padding:20px;color:#ff6666;">❌ Failed to generate.<br><small>Try a different prompt.</small></div>`;
+                resolve();
+            };
+            img.src = url;
+        });
+    });
+
+    await Promise.all(promises);
+
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Generate'; }
+    if (statusEl) statusEl.textContent = `✅ Generated ${count} image${count>1?'s':''} · Model: ${model} · Size: ${width}×${height}`;
+
+    // Save to history
+    window._imgHistory = window._imgHistory || [];
+    window._imgHistory.unshift({ prompt: fullPrompt, seeds, width, height, model });
+    if (window._imgHistory.length > 20) window._imgHistory.pop();
+
+    addNotification('🎨', 'AI Image Generator', `Generated ${count} image${count>1?'s':''}: "${prompt.slice(0,30)}..."`);
+}
+
+function imgDownload(url, name) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (name || 'ai-image') + '.jpg';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => a.remove(), 100);
+}
+
+function imgCopyUrl(url) {
+    navigator.clipboard.writeText(url).then(() => {
+        addNotification('🔗', 'Image Generator', 'Image URL copied to clipboard!');
+    }).catch(() => {
+        prompt('Copy this URL:', url);
+    });
+}
+
+async function imgVariation(encodedPrompt, width, height, model, slotIdx) {
+    const seed = Math.floor(Math.random() * 99999);
+    const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=${model}`;
+    const slot = document.getElementById(`img-slot-${slotIdx}`);
+    if (!slot) return;
+    slot.innerHTML = `<div style="text-align:center;color:#aaa;padding:20px;"><div style="font-size:32px;animation:spin 1.5s linear infinite;display:inline-block;">⏳</div><div style="margin-top:8px;font-size:12px;">Generating variation…</div></div>`;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+        slot.innerHTML = `
+          <img src="${url}" style="width:100%;display:block;border-radius:8px;">
+          <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.8));padding:8px 10px;display:flex;gap:6px;align-items:center;">
+            <span style="flex:1;font-size:11px;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Seed: ${seed}</span>
+            <button onclick="imgDownload('${url}','ai-image-${seed}')" style="background:#e94560;border:none;border-radius:4px;padding:4px 8px;color:white;font-size:11px;cursor:pointer;">⬇ Save</button>
+            <button onclick="imgVariation('${encodedPrompt}','${width}','${height}','${model}',${slotIdx})" style="background:#0f3460;border:1px solid #555;border-radius:4px;padding:4px 8px;color:white;font-size:11px;cursor:pointer;">🔄</button>
+          </div>`;
+    };
+    img.onerror = () => { slot.innerHTML = `<div style="text-align:center;padding:20px;color:#ff6666;">❌ Failed</div>`; };
+    img.src = url;
 }
 
 function createXbox() {
