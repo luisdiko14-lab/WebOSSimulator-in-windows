@@ -2,102 +2,81 @@
 (function() {
     const p = new URLSearchParams(window.location.search);
 
-    // VM plan specs
+    // VM plan specs — URL params override localStorage; both persist across refresh
     const plan = p.get('plan');
+    let _savedSpecs = null;
+    try { _savedSpecs = JSON.parse(localStorage.getItem('vmSpecs') || 'null'); } catch(e) {}
     window._vmSpecs = {
-        plan:    plan || 'free',
-        ram:     p.get('ram')     || null,
-        cpu:     p.get('cpu')     || null,
-        gpu:     p.get('gpu')     || null,
-        storage: p.get('storage') || null,
+        plan:    plan || (_savedSpecs && _savedSpecs.plan) || 'free',
+        ram:     p.get('ram')     || (_savedSpecs && _savedSpecs.ram)     || null,
+        cpu:     p.get('cpu')     || (_savedSpecs && _savedSpecs.cpu)     || null,
+        gpu:     p.get('gpu')     || (_savedSpecs && _savedSpecs.gpu)     || null,
+        storage: p.get('storage') || (_savedSpecs && _savedSpecs.storage) || null,
     };
+    // Persist so specs survive page refresh (URL params get stripped)
+    if (plan || p.get('ram') || p.get('cpu')) {
+        localStorage.setItem('vmSpecs', JSON.stringify(window._vmSpecs));
+    }
 
-    // Discord OAuth callback params — set by server after state verification
+    // Discord OAuth callback params — fire exchange immediately, don't wait for desktop
     const discordCode  = p.get('discord_code');
     const discordState = p.get('discord_state');
-    if (discordCode && discordState) {
-        window._discordPendingCode  = discordCode;
-        window._discordPendingState = discordState;
-    }
 
     // Strip all recognised params from the URL bar without reloading
     if (plan || discordCode) {
         window.history.replaceState({}, document.title, window.location.pathname);
     }
-})();
 
-// ── Auto-exchange Discord code once the desktop is ready ──
-// Called from showScreen('screen-desktop') or DOMContentLoaded fallback
-function _discordAutoExchange() {
-    const code  = window._discordPendingCode;
-    const state = window._discordPendingState;
-    if (!code || !state) return;
-
-    // Clear so we don't try again
-    delete window._discordPendingCode;
-    delete window._discordPendingState;
-
-    console.log('[Discord] Auto-exchanging OAuth code from URL params...');
-
-    // Show a subtle loading toast if possible
-    const toastId = 'discord-auto-login-toast';
-    const toast = document.createElement('div');
-    toast.id = toastId;
-    toast.style.cssText = 'position:fixed;bottom:60px;right:16px;z-index:99999;background:#5865f2;color:white;padding:10px 18px;border-radius:8px;font-size:13px;font-family:Segoe UI,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;';
-    toast.innerHTML = '<span style="font-size:16px;">💬</span> Signing you into Discord...';
-    document.body.appendChild(toast);
-
-    fetch(`/api/auth/exchange?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`)
-        .then(r => r.json())
-        .then(user => {
-            if (user && user.id) {
-                // Persist to localStorage so other tabs and polling pick it up
-                localStorage.setItem('discord_user_data', JSON.stringify(user));
-                window._discordLoggedInUser = user;
-
-                toast.innerHTML = '<span style="font-size:16px;">✅</span> Signed into Discord as <strong>' + (user.username || 'you') + '</strong>!';
-                toast.style.background = '#3ba55d';
-                setTimeout(() => toast.remove(), 3500);
-
-                // If Discord window is open, show profile immediately
-                const discordBody = document.getElementById('discord-app-body');
-                if (discordBody) discordShowProfile(user);
-
-                // Clear any lingering poll
-                if (_discordPollInterval) { clearInterval(_discordPollInterval); _discordPollInterval = null; }
-            } else {
-                throw new Error((user && user.error) || 'No user returned');
-            }
-        })
-        .catch(err => {
-            console.warn('[Discord] Exchange failed, trying session fallback:', err.message);
-            toast.innerHTML = '<span style="font-size:16px;">⚠️</span> Retrying Discord login...';
-            toast.style.background = '#ca5010';
-
-            // Fallback: try the session endpoint directly
-            fetch('/api/auth/user')
-                .then(r => r.json())
-                .then(user => {
+    if (discordCode && discordState) {
+        // Exchange code immediately — Discord codes expire in ~30 seconds
+        fetch('/api/auth/exchange?code=' + encodeURIComponent(discordCode) + '&state=' + encodeURIComponent(discordState))
+            .then(function(r) { return r.json(); })
+            .then(function(user) {
+                if (user && user.id) {
+                    localStorage.setItem('discord_user_data', JSON.stringify(user));
+                    window._discordLoggedInUser = user;
+                    // Apply to UI if already open
+                    var body = document.getElementById('discord-app-body');
+                    if (body && typeof discordShowProfile === 'function') discordShowProfile(user);
+                    // Show a toast when DOM is ready
+                    var showTst = function() {
+                        var t = document.createElement('div');
+                        t.style.cssText = 'position:fixed;bottom:60px;right:16px;z-index:99999;background:#3ba55d;color:white;padding:10px 18px;border-radius:8px;font-size:13px;font-family:Segoe UI,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;animation:fadeIn .3s;';
+                        t.innerHTML = '✅ Signed into Discord as <strong>' + (user.username || 'you') + '</strong>!';
+                        document.body.appendChild(t);
+                        setTimeout(function() { t.remove(); }, 3500);
+                    };
+                    if (document.body) showTst(); else document.addEventListener('DOMContentLoaded', showTst);
+                } else {
+                    throw new Error((user && user.error) || 'No user');
+                }
+            })
+            .catch(function() {
+                // Fallback: restore from existing server session
+                fetch('/api/auth/user').then(function(r) { return r.json(); }).then(function(user) {
                     if (user && user.id) {
                         localStorage.setItem('discord_user_data', JSON.stringify(user));
                         window._discordLoggedInUser = user;
-                        toast.innerHTML = '<span style="font-size:16px;">✅</span> Discord session restored!';
-                        toast.style.background = '#3ba55d';
-                        setTimeout(() => toast.remove(), 3000);
-                        const discordBody = document.getElementById('discord-app-body');
-                        if (discordBody) discordShowProfile(user);
-                    } else {
-                        toast.innerHTML = '<span style="font-size:16px;">❌</span> Discord login failed. Try again.';
-                        toast.style.background = '#ed4245';
-                        setTimeout(() => toast.remove(), 4000);
                     }
-                })
-                .catch(() => {
-                    toast.innerHTML = '<span style="font-size:16px;">❌</span> Discord login failed. Try again.';
-                    toast.style.background = '#ed4245';
-                    setTimeout(() => toast.remove(), 4000);
-                });
-        });
+                }).catch(function() {});
+            });
+    }
+})();
+
+// ── Called when desktop becomes visible — restores Discord session into the UI ──
+function _discordAutoExchange() {
+    // If the IIFE already exchanged the code, the user is in localStorage/window
+    const stored = localStorage.getItem('discord_user_data');
+    const user = window._discordLoggedInUser || (stored ? (() => { try { return JSON.parse(stored); } catch(e) { return null; } })() : null);
+    if (user && user.id) {
+        window._discordLoggedInUser = user;
+        const body = document.getElementById('discord-app-body');
+        if (body && typeof discordShowProfile === 'function') discordShowProfile(user);
+        if (typeof _discordPollInterval !== 'undefined' && _discordPollInterval) {
+            clearInterval(_discordPollInterval);
+            _discordPollInterval = null;
+        }
+    }
 }
 
 let currentSetupStep = 0;
@@ -413,8 +392,29 @@ document.addEventListener('DOMContentLoaded', () => {
         userData = users[0];
     }
     
-    startBootSequence();
-    
+    // ── Skip boot/lock/login if user already set up — just restore desktop ──
+    const _alreadySetup = localStorage.getItem('windowsUserData') || localStorage.getItem('windowsUsers');
+    if (_alreadySetup) {
+        // Snap straight to desktop — update profile info then show it
+        const _su = document.getElementById('start-username');
+        if (_su) _su.textContent = userData ? userData.username : 'User';
+        const _sa = document.querySelector('.start-avatar');
+        if (_sa) {
+            if (userData && userData.avatarUrl) {
+                _sa.innerHTML = '';
+                _sa.style.background = `url('${userData.avatarUrl}') center/cover no-repeat`;
+            } else {
+                _sa.innerHTML = (userData && userData.avatar) || '👤';
+                _sa.style.background = (userData && userData.avatarColor) || '#0078d4';
+            }
+        }
+        showScreen('screen-desktop');
+        // Also restore Discord session into the UI
+        setTimeout(_discordAutoExchange, 200);
+    } else {
+        startBootSequence();
+    }
+
     document.getElementById('screen-lock')?.addEventListener('click', () => {
         showScreen('screen-login');
         if (userData) {
@@ -1873,13 +1873,20 @@ function createTaskManager() {
       <div id="tm-performance" style="flex:1;display:none;overflow:hidden;display:none;">
         <div style="display:flex;height:100%;">
           <div style="width:180px;border-right:1px solid #eee;overflow-y:auto;background:#fafafa;">
-            ${[
-              ['cpu','🖥️','CPU','Intel Core i9-14900K'],
-              ['mem','🧠','Memory','500 GB DDR5'],
-              ['disk','💾','Disk 0 (C:)','Samsung 990 Pro 100TB'],
-              ['gpu','🎮','GPU 0','RTX 4090'],
-              ['net','🌐','Ethernet','Intel I225-V 2.5Gb'],
-            ].map(([id,icon,label,sub],i)=>`
+            ${(()=>{
+              const s = window._vmSpecs || {};
+              const cpuSub = s.cpu ? 'Intel Core @ '+s.cpu+' GHz' : 'Intel Core i9-14900K';
+              const memSub = s.ram ? s.ram+' GB DDR5' : '500 GB DDR5';
+              const dskSub = s.storage ? (s.storage>=1000?(s.storage/1000).toFixed(0)+'TB':s.storage+'GB')+' NVMe' : 'Samsung 990 Pro 100TB';
+              const gpuSub = s.gpu ? s.gpu : 'RTX 4090';
+              return [
+                ['cpu','🖥️','CPU',cpuSub],
+                ['mem','🧠','Memory',memSub],
+                ['disk','💾','Disk 0 (C:)',dskSub],
+                ['gpu','🎮','GPU 0',gpuSub],
+                ['net','🌐','Ethernet','Intel I225-V 2.5Gb'],
+              ];
+            })().map(([id,icon,label,sub],i)=>`
             <div id="tm-nav-${id}" onclick="tmPerfNav('${id}')" style="padding:12px;cursor:pointer;border-bottom:1px solid #f0f0f0;${i===0?'background:#e3f2fd;border-left:3px solid #0078d4;':''}" onmouseover="this.style.background='#e8f4ff'" onmouseout="this.style.background='${i===0?'#e3f2fd':'transparent'}'">
               <div style="font-size:18px;margin-bottom:2px;">${icon}</div>
               <div style="font-weight:600;font-size:13px;">${label}</div>
@@ -2160,10 +2167,10 @@ function tmPerfNav(section) {
 
     const sections = {
         cpu: {
-            title: 'CPU', sub: 'Intel® Core™ i9-14900K @ 8.00 GHz',
+            title: 'CPU', sub: (()=>{ const _s=window._vmSpecs||{}; return _s.cpu ? 'Intel® Core™ @ '+_s.cpu+' GHz' : 'Intel® Core™ i9-14900K @ 8.00 GHz'; })(),
             stats: [
                 ['Utilization', (cpu).toFixed(1) + '%'],
-                ['Speed', '8.00 GHz'],
+                ['Speed', (()=>{ const _s=window._vmSpecs||{}; return (_s.cpu||'8.00')+' GHz'; })()],
                 ['Processes', (window._tmProcs||[]).length + ''],
                 ['Threads', '524'],
                 ['Handles', '41,832'],
@@ -2172,21 +2179,26 @@ function tmPerfNav(section) {
             extra: ['Sockets: 1','Cores: 24 (8P+16E)','Logical processors: 32','Virtualization: Enabled','L1 cache: 2.0 MB','L2 cache: 32.0 MB','L3 cache: 36.0 MB'],
             color: '#0078d4', histKey: 'cpu', maxVal: 100
         },
-        mem: {
-            title: 'Memory', sub: '500 GB DDR5-6400 (4× 128 GB)',
-            stats: [
-                ['In use', (mem/1024).toFixed(1) + ' GB'],
-                ['Available', (500 - mem/1024).toFixed(1) + ' GB'],
-                ['Committed', (mem/1024*1.1).toFixed(1) + ' / 512.0 GB'],
-                ['Cached', '12.4 GB'],
-                ['Paged pool', '2.1 GB'],
-                ['Non-paged pool', '0.8 GB'],
-            ],
-            extra: ['Speed: 6400 MT/s','Slots used: 4 of 4','Form factor: DIMM','Hardware reserved: 128 MB'],
-            color: '#107c10', histKey: 'mem', maxVal: 512000
-        },
+        mem: (()=>{
+            const _s = window._vmSpecs||{};
+            const ramGB = _s.ram ? parseInt(_s.ram) : 500;
+            const inUse = (mem/1024).toFixed(1);
+            return {
+                title: 'Memory', sub: ramGB + ' GB DDR5-6400',
+                stats: [
+                    ['In use', inUse + ' GB'],
+                    ['Available', (ramGB - parseFloat(inUse)).toFixed(1) + ' GB'],
+                    ['Committed', (mem/1024*1.1).toFixed(1) + ' / ' + (ramGB+12) + '.0 GB'],
+                    ['Cached', '12.4 GB'],
+                    ['Paged pool', '2.1 GB'],
+                    ['Non-paged pool', '0.8 GB'],
+                ],
+                extra: ['Speed: 6400 MT/s','Slots used: 4 of 4','Form factor: DIMM','Hardware reserved: 128 MB'],
+                color: '#107c10', histKey: 'mem', maxVal: ramGB * 1024
+            };
+        })(),
         disk: {
-            title: 'Disk 0 (C:)', sub: 'Samsung 990 Pro NVMe — 100 TB',
+            title: 'Disk 0 (C:)', sub: (()=>{ const _s=window._vmSpecs||{}; return _s.storage ? (_s.storage>=1000?(_s.storage/1000).toFixed(0)+' TB':_s.storage+' GB')+' NVMe SSD' : 'Samsung 990 Pro NVMe — 100 TB'; })(),
             stats: [
                 ['Active time', (Math.random()*20).toFixed(0) + '%'],
                 ['Avg response time', (Math.random()*2+0.1).toFixed(2) + ' ms'],
@@ -2199,10 +2211,10 @@ function tmPerfNav(section) {
             color: '#6b69d6', histKey: 'disk', maxVal: 100
         },
         gpu: {
-            title: 'GPU 0', sub: 'NVIDIA GeForce RTX 4090 — 24 GB GDDR6X',
+            title: 'GPU 0', sub: (()=>{ const _s=window._vmSpecs||{}; return _s.gpu ? 'NVIDIA '+_s.gpu : 'NVIDIA GeForce RTX 4090 — 24 GB GDDR6X'; })(),
             stats: [
                 ['GPU utilization', (Math.random()*8).toFixed(1) + '%'],
-                ['Dedicated GPU memory', (Math.random()*4+1).toFixed(1) + ' GB / 24 GB'],
+                ['Dedicated GPU memory', (Math.random()*4+1).toFixed(1) + ' GB / ' + (()=>{ const _s=window._vmSpecs||{}; return _s.gpu && _s.gpu.match(/\d+GB/) ? _s.gpu.match(/(\d+)GB/)[1] : '24'; })() + ' GB'],
                 ['Shared GPU memory', (Math.random()*2).toFixed(1) + ' GB'],
                 ['GPU temperature', Math.floor(Math.random()*15+45) + '°C'],
                 ['Driver version', '560.81'],
