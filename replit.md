@@ -46,18 +46,22 @@ Preferred communication style: Simple, everyday language.
 - Each app has a `create*()` function that returns HTML string
 - Windows are draggable/resizable, z-stacked, minimizable/maximizable
 
-### Discord OAuth Flow
-1. User clicks "Login with Discord" in Discord app
-2. `discordStartOAuth()` opens `/api/auth/discord` in a **new tab** (server generates CSRF state)
-3. Server redirects the new tab to Discord's OAuth page
-4. Discord redirects back to `/api/auth/discord-callback` with `?code=&state=`
-5. Server **verifies state** (CSRF protection), then redirects new tab to `/?discord_code={code}&discord_state={state}`
-6. New tab lands on main app; `script.js` detects params, strips them from URL bar, stores as `window._discordPendingCode/State`
-7. When the desktop is shown (`showScreen('screen-desktop')`), `_discordAutoExchange()` is called
-8. `_discordAutoExchange()` calls `/api/auth/exchange?code=&state=` — server verifies state again, exchanges code for token (client secret stays server-side), fetches user + guilds, stores in session, returns user JSON
-9. User is stored in `localStorage` + `window._discordLoggedInUser`; Discord app shows profile instantly
-10. The original tab (if still open) detects `localStorage` via `_discordPollInterval` polling and also logs in
-11. **Fallback chain**: if exchange fails → try `/api/auth/user` (existing session) → show error toast
+### Discord OAuth Flow (cool authentication.html)
+1. User clicks "Login with Discord" in Discord app → `discordStartOAuth()` opens `/api/auth/discord` in a new tab
+2. Server generates CSRF state, redirects to Discord's OAuth page
+3. Discord redirects back to `/api/auth/discord-callback?code=&state=`
+4. Server verifies state, then **exchanges the code immediately** (gets username + avatar URL + guilds, stores in session)
+5. Server redirects to `authentication.html?username=...&avatar=...&statecode=...&callbackcode=...`
+6. **`authentication.html`** is a Discord-themed cool loader page: animated avatar ring, fade-in username, 4-step status list (Verifying → Loading → Syncing → Returning), shimmering progress bar, code display, confetti burst on completion
+7. authentication.html calls `/api/auth/user` to get the full user object, saves to `localStorage.discord_user_data`, posts message to opener (if popup), then either closes itself or redirects to `/`
+8. Main app reads `localStorage.discord_user_data` on boot and `_discordPollInterval` so the Discord app shows the profile instantly
+9. **Fallback**: if the callback exchange fails, it falls back to the old `/?discord_code=&discord_state=` flow which uses `/api/auth/exchange`
+
+### VM Launcher (`run_vm_on.html`)
+- 4 plan cards (Free / Pro / Master / Exclusive) with specs and perks
+- Click button → fullscreen launching overlay with: pulsing Windows logo, plan pill, animated progress bar (8 steps "Allocating RAM…", "Spinning up cores…", etc.), 4-spec grid (CPU/RAM/GPU/Storage)
+- Boot animation completes → navigates to `/?plan=...&ram=...&cpu=...&gpu=...&storage=...`
+- script.js IIFE at top reads the params and stores them in `localStorage.vmSpecs` + `window._vmSpecs`; About/Task Manager/Device Manager all read from `_vmSpecs` to show plan-specific hardware
 
 ### Screen Management
 - Multiple "screen" divs for boot, lock, login, desktop, setup steps

@@ -247,9 +247,122 @@
   @media (max-width: 600px) {
     .plans { grid-template-columns: 1fr; }
   }
+
+  /* ============== Launching overlay ============== */
+  #launch-overlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, #0a1929 0%, #000 100%);
+    z-index: 99;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    overflow: hidden;
+  }
+  #launch-overlay.active { display: flex; animation: fadeIn .4s; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .launch-logo {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    width: 80px;
+    margin-bottom: 30px;
+    animation: launchPulse 1.4s ease-in-out infinite;
+  }
+  .launch-logo span { aspect-ratio:1; background: #0078d4; border-radius: 2px; }
+  @keyframes launchPulse {
+    0%,100% { transform: scale(1); opacity: 1; }
+    50%     { transform: scale(1.1); opacity: 0.7; }
+  }
+  .launch-title {
+    font-size: 26px;
+    font-weight: 300;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+  .launch-plan-pill {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    background: linear-gradient(135deg, #5865f2, #9b59b6);
+  }
+  .launch-step {
+    color: #8892b0;
+    font-size: 14px;
+    min-height: 22px;
+    margin-bottom: 24px;
+    transition: opacity .3s;
+  }
+  .launch-bar {
+    width: min(420px, 80vw);
+    height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .launch-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #5865f2, #9b59b6, #ec4899);
+    background-size: 200% 100%;
+    border-radius: 999px;
+    transition: width .35s ease;
+    animation: shimmer 2s linear infinite;
+  }
+  @keyframes shimmer { from { background-position: 0% 0; } to { background-position: 200% 0; } }
+  .launch-specs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    width: min(620px, 90vw);
+    margin-top: 30px;
+  }
+  .launch-spec {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+  .launch-spec .lbl {
+    font-size: 10px;
+    color: #5865f2;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    font-weight: 700;
+  }
+  .launch-spec .val {
+    font-size: 12.5px;
+    color: #c8cce8;
+    font-weight: 600;
+    word-break: break-word;
+  }
+  @media (max-width:600px) {
+    .launch-specs { grid-template-columns: repeat(2,1fr); }
+  }
 </style>
 </head>
 <body>
+
+<!-- ============== VM LAUNCHING OVERLAY ============== -->
+<div id="launch-overlay">
+  <div class="launch-logo"><span></span><span></span><span></span><span></span></div>
+  <div class="launch-title">Booting your VM</div>
+  <div class="launch-plan-pill" id="launch-pill">FREE PLAN</div>
+  <div class="launch-step" id="launch-step">Allocating resources…</div>
+  <div class="launch-bar"><div class="launch-bar-fill" id="launch-fill"></div></div>
+  <div class="launch-specs" id="launch-specs"></div>
+</div>
+
 <div class="container">
 
   <div class="hero">
@@ -284,7 +397,7 @@
         <div class="perk"><span class="perk-check">✓</span> 30+ built-in apps</div>
         <div class="perk"><span class="perk-check">✓</span> Discord OAuth2</div>
       </div>
-      <a class="plan-btn btn-free" href="/?plan=free&ram=8&cpu=3.2&gpu=Intel+UHD&storage=256">Launch Free VM</a>
+      <a class="plan-btn btn-free" href="#" data-plan="free" data-ram="8" data-cpu="3.2" data-gpu="Intel UHD" data-storage="256" data-label="Free Plan" onclick="launchVM(event,this)">Launch Free VM</a>
     </div>
 
     <!-- PRO -->
@@ -309,7 +422,7 @@
         <div class="perk"><span class="perk-check">✓</span> Enhanced Task Manager</div>
         <div class="perk"><span class="perk-check">✓</span> 10x faster simulated speed</div>
       </div>
-      <a class="plan-btn btn-pro" href="/?plan=pro&ram=100&cpu=7.5&gpu=RTX+4070+Ti+12GB&storage=10000">Launch Pro VM</a>
+      <a class="plan-btn btn-pro" href="#" data-plan="pro" data-ram="100" data-cpu="7.5" data-gpu="RTX 4070 Ti 12GB" data-storage="10000" data-label="Pro Plan ⭐" onclick="launchVM(event,this)">Launch Pro VM</a>
     </div>
 
     <!-- MASTER -->
@@ -334,7 +447,7 @@
         <div class="perk"><span class="perk-check">✓</span> Extended Drive storage</div>
         <div class="perk"><span class="perk-check">✓</span> Unlocked hidden apps</div>
       </div>
-      <a class="plan-btn btn-master" href="/?plan=master&ram=250&cpu=8.5&gpu=RTX+4090+24GB&storage=50000">Launch Master VM</a>
+      <a class="plan-btn btn-master" href="#" data-plan="master" data-ram="250" data-cpu="8.5" data-gpu="RTX 4090 24GB" data-storage="50000" data-label="Master Plan ⚡" onclick="launchVM(event,this)">Launch Master VM</a>
     </div>
 
     <!-- EXCLUSIVE -->
@@ -361,7 +474,7 @@
         <div class="perk"><span class="perk-check">✓</span> VIP Task Manager skin</div>
         <div class="perk"><span class="perk-check">✓</span> 100TB cloud backup</div>
       </div>
-      <a class="plan-btn btn-excl" href="/?plan=exclusive&ram=500&cpu=9.0&gpu=RTX+4090+Ti+32GB&storage=100000">Launch Exclusive VM 💎</a>
+      <a class="plan-btn btn-excl" href="#" data-plan="exclusive" data-ram="500" data-cpu="9.0" data-gpu="RTX 4090 Ti 32GB" data-storage="100000" data-label="Exclusive 💎" onclick="launchVM(event,this)">Launch Exclusive VM 💎</a>
     </div>
 
   </div>
@@ -374,6 +487,75 @@
 </div>
 
 <script>
+  // ============== VM LAUNCH SEQUENCE ==============
+  function launchVM(e, btn) {
+    e.preventDefault();
+    const overlay  = document.getElementById('launch-overlay');
+    const pill     = document.getElementById('launch-pill');
+    const stepEl   = document.getElementById('launch-step');
+    const fill     = document.getElementById('launch-fill');
+    const specsEl  = document.getElementById('launch-specs');
+    const plan = btn.dataset.plan, label = btn.dataset.label;
+    const ram = btn.dataset.ram, cpu = btn.dataset.cpu, gpu = btn.dataset.gpu, storage = btn.dataset.storage;
+
+    pill.textContent = label;
+    pill.style.background = btn.classList.contains('btn-excl')
+      ? 'linear-gradient(135deg,#9b59b6,#e91e8c)'
+      : btn.classList.contains('btn-master')
+      ? 'linear-gradient(135deg,#e67e22,#e91e8c)'
+      : btn.classList.contains('btn-pro')
+      ? 'linear-gradient(135deg,#5865f2,#7289da)'
+      : 'linear-gradient(135deg,#3ba55d,#22c55e)';
+
+    specsEl.innerHTML = `
+      <div class="launch-spec"><div class="lbl">CPU</div><div class="val">${cpu} GHz</div></div>
+      <div class="launch-spec"><div class="lbl">RAM</div><div class="val">${ram} GB</div></div>
+      <div class="launch-spec"><div class="lbl">GPU</div><div class="val">${gpu}</div></div>
+      <div class="launch-spec"><div class="lbl">Storage</div><div class="val">${storage>=1000?(storage/1000)+' TB':storage+' GB'}</div></div>
+    `;
+    overlay.classList.add('active');
+
+    const steps = [
+      'Allocating ' + ram + ' GB of memory…',
+      'Spinning up ' + cpu + ' GHz cores…',
+      'Initialising ' + gpu + ' display adapter…',
+      'Mounting ' + (storage>=1000?(storage/1000)+' TB':storage+' GB') + ' virtual disk…',
+      'Loading Windows 10 kernel…',
+      'Starting system services…',
+      'Preparing desktop environment…',
+      'Almost ready…'
+    ];
+    let i = 0, p = 0;
+    stepEl.textContent = steps[0];
+    const tick = setInterval(() => {
+      p += Math.random() * 7 + 4;
+      if (p > 100) p = 100;
+      fill.style.width = p + '%';
+      const want = Math.min(steps.length - 1, Math.floor((p / 100) * steps.length));
+      if (want !== i) {
+        i = want;
+        stepEl.style.opacity = 0;
+        setTimeout(() => {
+          stepEl.textContent = steps[i];
+          stepEl.style.opacity = 1;
+        }, 150);
+      }
+      if (p >= 100) {
+        clearInterval(tick);
+        stepEl.textContent = '✓ VM ready — launching Windows 10';
+        stepEl.style.color = '#3ba55d';
+        setTimeout(() => {
+          const params = new URLSearchParams({
+            plan, ram, cpu,
+            gpu: gpu.replace(/ /g, '+'),
+            storage
+          });
+          location.href = '/?' + params.toString();
+        }, 700);
+      }
+    }, 180);
+  }
+
   // Add particle effect
   const canvas = document.createElement('canvas');
   canvas.style.cssText = 'position:fixed;top:0;left:0;pointer-events:none;z-index:0;opacity:0.4;';

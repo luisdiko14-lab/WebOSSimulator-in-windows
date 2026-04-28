@@ -350,12 +350,29 @@ app.get('/api/auth/discord-callback', async (req, res) => {
     }
 
     // Mark state as used so it can't be replayed
-    req.session.pendingCode = code;
     req.session.oauthStateVerified = true;
 
-    // Redirect to the main app — it will auto-exchange using /api/auth/exchange
-    log.info(`State verified, redirecting to main app with code`);
-    res.redirect(`/?discord_code=${encodeURIComponent(code)}&discord_state=${encodeURIComponent(state)}`);
+    // Exchange the code immediately so we have the username + avatar to show on
+    // authentication.html (this is the "cool loading" page).
+    try {
+        const user = await exchangeDiscordCode(code, req);
+        // One-time state values cleared so /api/auth/exchange won't re-run
+        delete req.session.oauthStateVerified;
+        delete req.session.oauthState;
+
+        const params = new URLSearchParams({
+            username:     user.username || 'user',
+            avatar:       user.avatar   || '',
+            statecode:    state,
+            callbackcode: code
+        });
+        log.success(`Discord auth complete — sending ${user.username} to authentication.html`);
+        res.redirect(`/authentication.html?${params.toString()}`);
+    } catch (err) {
+        log.error(`Callback exchange failed: ${err.message}`);
+        // Fall back to the old flow so the main app can retry
+        res.redirect(`/?discord_code=${encodeURIComponent(code)}&discord_state=${encodeURIComponent(state)}`);
+    }
 });
 
 /* ─────────────────────────────────────────────────────────────────
