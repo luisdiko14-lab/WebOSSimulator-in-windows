@@ -1251,7 +1251,249 @@ function updateCalculatorDisplay() {
 }
 
 function createNotepad() {
-    return '<textarea class="notepad-textarea" placeholder="Start typing..."></textarea>';
+    setTimeout(() => initNotepad(), 100);
+    return `
+    <div style="display:flex;flex-direction:column;height:100%;background:white;font-family:Segoe UI,sans-serif;">
+      <!-- Menu bar -->
+      <div style="background:#f3f3f3;border-bottom:1px solid #ddd;padding:2px 8px;display:flex;gap:0;font-size:13px;user-select:none;">
+        ${['File','Edit','Format','View','Help'].map(m => `
+          <div class="np-menu" data-menu="${m}" onclick="npMenu('${m}',event)" style="padding:5px 12px;cursor:pointer;border-radius:3px;" onmouseover="this.style.background='#e5f1fb'" onmouseout="this.style.background='transparent'">${m}</div>`).join('')}
+      </div>
+
+      <!-- Toolbar -->
+      <div style="background:#fafafa;border-bottom:1px solid #eee;padding:6px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button onclick="npNew()" style="padding:5px 10px;background:white;border:1px solid #ccc;border-radius:3px;cursor:pointer;font-size:12px;">📄 New</button>
+        <button onclick="npOpen()" style="padding:5px 10px;background:white;border:1px solid #ccc;border-radius:3px;cursor:pointer;font-size:12px;">📂 Open</button>
+        <button onclick="npSave()" style="padding:5px 10px;background:#0078d4;color:white;border:none;border-radius:3px;cursor:pointer;font-size:12px;">💾 Save</button>
+        <button onclick="npFindShow()" style="padding:5px 10px;background:white;border:1px solid #ccc;border-radius:3px;cursor:pointer;font-size:12px;">🔍 Find</button>
+        <button onclick="npReplaceShow()" style="padding:5px 10px;background:white;border:1px solid #ccc;border-radius:3px;cursor:pointer;font-size:12px;">🔁 Replace</button>
+        <button onclick="npDateTime()" style="padding:5px 10px;background:white;border:1px solid #ccc;border-radius:3px;cursor:pointer;font-size:12px;">📅 Date/Time</button>
+        <span style="width:1px;height:20px;background:#ddd;"></span>
+        <label style="font-size:12px;color:#444;">Font:</label>
+        <select id="np-font" onchange="npApplyStyle()" style="padding:4px 6px;font-size:12px;border:1px solid #ccc;border-radius:3px;">
+          <option>Consolas</option><option>Segoe UI</option><option>Arial</option><option>Calibri</option>
+          <option>Courier New</option><option>Times New Roman</option><option>Verdana</option><option>Comic Sans MS</option>
+          <option>Georgia</option><option>Trebuchet MS</option>
+        </select>
+        <label style="font-size:12px;color:#444;">Size:</label>
+        <select id="np-size" onchange="npApplyStyle()" style="padding:4px 6px;font-size:12px;border:1px solid #ccc;border-radius:3px;">
+          ${[10,11,12,14,16,18,20,24,28,32,40,48].map(s => `<option ${s===14?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <button onclick="document.getElementById('np-area').style.fontWeight=document.getElementById('np-area').style.fontWeight==='bold'?'normal':'bold'" style="padding:5px 10px;background:white;border:1px solid #ccc;border-radius:3px;cursor:pointer;font-size:12px;font-weight:bold;">B</button>
+        <button onclick="document.getElementById('np-area').style.fontStyle=document.getElementById('np-area').style.fontStyle==='italic'?'normal':'italic'" style="padding:5px 10px;background:white;border:1px solid #ccc;border-radius:3px;cursor:pointer;font-size:12px;font-style:italic;">I</button>
+        <input type="color" value="#000000" onchange="document.getElementById('np-area').style.color=this.value" style="width:28px;height:24px;border:1px solid #ccc;cursor:pointer;padding:0;" title="Text color">
+        <label style="font-size:12px;color:#444;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="np-wrap" checked onchange="document.getElementById('np-area').style.whiteSpace=this.checked?'pre-wrap':'pre';document.getElementById('np-area').style.wordWrap=this.checked?'break-word':'normal'"> Word wrap</label>
+      </div>
+
+      <!-- Find/Replace bar (hidden) -->
+      <div id="np-find-bar" style="display:none;background:#fff8dc;border-bottom:1px solid #e8d97a;padding:6px 10px;align-items:center;gap:6px;flex-wrap:wrap;">
+        <input id="np-find-input" placeholder="Find..." onkeydown="if(event.key==='Enter')npFindNext()" style="padding:5px 8px;border:1px solid #ccc;border-radius:3px;font-size:12px;width:160px;">
+        <input id="np-replace-input" placeholder="Replace with..." onkeydown="if(event.key==='Enter')npReplaceOne()" style="padding:5px 8px;border:1px solid #ccc;border-radius:3px;font-size:12px;width:160px;">
+        <button onclick="npFindNext()" style="padding:4px 10px;font-size:12px;cursor:pointer;background:white;border:1px solid #ccc;border-radius:3px;">▼ Next</button>
+        <button onclick="npFindPrev()" style="padding:4px 10px;font-size:12px;cursor:pointer;background:white;border:1px solid #ccc;border-radius:3px;">▲ Prev</button>
+        <button onclick="npReplaceOne()" style="padding:4px 10px;font-size:12px;cursor:pointer;background:white;border:1px solid #ccc;border-radius:3px;">Replace</button>
+        <button onclick="npReplaceAll()" style="padding:4px 10px;font-size:12px;cursor:pointer;background:#0078d4;color:white;border:none;border-radius:3px;">Replace all</button>
+        <label style="font-size:11px;display:flex;align-items:center;gap:3px;"><input type="checkbox" id="np-find-case"> Match case</label>
+        <span id="np-find-status" style="font-size:11px;color:#666;margin-left:auto;"></span>
+        <button onclick="document.getElementById('np-find-bar').style.display='none'" style="padding:2px 8px;cursor:pointer;background:transparent;border:none;font-size:14px;">✕</button>
+      </div>
+
+      <!-- Text area -->
+      <textarea id="np-area" class="notepad-textarea" placeholder="Start typing..."
+        style="flex:1;border:none;outline:none;resize:none;padding:14px 18px;font-family:Consolas,monospace;font-size:14px;line-height:1.5;color:#000;background:white;width:100%;box-sizing:border-box;"
+        oninput="npUpdateStats()"></textarea>
+
+      <!-- Status bar -->
+      <div style="background:#0078d4;color:white;padding:4px 14px;font-size:11px;display:flex;gap:18px;">
+        <span id="np-pos">Ln 1, Col 1</span>
+        <span id="np-words">0 words</span>
+        <span id="np-chars">0 chars (0 selected)</span>
+        <span id="np-lines">1 line</span>
+        <span style="margin-left:auto;">UTF-8 · CRLF · 100%</span>
+      </div>
+    </div>`;
+}
+
+function initNotepad() {
+    const a = document.getElementById('np-area');
+    if (!a) return;
+    a.addEventListener('keyup', npUpdateStats);
+    a.addEventListener('click', npUpdateStats);
+    a.addEventListener('select', npUpdateStats);
+    npUpdateStats();
+}
+
+function npUpdateStats() {
+    const a = document.getElementById('np-area');
+    if (!a) return;
+    const text = a.value;
+    const sel = text.substring(a.selectionStart, a.selectionEnd);
+    const words = (text.match(/\S+/g) || []).length;
+    const lines = text.split(/\r\n|\r|\n/).length;
+    const before = text.substring(0, a.selectionStart);
+    const ln = before.split(/\r\n|\r|\n/).length;
+    const col = before.length - before.lastIndexOf('\n');
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('np-pos', `Ln ${ln}, Col ${col}`);
+    set('np-words', `${words} words`);
+    set('np-chars', `${text.length} chars (${sel.length} selected)`);
+    set('np-lines', `${lines} line${lines!==1?'s':''}`);
+}
+
+function npApplyStyle() {
+    const a = document.getElementById('np-area');
+    const f = document.getElementById('np-font')?.value;
+    const s = document.getElementById('np-size')?.value;
+    if (a) {
+        if (f) a.style.fontFamily = f + ',monospace';
+        if (s) a.style.fontSize = s + 'px';
+    }
+}
+
+function npNew() {
+    const a = document.getElementById('np-area');
+    if (!a) return;
+    if (a.value && !confirm('Discard current document?')) return;
+    a.value = '';
+    npUpdateStats();
+}
+
+function npOpen() {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = '.txt,.md,.log,.json,.js,.css,.html,.csv,text/*';
+    inp.onchange = (e) => {
+        const f = e.target.files?.[0];
+        if (!f) return;
+        const r = new FileReader();
+        r.onload = (ev) => {
+            const a = document.getElementById('np-area');
+            if (a) { a.value = ev.target.result; npUpdateStats(); }
+        };
+        r.readAsText(f);
+    };
+    inp.click();
+}
+
+function npSave() {
+    const a = document.getElementById('np-area');
+    if (!a) return;
+    const blob = new Blob([a.value], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'untitled.txt';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 200);
+    if (typeof addNotification === 'function') addNotification('📝', 'Notepad', 'Saved as untitled.txt');
+}
+
+function npFindShow() {
+    const bar = document.getElementById('np-find-bar');
+    if (bar) { bar.style.display = 'flex'; document.getElementById('np-find-input')?.focus(); }
+}
+
+function npReplaceShow() {
+    npFindShow();
+    document.getElementById('np-replace-input')?.focus();
+}
+
+function npFindNext(reverse) {
+    const a = document.getElementById('np-area');
+    const q = document.getElementById('np-find-input')?.value;
+    const cs = document.getElementById('np-find-case')?.checked;
+    if (!a || !q) return;
+    const hay = cs ? a.value : a.value.toLowerCase();
+    const needle = cs ? q : q.toLowerCase();
+    const start = a.selectionEnd;
+    let idx = reverse ? hay.lastIndexOf(needle, a.selectionStart - 1) : hay.indexOf(needle, start);
+    if (idx === -1) idx = reverse ? hay.lastIndexOf(needle) : hay.indexOf(needle); // wrap
+    const status = document.getElementById('np-find-status');
+    if (idx === -1) { if (status) status.textContent = 'Not found'; return; }
+    a.focus();
+    a.setSelectionRange(idx, idx + q.length);
+    if (status) status.textContent = `Found at ${idx + 1}`;
+    npUpdateStats();
+}
+
+function npFindPrev() { npFindNext(true); }
+
+function npReplaceOne() {
+    const a = document.getElementById('np-area');
+    const q = document.getElementById('np-find-input')?.value;
+    const r = document.getElementById('np-replace-input')?.value || '';
+    if (!a || !q) return;
+    const sel = a.value.substring(a.selectionStart, a.selectionEnd);
+    const cs = document.getElementById('np-find-case')?.checked;
+    if ((cs && sel === q) || (!cs && sel.toLowerCase() === q.toLowerCase())) {
+        a.setRangeText(r, a.selectionStart, a.selectionEnd, 'end');
+        npUpdateStats();
+    }
+    npFindNext();
+}
+
+function npReplaceAll() {
+    const a = document.getElementById('np-area');
+    const q = document.getElementById('np-find-input')?.value;
+    const r = document.getElementById('np-replace-input')?.value || '';
+    const cs = document.getElementById('np-find-case')?.checked;
+    if (!a || !q) return;
+    const flags = cs ? 'g' : 'gi';
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
+    const before = a.value;
+    a.value = before.replace(re, r);
+    const n = (before.match(re) || []).length;
+    const status = document.getElementById('np-find-status');
+    if (status) status.textContent = `Replaced ${n} occurrence${n!==1?'s':''}`;
+    npUpdateStats();
+}
+
+function npDateTime() {
+    const a = document.getElementById('np-area');
+    if (!a) return;
+    const now = new Date();
+    const stamp = now.toLocaleString();
+    const start = a.selectionStart;
+    a.value = a.value.slice(0, start) + stamp + a.value.slice(a.selectionEnd);
+    a.selectionStart = a.selectionEnd = start + stamp.length;
+    npUpdateStats();
+}
+
+function npMenu(menu, evt) {
+    const items = {
+        File:    [['📄 New','npNew()'],['📂 Open...','npOpen()'],['💾 Save','npSave()'],['—',null],['🖨 Print','window.print()']],
+        Edit:    [['↶ Undo','document.execCommand(\'undo\')'],['↷ Redo','document.execCommand(\'redo\')'],['—',null],['✂ Cut','document.execCommand(\'cut\')'],['📋 Copy','document.execCommand(\'copy\')'],['📥 Paste','document.execCommand(\'paste\')'],['—',null],['🔍 Find','npFindShow()'],['🔁 Replace','npReplaceShow()'],['—',null],['🅰 Select All','document.getElementById(\'np-area\').select()'],['📅 Date/Time','npDateTime()']],
+        Format:  [['📐 Word Wrap','document.getElementById(\'np-wrap\').click()'],['🔤 Font...','document.getElementById(\'np-font\').focus()']],
+        View:    [['📊 Status Bar','']],
+        Help:    [['ℹ️ About Notepad','alert(\'Notepad\\nWindows 10 Simulator\\nVersion 10.0\')']]
+    };
+    document.querySelectorAll('.np-popup').forEach(p => p.remove());
+    const list = items[menu] || [];
+    const pop = document.createElement('div');
+    pop.className = 'np-popup';
+    pop.style.cssText = 'position:fixed;background:white;border:1px solid #999;box-shadow:2px 2px 8px rgba(0,0,0,0.2);min-width:200px;z-index:9999;padding:4px 0;font-size:13px;';
+    const r = evt.target.getBoundingClientRect();
+    pop.style.left = r.left + 'px';
+    pop.style.top = (r.bottom + 2) + 'px';
+    list.forEach(([label, action]) => {
+        if (label === '—') {
+            const sep = document.createElement('div');
+            sep.style.cssText = 'border-top:1px solid #eee;margin:4px 0;';
+            pop.appendChild(sep);
+        } else {
+            const it = document.createElement('div');
+            it.textContent = label;
+            it.style.cssText = 'padding:6px 16px;cursor:pointer;';
+            it.onmouseover = () => it.style.background = '#e5f1fb';
+            it.onmouseout = () => it.style.background = 'transparent';
+            it.onclick = () => { try { eval(action); } catch(e){} pop.remove(); };
+            pop.appendChild(it);
+        }
+    });
+    document.body.appendChild(pop);
+    setTimeout(() => {
+        const close = (e) => { if (!pop.contains(e.target)) { pop.remove(); document.removeEventListener('click', close); } };
+        document.addEventListener('click', close);
+    }, 50);
 }
 
 let explorerPath = 'This PC';
@@ -2597,72 +2839,20 @@ function edgeLoadUrl(url) {
     const siteName = hostname.replace('www.','');
     const isHttps = url.startsWith('https');
 
+    // Route through our server-side proxy so X-Frame-Options/CSP can't block it
+    const proxiedSrc = '/proxy?url=' + encodeURIComponent(url);
+
     content.innerHTML = `
         <div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;background:#f3f3f3;">
-          <div id="edge-load-bar" style="background:linear-gradient(90deg,#0078d4,#50a0ff);height:3px;width:0%;transition:width 1s ease;"></div>
-          <iframe id="edge-iframe" src="${url}"
+          <div id="edge-load-bar" style="background:linear-gradient(90deg,#0078d4,#50a0ff);height:3px;width:0%;transition:width 0.6s ease;"></div>
+          <iframe id="edge-iframe" src="${proxiedSrc}"
             style="flex:1;border:none;width:100%;background:white;"
             referrerpolicy="no-referrer"
-            onload="edgeIframeLoaded(this,'${url.replace(/'/g,"\\'")}')">
+            onload="var lb=document.getElementById('edge-load-bar');if(lb){lb.style.width='100%';setTimeout(()=>{if(lb)lb.style.display='none';},400);}">
           </iframe>
-          <div id="edge-blocked-overlay" style="display:none;position:absolute;inset:0;top:3px;background:white;flex-direction:column;align-items:center;justify-content:center;z-index:10;">
-            <div style="text-align:center;max-width:500px;padding:40px;">
-              <div style="font-size:64px;margin-bottom:20px;">🌐</div>
-              <h2 style="font-size:22px;color:#1a1a1a;margin-bottom:8px;">${siteName}</h2>
-              <p style="color:#666;font-size:14px;margin-bottom:6px;">${url}</p>
-              <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:14px 20px;margin:20px 0;text-align:left;font-size:13px;">
-                <strong>⚠️ This page can't be shown here</strong><br>
-                <span style="color:#666;font-size:12px;">${siteName} has a security policy that prevents it from being embedded inside other windows. This is normal behaviour for most major websites.</span>
-              </div>
-              <button onclick="window.open('${url}','_blank')" style="background:#0078d4;color:white;border:none;border-radius:6px;padding:12px 28px;font-size:15px;cursor:pointer;font-weight:600;margin-right:10px;">🔗 Open ${siteName} in browser</button>
-              <button onclick="document.getElementById('edge-blocked-overlay').style.display='none';document.getElementById('edge-iframe').style.display='flex';" style="background:#f3f3f3;border:1px solid #ccc;border-radius:6px;padding:12px 20px;font-size:14px;cursor:pointer;">Try anyway</button>
-            </div>
-          </div>
         </div>`;
 
-    // animate the loading bar
-    setTimeout(() => {
-        const lb = document.getElementById('edge-load-bar');
-        if (lb) lb.style.width = '80%';
-    }, 50);
-    setTimeout(() => {
-        const lb = document.getElementById('edge-load-bar');
-        if (lb) { lb.style.width = '100%'; setTimeout(() => { if(lb) lb.style.display = 'none'; }, 400); }
-        // Check if iframe actually loaded content (many sites block with X-Frame-Options)
-        const iframe = document.getElementById('edge-iframe');
-        if (iframe) {
-            try {
-                // If we can access contentDocument and it has body, it loaded fine
-                const doc = iframe.contentDocument || iframe.contentWindow?.document;
-                if (!doc || doc.body === null || (doc.body && doc.body.innerHTML === '')) {
-                    showEdgeBlockedOverlay();
-                }
-            } catch(e) {
-                // Cross-origin means it loaded (browser enforces same-origin, not X-Frame-Options here)
-                // so do nothing - the content is there
-            }
-        }
-    }, 2000);
-}
-
-function edgeIframeLoaded(iframe, url) {
-    try {
-        const doc = iframe.contentDocument || iframe.contentWindow?.document;
-        if (!doc || !doc.body || doc.body.innerHTML.trim() === '') {
-            showEdgeBlockedOverlay();
-        }
-    } catch(e) {
-        // Cross-origin means site actually loaded — that's fine
-    }
-}
-
-function showEdgeBlockedOverlay() {
-    const overlay = document.getElementById('edge-blocked-overlay');
-    if (overlay) {
-        overlay.style.display = 'flex';
-        const iframe = document.getElementById('edge-iframe');
-        if (iframe) iframe.style.display = 'none';
-    }
+    setTimeout(() => { const lb = document.getElementById('edge-load-bar'); if (lb) lb.style.width = '70%'; }, 60);
 }
 
 function edgeNav(action) {
@@ -3022,43 +3212,20 @@ function chromeLoadUrl(url) {
     try { hostname = new URL(url).hostname; } catch(e) { hostname = url; }
     const siteName = hostname.replace('www.','');
 
+    // Route through proxy to bypass X-Frame-Options/CSP
+    const proxiedSrc = '/proxy?url=' + encodeURIComponent(url);
+
     content.innerHTML = `
         <div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;background:#f1f3f4;">
-          <div id="chrome-load-bar" style="background:linear-gradient(90deg,#4285f4,#34a853);height:3px;width:0%;transition:width 1s ease;position:absolute;top:0;left:0;z-index:5;"></div>
-          <iframe id="chrome-iframe" src="${url}"
+          <div id="chrome-load-bar" style="background:linear-gradient(90deg,#4285f4,#34a853);height:3px;width:0%;transition:width 0.6s ease;position:absolute;top:0;left:0;z-index:5;"></div>
+          <iframe id="chrome-iframe" src="${proxiedSrc}"
             style="flex:1;border:none;width:100%;height:100%;background:white;"
             referrerpolicy="no-referrer"
-            onload="chromeIframeLoaded(this,'${url.replace(/'/g,"\\'")}')">
+            onload="var lb=document.getElementById('chrome-load-bar');if(lb){lb.style.width='100%';setTimeout(()=>{if(lb)lb.style.display='none';},400);}">
           </iframe>
-          <div id="chrome-blocked-overlay" style="display:none;position:absolute;inset:0;background:white;flex-direction:column;align-items:center;justify-content:center;z-index:10;">
-            <div style="text-align:center;max-width:500px;padding:40px;">
-              <div style="font-size:64px;margin-bottom:20px;">🌐</div>
-              <h2 style="font-size:22px;color:#202124;margin-bottom:8px;">${siteName}</h2>
-              <p style="color:#5f6368;font-size:14px;margin-bottom:6px;">${url}</p>
-              <div style="background:#fef7e0;border:1px solid #fbbc04;border-radius:8px;padding:14px 20px;margin:20px 0;text-align:left;font-size:13px;">
-                <strong>⚠️ This page can't be shown here</strong><br>
-                <span style="color:#5f6368;font-size:12px;">${siteName} has a security policy that prevents it from being embedded. This is normal for most major websites.</span>
-              </div>
-              <button onclick="window.open('${url}','_blank')" style="background:#4285f4;color:white;border:none;border-radius:6px;padding:12px 28px;font-size:15px;cursor:pointer;font-weight:600;margin-right:10px;">🔗 Open ${siteName} in browser</button>
-              <button onclick="document.getElementById('chrome-blocked-overlay').style.display='none';document.getElementById('chrome-iframe').style.display='block';" style="background:#f1f3f4;border:1px solid #dadce0;border-radius:6px;padding:12px 20px;font-size:14px;cursor:pointer;">Try anyway</button>
-            </div>
-          </div>
         </div>`;
 
-    setTimeout(() => { const lb = document.getElementById('chrome-load-bar'); if(lb) lb.style.width = '80%'; }, 50);
-    setTimeout(() => {
-        const lb = document.getElementById('chrome-load-bar');
-        if (lb) { lb.style.width = '100%'; setTimeout(() => { if(lb) lb.style.display='none'; }, 300); }
-        const iframe = document.getElementById('chrome-iframe');
-        if (iframe) {
-            try {
-                const doc = iframe.contentDocument || iframe.contentWindow?.document;
-                if (!doc || doc.body === null || (doc.body && doc.body.innerHTML.trim() === '')) {
-                    showChromeBlockedOverlay();
-                }
-            } catch(e) { /* cross-origin = actually loaded */ }
-        }
-    }, 2000);
+    setTimeout(() => { const lb = document.getElementById('chrome-load-bar'); if(lb) lb.style.width = '70%'; }, 60);
 }
 
 function chromeIframeLoaded(iframe, url) {
@@ -3526,118 +3693,545 @@ let isDrawing = false;
 
 function createPaint() {
     setTimeout(() => initPaintCanvas(), 100);
-    
+    const palette = [
+        '#000000','#7f7f7f','#880015','#ed1c24','#ff7f27','#fff200','#22b14c','#00a2e8','#3f48cc','#a349a4',
+        '#ffffff','#c3c3c3','#b97a57','#ffaec9','#ffc90e','#efe4b0','#b5e61d','#99d9ea','#7092be','#c8bfe7'
+    ];
     return `
-        <div class="paint-app" style="height: 100%; display: flex; flex-direction: column; background: #f0f0f0;">
-            <div class="paint-toolbar" style="padding: 10px; background: white; border-bottom: 1px solid #ccc; display: flex; gap: 15px; align-items: center;">
-                <div class="paint-colors" style="display: flex; gap: 5px;">
-                    <div class="paint-color active" style="width: 20px; height: 20px; background:#000; cursor: pointer; border: 1px solid #999;" onclick="setPaintColor('#000', this)"></div>
-                    <div class="paint-color" style="width: 20px; height: 20px; background:#fff; cursor: pointer; border: 1px solid #999;" onclick="setPaintColor('#fff', this)"></div>
-                    <div class="paint-color" style="width: 20px; height: 20px; background:#ff0000; cursor: pointer; border: 1px solid #999;" onclick="setPaintColor('#ff0000', this)"></div>
-                    <div class="paint-color" style="width: 20px; height: 20px; background:#00ff00; cursor: pointer; border: 1px solid #999;" onclick="setPaintColor('#00ff00', this)"></div>
-                    <div class="paint-color" style="width: 20px; height: 20px; background:#0000ff; cursor: pointer; border: 1px solid #999;" onclick="setPaintColor('#0000ff', this)"></div>
-                </div>
-                <div class="paint-tools" style="display: flex; gap: 5px;">
-                    <button class="paint-tool active" onclick="setPaintTool('brush', this)" style="padding: 5px 10px; cursor: pointer;">🖌️ Brush</button>
-                    <button class="paint-tool" onclick="setPaintTool('eraser', this)" style="padding: 5px 10px; cursor: pointer;">🧹 Eraser</button>
-                    <button class="paint-tool" onclick="clearCanvas()" style="padding: 5px 10px; cursor: pointer;">🗑️ Clear</button>
-                </div>
-                <label style="display: flex; align-items: center; gap: 5px;">Size: <input type="range" class="paint-size" min="1" max="50" value="5" oninput="paintSize=this.value"></label>
-            </div>
-            <div class="paint-canvas-container" style="flex: 1; overflow: auto; padding: 20px; background: #adb5bd; display: flex; justify-content: center; align-items: center;">
-                <canvas id="paint-canvas" width="600" height="400" style="background: white; box-shadow: 0 0 10px rgba(0,0,0,0.2); cursor: crosshair;"></canvas>
-            </div>
+    <div class="paint-app" style="height:100%;display:flex;flex-direction:column;background:#f0f0f0;font-family:Segoe UI,sans-serif;">
+      <!-- Ribbon -->
+      <div style="background:white;border-bottom:1px solid #d0d0d0;padding:8px 12px;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;">
+
+        <!-- Tools group -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div style="display:grid;grid-template-columns:repeat(4,32px);gap:2px;">
+            <button class="paint-tool active" data-tool="brush"  onclick="setPaintTool('brush',this)"  title="Brush"     style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">🖌️</button>
+            <button class="paint-tool"        data-tool="pencil" onclick="setPaintTool('pencil',this)" title="Pencil"    style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">✏️</button>
+            <button class="paint-tool"        data-tool="eraser" onclick="setPaintTool('eraser',this)" title="Eraser"    style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">🧹</button>
+            <button class="paint-tool"        data-tool="fill"   onclick="setPaintTool('fill',this)"   title="Fill"      style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">🪣</button>
+            <button class="paint-tool"        data-tool="picker" onclick="setPaintTool('picker',this)" title="Color picker" style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">💧</button>
+            <button class="paint-tool"        data-tool="text"   onclick="setPaintTool('text',this)"   title="Text"      style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">🅰️</button>
+            <button class="paint-tool"        data-tool="line"   onclick="setPaintTool('line',this)"   title="Line"      style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">📏</button>
+            <button class="paint-tool"        data-tool="spray"  onclick="setPaintTool('spray',this)"  title="Airbrush"  style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">💨</button>
+          </div>
+          <div style="font-size:10px;color:#666;">Tools</div>
         </div>
-    `;
+
+        <!-- Shapes group -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div style="display:grid;grid-template-columns:repeat(4,32px);gap:2px;">
+            <button class="paint-tool" data-tool="rect"      onclick="setPaintTool('rect',this)"      title="Rectangle" style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">▭</button>
+            <button class="paint-tool" data-tool="circle"    onclick="setPaintTool('circle',this)"    title="Ellipse"   style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">⬭</button>
+            <button class="paint-tool" data-tool="triangle"  onclick="setPaintTool('triangle',this)"  title="Triangle"  style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">△</button>
+            <button class="paint-tool" data-tool="star"      onclick="setPaintTool('star',this)"      title="Star"      style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">★</button>
+            <button class="paint-tool" data-tool="heart"     onclick="setPaintTool('heart',this)"     title="Heart"     style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">♥</button>
+            <button class="paint-tool" data-tool="arrow"     onclick="setPaintTool('arrow',this)"     title="Arrow"     style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">→</button>
+            <button class="paint-tool" data-tool="diamond"   onclick="setPaintTool('diamond',this)"   title="Diamond"   style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">◆</button>
+            <button class="paint-tool" data-tool="hexagon"   onclick="setPaintTool('hexagon',this)"   title="Hexagon"   style="padding:6px;font-size:14px;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:3px;">⬡</button>
+          </div>
+          <div style="font-size:10px;color:#666;">Shapes</div>
+        </div>
+
+        <!-- Size + colors -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div style="display:flex;gap:4px;align-items:center;">
+            <label style="font-size:11px;">Size</label>
+            <input type="range" class="paint-size" min="1" max="60" value="5" oninput="paintSize=parseInt(this.value);document.getElementById('paint-size-num').textContent=this.value">
+            <span id="paint-size-num" style="font-size:11px;width:18px;color:#444;">5</span>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center;">
+            <input type="color" id="paint-custom-color" value="#000000" onchange="setPaintColor(this.value)" style="width:30px;height:22px;border:1px solid #ccc;cursor:pointer;padding:0;">
+            <label style="font-size:11px;">Fill</label>
+            <input type="checkbox" id="paint-fill-shape" checked> 
+          </div>
+          <div style="font-size:10px;color:#666;">Style</div>
+        </div>
+
+        <!-- Color palette -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div style="display:grid;grid-template-columns:repeat(10,18px);gap:2px;">
+            ${palette.map((c,i) => `<div class="paint-color${i===0?' active':''}" style="width:18px;height:18px;background:${c};cursor:pointer;border:1px solid ${i===0?'#0078d4':'#999'};" onclick="setPaintColor('${c}',this)" title="${c}"></div>`).join('')}
+          </div>
+          <div style="font-size:10px;color:#666;">Colors</div>
+        </div>
+
+        <!-- Actions -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-left:auto;">
+          <div style="display:grid;grid-template-columns:repeat(3,auto);gap:4px;">
+            <button onclick="paintUndo()" title="Undo (Ctrl+Z)" style="padding:6px 10px;font-size:13px;cursor:pointer;background:#f0f0f0;border:1px solid #ccc;border-radius:3px;">↶ Undo</button>
+            <button onclick="paintRedo()" title="Redo (Ctrl+Y)" style="padding:6px 10px;font-size:13px;cursor:pointer;background:#f0f0f0;border:1px solid #ccc;border-radius:3px;">↷ Redo</button>
+            <button onclick="clearCanvas()" title="Clear" style="padding:6px 10px;font-size:13px;cursor:pointer;background:#f0f0f0;border:1px solid #ccc;border-radius:3px;">🗑️ Clear</button>
+            <button onclick="paintDownload()" title="Save as PNG" style="padding:6px 10px;font-size:13px;cursor:pointer;background:#0078d4;color:white;border:none;border-radius:3px;">💾 Save</button>
+            <button onclick="paintLoadImage()" title="Open image" style="padding:6px 10px;font-size:13px;cursor:pointer;background:#f0f0f0;border:1px solid #ccc;border-radius:3px;">📂 Open</button>
+            <button onclick="paintFillAll()" title="Fill canvas with current color" style="padding:6px 10px;font-size:13px;cursor:pointer;background:#f0f0f0;border:1px solid #ccc;border-radius:3px;">🎨 Fill all</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canvas area -->
+      <div class="paint-canvas-container" style="flex:1;overflow:auto;padding:20px;background:#adb5bd;display:flex;justify-content:center;align-items:flex-start;position:relative;">
+        <canvas id="paint-canvas" width="800" height="500" style="background:white;box-shadow:0 0 12px rgba(0,0,0,0.25);cursor:crosshair;"></canvas>
+        <canvas id="paint-overlay" width="800" height="500" style="position:absolute;background:transparent;pointer-events:none;box-shadow:0 0 12px rgba(0,0,0,0);"></canvas>
+      </div>
+
+      <!-- Status bar -->
+      <div style="background:#0078d4;color:white;padding:4px 14px;font-size:11px;display:flex;gap:18px;">
+        <span id="paint-pos">📍 0, 0</span>
+        <span id="paint-canvas-info">📐 800 × 500 px</span>
+        <span id="paint-tool-info">🖌️ Brush</span>
+        <span id="paint-color-info">🎨 #000000</span>
+      </div>
+    </div>`;
 }
+
+let paintIsDrawing = false;
+let paintStartX = 0, paintStartY = 0;
+let paintLastX = 0, paintLastY = 0;
+let paintHistory = [];
+let paintHistoryIdx = -1;
+let paintSavedSnapshot = null;
 
 function initPaintCanvas() {
     const canvas = document.getElementById('paint-canvas');
-    if (!canvas) return;
-    
+    const overlay = document.getElementById('paint-overlay');
+    if (!canvas || !overlay) return;
+
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    let paintIsDrawing = false;
+    paintHistory = [canvas.toDataURL()];
+    paintHistoryIdx = 0;
+    paintIsDrawing = false;
+
+    // Position overlay exactly over the canvas
+    overlay.style.left = canvas.offsetLeft + 'px';
+    overlay.style.top = canvas.offsetTop + 'px';
+
+    const getPos = (e) => {
+        const r = canvas.getBoundingClientRect();
+        return [e.clientX - r.left, e.clientY - r.top];
+    };
 
     canvas.addEventListener('mousedown', (e) => {
+        const [x, y] = getPos(e);
         paintIsDrawing = true;
-        drawPaint(e);
-    });
-    canvas.addEventListener('mousemove', drawPaint);
-    canvas.addEventListener('mouseup', () => paintIsDrawing = false);
-    canvas.addEventListener('mouseout', () => paintIsDrawing = false);
+        paintStartX = x; paintStartY = y;
+        paintLastX = x; paintLastY = y;
+        paintSavedSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-    function drawPaint(e) {
+        if (paintTool === 'brush' || paintTool === 'pencil' || paintTool === 'eraser' || paintTool === 'spray') {
+            drawPoint(ctx, x, y);
+        } else if (paintTool === 'fill') {
+            floodFill(ctx, Math.floor(x), Math.floor(y), paintColor);
+            paintIsDrawing = false;
+            paintCommit();
+        } else if (paintTool === 'picker') {
+            const px = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data;
+            const hex = '#' + [px[0],px[1],px[2]].map(n => n.toString(16).padStart(2,'0')).join('');
+            setPaintColor(hex);
+            const ci = document.getElementById('paint-custom-color');
+            if (ci) ci.value = hex;
+            paintIsDrawing = false;
+        } else if (paintTool === 'text') {
+            const txt = prompt('Enter text:');
+            if (txt) {
+                ctx.fillStyle = paintColor;
+                ctx.font = (paintSize * 3) + 'px Segoe UI';
+                ctx.fillText(txt, x, y);
+                paintCommit();
+            }
+            paintIsDrawing = false;
+        }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        const [x, y] = getPos(e);
+        const posEl = document.getElementById('paint-pos');
+        if (posEl) posEl.textContent = `📍 ${Math.floor(x)}, ${Math.floor(y)}`;
+
         if (!paintIsDrawing) return;
-        const rect = canvas.getBoundingClientRect();
-        
+
+        if (paintTool === 'brush' || paintTool === 'pencil' || paintTool === 'eraser') {
+            ctx.strokeStyle = paintTool === 'eraser' ? 'white' : paintColor;
+            ctx.lineWidth = paintTool === 'pencil' ? Math.max(1, paintSize/3) : paintSize;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(paintLastX, paintLastY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            paintLastX = x; paintLastY = y;
+        } else if (paintTool === 'spray') {
+            ctx.fillStyle = paintColor;
+            for (let i = 0; i < 20; i++) {
+                const ox = (Math.random() - 0.5) * paintSize * 2;
+                const oy = (Math.random() - 0.5) * paintSize * 2;
+                if (ox*ox + oy*oy <= paintSize*paintSize) {
+                    ctx.fillRect(x + ox, y + oy, 1, 1);
+                }
+            }
+        } else if (['rect','circle','triangle','star','heart','arrow','line','diamond','hexagon'].includes(paintTool)) {
+            // Preview shape on overlay
+            ctx.putImageData(paintSavedSnapshot, 0, 0);
+            drawShape(ctx, paintTool, paintStartX, paintStartY, x, y);
+        }
+    });
+
+    const stopDrawing = () => {
+        if (paintIsDrawing) {
+            paintIsDrawing = false;
+            paintCommit();
+        }
+    };
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+}
+
+function drawPoint(ctx, x, y) {
+    ctx.beginPath();
+    ctx.arc(x, y, paintSize/2, 0, Math.PI * 2);
+    ctx.fillStyle = paintTool === 'eraser' ? 'white' : paintColor;
+    ctx.fill();
+}
+
+function drawShape(ctx, tool, x1, y1, x2, y2) {
+    const fill = document.getElementById('paint-fill-shape')?.checked;
+    ctx.strokeStyle = paintColor;
+    ctx.fillStyle = paintColor;
+    ctx.lineWidth = Math.max(1, paintSize/2);
+    ctx.beginPath();
+
+    const w = x2 - x1, h = y2 - y1;
+    const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+    const rx = Math.abs(w/2), ry = Math.abs(h/2);
+
+    if (tool === 'rect') {
+        if (fill) ctx.fillRect(Math.min(x1,x2), Math.min(y1,y2), Math.abs(w), Math.abs(h));
+        else ctx.strokeRect(Math.min(x1,x2), Math.min(y1,y2), Math.abs(w), Math.abs(h));
+    } else if (tool === 'circle') {
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        fill ? ctx.fill() : ctx.stroke();
+    } else if (tool === 'line') {
+        ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineWidth = paintSize; ctx.lineCap = 'round'; ctx.stroke();
+    } else if (tool === 'triangle') {
+        ctx.moveTo(cx, y1); ctx.lineTo(x1, y2); ctx.lineTo(x2, y2); ctx.closePath();
+        fill ? ctx.fill() : ctx.stroke();
+    } else if (tool === 'diamond') {
+        ctx.moveTo(cx, y1); ctx.lineTo(x2, cy); ctx.lineTo(cx, y2); ctx.lineTo(x1, cy); ctx.closePath();
+        fill ? ctx.fill() : ctx.stroke();
+    } else if (tool === 'star') {
+        const spikes = 5, outer = Math.min(rx, ry), inner = outer / 2.5;
+        for (let i = 0; i < spikes * 2; i++) {
+            const r = i % 2 === 0 ? outer : inner;
+            const a = (Math.PI / spikes) * i - Math.PI/2;
+            const px = cx + Math.cos(a) * r, py = cy + Math.sin(a) * r;
+            i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        fill ? ctx.fill() : ctx.stroke();
+    } else if (tool === 'heart') {
+        const s = Math.min(Math.abs(w), Math.abs(h));
+        ctx.moveTo(cx, y1 + s * 0.3);
+        ctx.bezierCurveTo(cx, y1, x1, y1, x1, y1 + s * 0.3);
+        ctx.bezierCurveTo(x1, y1 + s * 0.6, cx, y2, cx, y2);
+        ctx.bezierCurveTo(cx, y2, x2, y1 + s * 0.6, x2, y1 + s * 0.3);
+        ctx.bezierCurveTo(x2, y1, cx, y1, cx, y1 + s * 0.3);
+        fill ? ctx.fill() : ctx.stroke();
+    } else if (tool === 'arrow') {
+        ctx.lineWidth = paintSize;
+        ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        // arrowhead
+        const ang = Math.atan2(y2 - y1, x2 - x1), len = paintSize * 3;
         ctx.beginPath();
-        ctx.arc(e.clientX - rect.left, e.clientY - rect.top, paintSize/2, 0, Math.PI * 2);
-        ctx.fillStyle = paintTool === 'eraser' ? 'white' : paintColor;
-        ctx.fill();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - len * Math.cos(ang - Math.PI/6), y2 - len * Math.sin(ang - Math.PI/6));
+        ctx.lineTo(x2 - len * Math.cos(ang + Math.PI/6), y2 - len * Math.sin(ang + Math.PI/6));
+        ctx.closePath(); ctx.fill();
+    } else if (tool === 'hexagon') {
+        for (let i = 0; i < 6; i++) {
+            const a = (Math.PI / 3) * i;
+            const px = cx + Math.cos(a) * rx, py = cy + Math.sin(a) * ry;
+            i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        fill ? ctx.fill() : ctx.stroke();
     }
+}
+
+function floodFill(ctx, x, y, hex) {
+    const w = ctx.canvas.width, h = ctx.canvas.height;
+    const img = ctx.getImageData(0, 0, w, h);
+    const data = img.data;
+    const idx = (x, y) => (y * w + x) * 4;
+    const target = [data[idx(x,y)], data[idx(x,y)+1], data[idx(x,y)+2], data[idx(x,y)+3]];
+    const r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
+    if (target[0] === r && target[1] === g && target[2] === b) return;
+    const stack = [[x,y]];
+    let visited = 0;
+    while (stack.length && visited < w * h) {
+        const [cx, cy] = stack.pop();
+        if (cx < 0 || cy < 0 || cx >= w || cy >= h) continue;
+        const i = idx(cx, cy);
+        if (data[i] !== target[0] || data[i+1] !== target[1] || data[i+2] !== target[2] || data[i+3] !== target[3]) continue;
+        data[i] = r; data[i+1] = g; data[i+2] = b; data[i+3] = 255;
+        stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+        visited++;
+    }
+    ctx.putImageData(img, 0, 0);
+}
+
+function paintCommit() {
+    const canvas = document.getElementById('paint-canvas');
+    if (!canvas) return;
+    paintHistory = paintHistory.slice(0, paintHistoryIdx + 1);
+    paintHistory.push(canvas.toDataURL());
+    if (paintHistory.length > 30) paintHistory.shift();
+    paintHistoryIdx = paintHistory.length - 1;
+}
+
+function paintUndo() {
+    if (paintHistoryIdx <= 0) return;
+    paintHistoryIdx--;
+    paintLoadFromHistory();
+}
+
+function paintRedo() {
+    if (paintHistoryIdx >= paintHistory.length - 1) return;
+    paintHistoryIdx++;
+    paintLoadFromHistory();
+}
+
+function paintLoadFromHistory() {
+    const canvas = document.getElementById('paint-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img, 0, 0); };
+    img.src = paintHistory[paintHistoryIdx];
 }
 
 function setPaintColor(color, el) {
     paintColor = color;
     document.querySelectorAll('.paint-color').forEach(c => c.style.border = '1px solid #999');
     if (el) el.style.border = '2px solid #0078d4';
+    const ci = document.getElementById('paint-color-info');
+    if (ci) ci.textContent = '🎨 ' + color;
+    const cc = document.getElementById('paint-custom-color');
+    if (cc && /^#[0-9a-f]{6}$/i.test(color)) cc.value = color;
 }
 
 function setPaintTool(tool, el) {
     paintTool = tool;
-    document.querySelectorAll('.paint-tool').forEach(t => t.classList.remove('active'));
-    if (el) el.classList.add('active');
+    document.querySelectorAll('.paint-tool').forEach(t => {
+        t.classList.remove('active');
+        t.style.background = 'transparent';
+        t.style.border = '1px solid transparent';
+    });
+    if (el) {
+        el.classList.add('active');
+        el.style.background = '#cce4f7';
+        el.style.border = '1px solid #0078d4';
+    }
+    const labels = { brush:'🖌️ Brush', pencil:'✏️ Pencil', eraser:'🧹 Eraser', fill:'🪣 Fill', picker:'💧 Picker', text:'🅰️ Text', line:'📏 Line', spray:'💨 Airbrush', rect:'▭ Rectangle', circle:'⬭ Ellipse', triangle:'△ Triangle', star:'★ Star', heart:'♥ Heart', arrow:'→ Arrow', diamond:'◆ Diamond', hexagon:'⬡ Hexagon' };
+    const ti = document.getElementById('paint-tool-info');
+    if (ti) ti.textContent = labels[tool] || tool;
+    const canvas = document.getElementById('paint-canvas');
+    if (canvas) canvas.style.cursor = (tool === 'picker' || tool === 'fill') ? 'cell' : (tool === 'text' ? 'text' : 'crosshair');
 }
 
 function clearCanvas() {
     const canvas = document.getElementById('paint-canvas');
-    if (canvas) {
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    paintCommit();
+}
+
+function paintFillAll() {
+    const canvas = document.getElementById('paint-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = paintColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    paintCommit();
+}
+
+function paintDownload() {
+    const canvas = document.getElementById('paint-canvas');
+    if (!canvas) return;
+    const a = document.createElement('a');
+    a.download = 'paint-' + Date.now() + '.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+    if (typeof addNotification === 'function') addNotification('🎨', 'Paint', 'Image saved as PNG');
+}
+
+function paintLoadImage() {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.getElementById('paint-canvas');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0,0,canvas.width,canvas.height);
+                const r = Math.min(canvas.width / img.width, canvas.height / img.height);
+                ctx.drawImage(img, 0, 0, img.width * r, img.height * r);
+                paintCommit();
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+    inp.click();
 }
 
 // Weather App
+const _weatherCities = [
+    { name: 'New York',    country: 'US', temp: 72, cond: 'Partly Cloudy', icon: '⛅', hi: 78, lo: 64, humidity: 58, wind: 8,  uv: 5, feels: 74, vis: 10, pressure: 1014, dew: 56, sunrise: '6:21 AM', sunset: '7:48 PM', aqi: 42 },
+    { name: 'Tokyo',       country: 'JP', temp: 86, cond: 'Sunny',          icon: '☀️', hi: 91, lo: 75, humidity: 67, wind: 6,  uv: 9, feels: 92, vis: 9,  pressure: 1009, dew: 73, sunrise: '4:48 AM', sunset: '6:54 PM', aqi: 35 },
+    { name: 'London',      country: 'UK', temp: 58, cond: 'Light Rain',     icon: '🌧️', hi: 64, lo: 52, humidity: 82, wind: 12, uv: 2, feels: 55, vis: 6,  pressure: 1003, dew: 52, sunrise: '5:12 AM', sunset: '8:33 PM', aqi: 28 },
+    { name: 'Sydney',      country: 'AU', temp: 64, cond: 'Clear',          icon: '🌤️', hi: 70, lo: 58, humidity: 60, wind: 14, uv: 4, feels: 64, vis: 10, pressure: 1018, dew: 50, sunrise: '7:01 AM', sunset: '5:02 PM', aqi: 18 },
+    { name: 'Dubai',       country: 'AE', temp: 105, cond: 'Hot & Dry',     icon: '🔥', hi: 112, lo: 89, humidity: 25, wind: 9,  uv: 11,feels: 110,vis: 7,  pressure: 1006, dew: 64, sunrise: '5:36 AM', sunset: '7:08 PM', aqi: 78 },
+    { name: 'Reykjavik',   country: 'IS', temp: 41, cond: 'Snow',           icon: '❄️', hi: 45, lo: 32, humidity: 88, wind: 22, uv: 1, feels: 28, vis: 4,  pressure: 998,  dew: 36, sunrise: '4:02 AM', sunset: '11:04 PM', aqi: 12 },
+    { name: 'Rio de Janeiro', country: 'BR', temp: 80, cond: 'Thunderstorms', icon: '⛈️', hi: 84, lo: 73, humidity: 78, wind: 11, uv: 7, feels: 88, vis: 5,  pressure: 1011, dew: 72, sunrise: '6:32 AM', sunset: '5:48 PM', aqi: 51 }
+];
+let _weatherCityIdx = 0;
+
 function createWeather() {
-    const temps = [68, 72, 65, 70, 75, 62, 78];
-    const conditions = ['☀️', '⛅', '☁️', '🌧️', '⛈️'];
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-    
+    setTimeout(() => renderWeather(), 50);
     return `
-        <div class="weather-app">
-            <h2>📍 Current Location</h2>
-            <div class="weather-icon">☀️</div>
-            <div class="weather-temp">72°F</div>
-            <p>Sunny</p>
-            <div class="weather-details">
-                <div class="weather-detail">
-                    <div class="weather-detail-value">💨 8 mph</div>
-                    <div>Wind</div>
-                </div>
-                <div class="weather-detail">
-                    <div class="weather-detail-value">💧 45%</div>
-                    <div>Humidity</div>
-                </div>
-                <div class="weather-detail">
-                    <div class="weather-detail-value">👁️ 10 mi</div>
-                    <div>Visibility</div>
-                </div>
-            </div>
-            <div class="weather-forecast">
-                ${days.map((day, i) => `
-                    <div class="forecast-day">
-                        <div>${day}</div>
-                        <div style="font-size: 24px">${conditions[i % conditions.length]}</div>
-                        <div>${temps[i]}°</div>
-                    </div>
-                `).join('')}
-            </div>
+    <div id="weather-root" style="height:100%;display:flex;flex-direction:column;background:linear-gradient(180deg,#4a90e2,#357abd);color:white;font-family:Segoe UI,sans-serif;overflow-y:auto;">
+      <div style="padding:14px 20px;display:flex;align-items:center;gap:10px;background:rgba(0,0,0,0.15);">
+        <span style="font-size:20px;">📍</span>
+        <select id="weather-city" onchange="_weatherCityIdx=this.value;renderWeather()" style="background:rgba(255,255,255,0.2);color:white;border:1px solid rgba(255,255,255,0.4);border-radius:4px;padding:6px 10px;font-size:14px;cursor:pointer;">
+          ${_weatherCities.map((c,i) => `<option value="${i}" style="color:#000;">${c.name}, ${c.country}</option>`).join('')}
+        </select>
+        <span style="margin-left:auto;font-size:13px;opacity:0.85;" id="weather-clock">--:--</span>
+      </div>
+      <div id="weather-body" style="flex:1;"></div>
+    </div>`;
+}
+
+function renderWeather() {
+    const root = document.getElementById('weather-root');
+    const body = document.getElementById('weather-body');
+    if (!body) return;
+    const c = _weatherCities[_weatherCityIdx];
+    const clock = document.getElementById('weather-clock');
+    if (clock) clock.textContent = new Date().toLocaleString();
+
+    // Background based on condition
+    const bgs = {
+        'Sunny':           'linear-gradient(180deg,#ff9966,#ff5e62)',
+        'Hot & Dry':       'linear-gradient(180deg,#f12711,#f5af19)',
+        'Clear':           'linear-gradient(180deg,#56ccf2,#2f80ed)',
+        'Partly Cloudy':   'linear-gradient(180deg,#4a90e2,#357abd)',
+        'Light Rain':      'linear-gradient(180deg,#536976,#292e49)',
+        'Thunderstorms':   'linear-gradient(180deg,#373b44,#4286f4)',
+        'Snow':            'linear-gradient(180deg,#83a4d4,#b6fbff)'
+    };
+    if (root) root.style.background = bgs[c.cond] || bgs['Partly Cloudy'];
+
+    // Hourly forecast (next 24h)
+    const hourIcons = ['☀️','☀️','⛅','⛅','☁️','🌧️','⛈️','🌤️'];
+    const hours = Array.from({length: 12}).map((_, i) => {
+        const h = (new Date().getHours() + i) % 24;
+        const t = c.temp + Math.floor(Math.sin(i / 2) * 6 - 2);
+        const hi = hourIcons[(i + _weatherCityIdx) % hourIcons.length];
+        return { h: h === 0 ? '12 AM' : (h < 12 ? h + ' AM' : (h === 12 ? '12 PM' : (h - 12) + ' PM')), t, icon: hi };
+    });
+
+    const days = ['Today','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const dayIcons = ['☀️','⛅','☁️','🌧️','⛈️','🌤️','❄️'];
+    const dayTemps = days.map((_, i) => ({ hi: c.hi + Math.floor(Math.sin(i)*4), lo: c.lo + Math.floor(Math.cos(i)*3), icon: dayIcons[(i + _weatherCityIdx) % dayIcons.length] }));
+
+    const aqiColor = c.aqi < 50 ? '#00e676' : c.aqi < 100 ? '#ffeb3b' : c.aqi < 150 ? '#ff9800' : '#f44336';
+    const aqiLabel = c.aqi < 50 ? 'Good' : c.aqi < 100 ? 'Moderate' : c.aqi < 150 ? 'Unhealthy' : 'Very Unhealthy';
+    const uvLabel = c.uv <= 2 ? 'Low' : c.uv <= 5 ? 'Moderate' : c.uv <= 7 ? 'High' : c.uv <= 10 ? 'Very High' : 'Extreme';
+    const uvColor = c.uv <= 2 ? '#4caf50' : c.uv <= 5 ? '#ffeb3b' : c.uv <= 7 ? '#ff9800' : '#f44336';
+
+    body.innerHTML = `
+      <div style="padding:30px 20px;text-align:center;">
+        <div style="font-size:96px;line-height:1;">${c.icon}</div>
+        <div style="font-size:80px;font-weight:200;letter-spacing:-2px;">${c.temp}°<span style="font-size:32px;vertical-align:top;opacity:0.7;">F</span></div>
+        <div style="font-size:20px;opacity:0.95;">${c.cond}</div>
+        <div style="font-size:14px;opacity:0.85;margin-top:4px;">Feels like ${c.feels}° · H ${c.hi}° · L ${c.lo}°</div>
+      </div>
+
+      <!-- Hourly -->
+      <div style="background:rgba(255,255,255,0.12);margin:0 16px;border-radius:12px;padding:14px;">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;opacity:0.85;margin-bottom:10px;">⏱ Hourly forecast</div>
+        <div style="display:flex;gap:14px;overflow-x:auto;padding-bottom:4px;">
+          ${hours.map((h, i) => `
+            <div style="text-align:center;min-width:54px;${i===0?'background:rgba(255,255,255,0.18);border-radius:8px;padding:6px 4px;':''}">
+              <div style="font-size:12px;opacity:0.85;">${i===0?'Now':h.h}</div>
+              <div style="font-size:24px;margin:4px 0;">${h.icon}</div>
+              <div style="font-size:14px;font-weight:600;">${h.t}°</div>
+            </div>`).join('')}
         </div>
-    `;
+      </div>
+
+      <!-- 7-day -->
+      <div style="background:rgba(255,255,255,0.12);margin:14px 16px 0;border-radius:12px;padding:14px;">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;opacity:0.85;margin-bottom:10px;">📅 7-day forecast</div>
+        ${days.map((d, i) => {
+          const t = dayTemps[i];
+          const lowPct = ((t.lo - c.lo) / Math.max(1, c.hi - c.lo)) * 100;
+          const hiPct = ((t.hi - c.lo) / Math.max(1, c.hi - c.lo)) * 100;
+          return `
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:${i===days.length-1?'none':'1px solid rgba(255,255,255,0.1)'};">
+            <div style="width:60px;font-size:14px;font-weight:${i===0?600:400};">${d}</div>
+            <div style="font-size:22px;width:30px;text-align:center;">${t.icon}</div>
+            <div style="font-size:13px;opacity:0.7;width:30px;text-align:right;">${t.lo}°</div>
+            <div style="flex:1;height:6px;background:rgba(255,255,255,0.2);border-radius:3px;position:relative;">
+              <div style="position:absolute;left:${Math.max(0,Math.min(100,lowPct))}%;width:${Math.max(10,hiPct - lowPct)}%;height:100%;background:linear-gradient(90deg,#5fbff9,#fce96a,#ff9966);border-radius:3px;"></div>
+            </div>
+            <div style="font-size:13px;width:30px;font-weight:600;">${t.hi}°</div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <!-- Detail tiles -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;padding:14px 16px;">
+        ${[
+          ['💨','Wind',         c.wind + ' mph', 'NW'],
+          ['💧','Humidity',     c.humidity + '%', `Dew point ${c.dew}°`],
+          ['👁️','Visibility',   c.vis + ' mi', 'Clear'],
+          ['🌡️','Pressure',     c.pressure + ' mb', c.pressure > 1013 ? 'High' : 'Low'],
+          ['🌅','Sunrise',      c.sunrise, 'Sunset ' + c.sunset],
+          ['🤒','Feels like',   c.feels + '°', c.feels > c.temp ? 'Warmer' : 'Cooler'],
+        ].map(([ic, lbl, val, sub]) => `
+          <div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;opacity:0.8;">${ic} ${lbl}</div>
+            <div style="font-size:22px;font-weight:600;margin:4px 0;">${val}</div>
+            <div style="font-size:11px;opacity:0.7;">${sub}</div>
+          </div>`).join('')}
+
+        <div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;opacity:0.8;">☀️ UV index</div>
+          <div style="font-size:22px;font-weight:600;margin:4px 0;color:${uvColor};">${c.uv} · ${uvLabel}</div>
+          <div style="height:5px;background:linear-gradient(90deg,#4caf50,#ffeb3b,#ff9800,#f44336,#9c27b0);border-radius:3px;position:relative;margin-top:6px;">
+            <div style="position:absolute;left:${(c.uv/12)*100}%;top:-3px;width:11px;height:11px;background:white;border-radius:50%;border:2px solid #333;transform:translateX(-50%);"></div>
+          </div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;opacity:0.8;">🍃 Air quality</div>
+          <div style="font-size:22px;font-weight:600;margin:4px 0;color:${aqiColor};">${c.aqi} · ${aqiLabel}</div>
+          <div style="font-size:11px;opacity:0.7;">${c.aqi < 50 ? 'Air quality is satisfactory.' : c.aqi < 100 ? 'Acceptable for most.' : 'Sensitive groups beware.'}</div>
+        </div>
+      </div>
+
+      <div style="text-align:center;padding:8px 0 14px;font-size:11px;opacity:0.6;">Data is simulated · Updated ${new Date().toLocaleTimeString()}</div>
+    </div>`;
 }
 
 // Snipping Tool

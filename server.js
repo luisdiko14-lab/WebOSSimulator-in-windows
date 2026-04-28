@@ -66,6 +66,127 @@ app.get('/', (req, res) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+/* ═══════════════════════════════════════════════════════════════
+   🌐 WEB PROXY — strips X-Frame-Options/CSP so the simulator's
+   browsers can actually load real websites inside iframes.
+═══════════════════════════════════════════════════════════════ */
+app.get('/proxy', async (req, res) => {
+    const target = req.query.url;
+    if (!target) return res.status(400).send('Missing url');
+
+    let parsed;
+    try { parsed = new URL(target); }
+    catch { return res.status(400).send('Invalid URL'); }
+
+    if (!/^https?:$/.test(parsed.protocol)) {
+        return res.status(400).send('Only http/https allowed');
+    }
+
+    try {
+        const upstream = await fetch(target, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                'Accept': '*/*',
+                'Accept-Language': 'en-US,en;q=0.9'
+            },
+            redirect: 'follow'
+        });
+
+        const ct = upstream.headers.get('content-type') || 'text/html; charset=utf-8';
+        const finalUrl = upstream.url || target;
+        const baseUrl = new URL(finalUrl);
+
+        // Pass through only safe headers; strip frame-blocking ones
+        res.setHeader('Content-Type', ct);
+        res.setHeader('Cache-Control', 'no-store');
+        res.removeHeader('X-Frame-Options');
+        res.removeHeader('Content-Security-Policy');
+
+        // Helper to make any link go through the proxy
+        const rewrite = (u) => {
+            try { return '/proxy?url=' + encodeURIComponent(new URL(u, baseUrl).href); }
+            catch { return u; }
+        };
+
+        if (ct.includes('text/html')) {
+            let html = await upstream.text();
+
+            // Strip CSP <meta> tags that would block our injection
+            html = html.replace(/<meta[^>]+http-equiv=["']?Content-Security-Policy["']?[^>]*>/gi, '');
+            html = html.replace(/<meta[^>]+http-equiv=["']?X-Frame-Options["']?[^>]*>/gi, '');
+
+            // Rewrite href/src/action/poster/data-src attributes
+            html = html.replace(/\b(href|src|action|poster|data-src|srcset)\s*=\s*(["'])([^"']+)\2/gi,
+                (m, attr, q, url) => {
+                    if (/^(javascript:|data:|mailto:|tel:|#|blob:|about:)/i.test(url)) return m;
+                    if (attr.toLowerCase() === 'srcset') {
+                        // srcset is comma-separated "url size, url size"
+                        const rewritten = url.split(',').map(part => {
+                            const seg = part.trim().split(/\s+/);
+                            if (seg[0]) seg[0] = rewrite(seg[0]);
+                            return seg.join(' ');
+                        }).join(', ');
+                        return `${attr}=${q}${rewritten}${q}`;
+                    }
+                    return `${attr}=${q}${rewrite(url)}${q}`;
+                }
+            );
+
+            // Rewrite url(...) inside inline style attributes/blocks
+            html = html.replace(/url\((['"]?)([^)'"]+)\1\)/gi, (m, q, url) => {
+                if (/^(data:|blob:|#)/i.test(url)) return m;
+                return `url(${q}${rewrite(url)}${q})`;
+            });
+
+            const baseTag = `<base href="${baseUrl.origin}${baseUrl.pathname.replace(/[^/]*$/, '')}">`;
+            const proxyScript = `<script>(function(){
+                var BASE=${JSON.stringify(baseUrl.origin)};
+                function P(u){try{return '/proxy?url='+encodeURIComponent(new URL(u,BASE).href);}catch(e){return u;}}
+                var of=window.fetch;
+                if(of) window.fetch=function(input,init){
+                    if(typeof input==='string' && /^https?:\\/\\//i.test(input)) input=P(input);
+                    else if(input && input.url && /^https?:\\/\\//i.test(input.url)) input=new Request(P(input.url),input);
+                    return of.call(this,input,init);
+                };
+                var ox=XMLHttpRequest.prototype.open;
+                XMLHttpRequest.prototype.open=function(m,u){
+                    if(typeof u==='string' && /^https?:\\/\\//i.test(u)) u=P(u);
+                    return ox.apply(this,[m,u].concat([].slice.call(arguments,2)));
+                };
+            })();</script>`;
+
+            if (/<head[^>]*>/i.test(html)) {
+                html = html.replace(/<head[^>]*>/i, m => m + baseTag + proxyScript);
+            } else {
+                html = baseTag + proxyScript + html;
+            }
+
+            res.send(html);
+        } else if (ct.includes('text/css')) {
+            // Rewrite url(...) inside CSS
+            let css = await upstream.text();
+            css = css.replace(/url\((['"]?)([^)'"]+)\1\)/gi, (m, q, url) => {
+                if (/^(data:|#)/i.test(url)) return m;
+                return `url(${q}${rewrite(url)}${q})`;
+            });
+            css = css.replace(/@import\s+(['"])([^'"]+)\1/gi, (m, q, url) => `@import ${q}${rewrite(url)}${q}`);
+            res.send(css);
+        } else {
+            // Stream binary/text resources as-is
+            const buf = Buffer.from(await upstream.arrayBuffer());
+            res.send(buf);
+        }
+    } catch (e) {
+        log.warn(`Proxy error for ${target}: ${e.message}`);
+        res.status(502).send(`<!DOCTYPE html><html><body style="font-family:Segoe UI,sans-serif;padding:40px;text-align:center;background:#f3f3f3;">
+            <div style="font-size:64px;margin-bottom:14px;">🌐</div>
+            <h2 style="color:#d83b01;">Couldn't reach the site</h2>
+            <p style="color:#666;">${parsed.hostname} did not respond.</p>
+            <p style="color:#999;font-size:12px;">${e.message}</p>
+        </body></html>`);
+    }
+});
+
 // ✅ GET route (fixed & safer)
 app.get('/windows_defender', (req, res) => {
     const filePath = path.join(__dirname, 'windows_defender.html');
