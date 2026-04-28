@@ -796,6 +796,7 @@ function createWindow(appName) {
         mail:         () => ({ title: '📧 Mail',                  content: createMail() }),
         xbox:         () => ({ title: '🎮 Xbox',                  content: createXbox() }),
         imagegen:     () => ({ title: '🎨 AI Image Generator',    content: createImageGenerator() }),
+        bluetooth:    () => ({ title: '📡 Bluetooth & Devices',   content: createBluetooth() }),
     };
 
     const appData = (appFactories[appName] || (() => ({ title: '🪟 Window', content: '<div style="padding:20px;color:#666;">App not found: ' + appName + '</div>' })))();
@@ -2161,6 +2162,57 @@ function createSettings() {
                             </div>
                         `;
                         break;
+                    case 'Devices':
+                        content = settingsRenderDevices();
+                        break;
+                    case 'Network & Internet':
+                        content = settingsRenderNetwork();
+                        break;
+                    case 'Phone':
+                        content = settingsRenderPhone();
+                        break;
+                    case 'Ease of Access':
+                        content = settingsRenderAccess();
+                        break;
+                    case 'Search':
+                        content = settingsRenderSearch();
+                        break;
+                    case 'Cortana':
+                        content = settingsRenderCortana();
+                        break;
+                    case 'Themes':
+                        content = settingsRenderThemes();
+                        break;
+                    case 'Lock screen':
+                        content = settingsRenderLockScreen();
+                        break;
+                    case 'Display':
+                        content = settingsRenderDisplay();
+                        break;
+                    case 'Sound':
+                        content = settingsRenderSound();
+                        break;
+                    case 'Notifications':
+                        content = settingsRenderNotifications();
+                        break;
+                    case 'Power & Sleep':
+                        content = settingsRenderPower();
+                        break;
+                    case 'Storage':
+                        content = settingsRenderStorage();
+                        break;
+                    case 'Mouse':
+                        content = settingsRenderMouse();
+                        break;
+                    case 'Keyboard':
+                        content = settingsRenderKeyboard();
+                        break;
+                    case 'Mixed reality':
+                        content = settingsRenderMR();
+                        break;
+                    case 'About':
+                        content = settingsRenderAbout();
+                        break;
                 }
                 
                 contentArea.innerHTML = content;
@@ -2170,15 +2222,32 @@ function createSettings() {
     
     return `
         <div style="display: flex; height: 100%;">
-            <div class="settings-sidebar">
+            <div class="settings-sidebar" style="overflow-y:auto;">
                 <div class="settings-menu-item active">System</div>
+                <div class="settings-menu-item">Display</div>
+                <div class="settings-menu-item">Sound</div>
+                <div class="settings-menu-item">Notifications</div>
+                <div class="settings-menu-item">Power & Sleep</div>
+                <div class="settings-menu-item">Storage</div>
+                <div class="settings-menu-item">Devices</div>
+                <div class="settings-menu-item">Mouse</div>
+                <div class="settings-menu-item">Keyboard</div>
+                <div class="settings-menu-item">Phone</div>
+                <div class="settings-menu-item">Network & Internet</div>
                 <div class="settings-menu-item">Personalization</div>
+                <div class="settings-menu-item">Themes</div>
+                <div class="settings-menu-item">Lock screen</div>
                 <div class="settings-menu-item">Apps</div>
                 <div class="settings-menu-item">Accounts</div>
                 <div class="settings-menu-item">Time & Language</div>
                 <div class="settings-menu-item">Gaming</div>
+                <div class="settings-menu-item">Ease of Access</div>
+                <div class="settings-menu-item">Search</div>
+                <div class="settings-menu-item">Cortana</div>
                 <div class="settings-menu-item">Privacy</div>
                 <div class="settings-menu-item">Update & Security</div>
+                <div class="settings-menu-item">Mixed reality</div>
+                <div class="settings-menu-item">About</div>
             </div>
             <div class="settings-content">
                 <h2>⚙️ System</h2>
@@ -2218,6 +2287,462 @@ function createSettings() {
             </div>
         </div>
     `;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SETTINGS SECTION RENDERERS — extend the 8 built-in sections to 25+
+// ═══════════════════════════════════════════════════════════════════════════
+function settingsToggle(name, desc, checked) {
+    return `<div class="setting-item"><div><div class="setting-label">${name}</div><div class="setting-description">${desc}</div></div>
+        <label class="toggle-switch"><input type="checkbox" ${checked?'checked':''}><span class="toggle-slider"></span></label></div>`;
+}
+function settingsSlider(name, desc, val, min=0, max=100) {
+    const id = 'sl_'+Math.random().toString(36).slice(2,8);
+    return `<div class="setting-item"><div><div class="setting-label">${name}</div><div class="setting-description">${desc}</div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><input type="range" min="${min}" max="${max}" value="${val}" style="width:200px" oninput="document.getElementById('${id}').textContent=this.value">
+        <span id="${id}" style="min-width:30px;text-align:right;">${val}</span></div></div>`;
+}
+function settingsButton(name, desc, btnLabel, action) {
+    return `<div class="setting-item"><div><div class="setting-label">${name}</div><div class="setting-description">${desc}</div></div>
+        <button onclick="${action}" style="padding:8px 16px;border-radius:4px;background:#0078d4;color:white;border:none;cursor:pointer;">${btnLabel}</button></div>`;
+}
+
+function settingsRenderDevices() {
+    return `<h2>📱 Devices</h2>
+        <div style="background:#f0f8ff;padding:14px;border-radius:8px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-weight:500;">Bluetooth</div><div style="color:#666;font-size:12px;">Discoverable as "DESKTOP-WIN10"</div></div>
+            <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+        </div>
+        <button onclick="openApp('bluetooth')" style="padding:10px 18px;background:#0078d4;color:white;border:none;border-radius:4px;cursor:pointer;margin-bottom:14px;">+ Add Bluetooth or other device</button>
+        <h3 style="margin:14px 0 8px;">Mouse, keyboard, & pen</h3>
+        ${settingsToggle('Logitech MX Master 3', 'Connected • Battery 64%', true)}
+        ${settingsToggle('Logitech K380 Keyboard', 'Connected • Battery 45%', true)}
+        <h3 style="margin:14px 0 8px;">Audio</h3>
+        ${settingsToggle('Sony WH-1000XM5', 'Paired', true)}
+        ${settingsToggle('AirPods Pro', 'Paired • Battery 88%', false)}
+        <h3 style="margin:14px 0 8px;">Other devices</h3>
+        ${settingsToggle('iPhone 15 Pro', 'Paired', true)}
+        ${settingsToggle('Xbox Wireless Controller', 'Paired', false)}
+        ${settingsButton('Default save locations', 'New apps will save to', 'Change', "alert('Open Storage settings to change default save location.')")}`;
+}
+
+function settingsRenderNetwork() {
+    return `<h2>🌐 Network & Internet</h2>
+        ${settingsButton('Open full network settings', 'Wi-Fi, Ethernet, VPN, Mobile hotspot, Proxy', 'Open', "openApp('wifi')")}
+        ${settingsToggle('Wi-Fi',  'Connected to Home_WiFi_5G', true)}
+        ${settingsToggle('Bluetooth', 'On — 4 devices paired', true)}
+        ${settingsToggle('Airplane mode', 'Turn off all wireless communication', false)}
+        ${settingsToggle('Mobile hotspot', 'Share your internet connection', false)}
+        ${settingsToggle('VPN', 'Add and manage VPN connections', false)}
+        <div class="setting-item"><div><div class="setting-label">Data usage</div><div class="setting-description">This month: 24.6 GB / 100 GB</div></div>
+            <div style="width:200px;height:8px;background:#e0e0e0;border-radius:4px;"><div style="width:24.6%;height:100%;background:#0078d4;border-radius:4px;"></div></div></div>
+        ${settingsButton('Network reset', 'Reinstall all network adapters', 'Reset now', "alert('Network would be reset. (Simulation)')")}`;
+}
+
+function settingsRenderPhone() {
+    return `<h2>📱 Your Phone</h2>
+        <div style="background:linear-gradient(135deg,#0078d4,#00bcf2);color:white;padding:24px;border-radius:10px;margin-bottom:16px;">
+            <div style="font-size:20px;font-weight:300;">Link your Android or iPhone</div>
+            <div style="opacity:.85;margin:8px 0 16px;font-size:13px;">Get instant access to texts, photos, calls, and more.</div>
+            <button onclick="alert('Phone Link app would launch.')" style="padding:10px 22px;background:white;color:#0078d4;border:none;border-radius:4px;cursor:pointer;font-weight:500;">+ Add a phone</button>
+        </div>
+        <h3 style="margin:14px 0 8px;">Linked phones</h3>
+        ${settingsToggle('iPhone 15 Pro', 'Last seen: 2 minutes ago', true)}
+        ${settingsToggle('Sync notifications', 'Send phone notifications to this PC', true)}
+        ${settingsToggle('Send texts from this PC', 'Reply to messages from your computer', true)}
+        ${settingsToggle('Make and receive calls', 'Use your PC for phone calls', false)}
+        ${settingsToggle('Photo transfer', 'Copy recent photos automatically', true)}`;
+}
+
+function settingsRenderAccess() {
+    return `<h2>♿ Ease of Access</h2>
+        <h3 style="margin:14px 0 8px;">Vision</h3>
+        ${settingsSlider('Text size', 'Make text larger', 100, 100, 225)}
+        ${settingsToggle('Magnifier', 'Press Win + Plus to zoom in', false)}
+        ${settingsToggle('High contrast', 'Easier to see content', false)}
+        ${settingsToggle('Color filters', 'For colorblindness', false)}
+        ${settingsToggle('Narrator', 'Screen reader reads everything aloud', false)}
+        <h3 style="margin:14px 0 8px;">Hearing</h3>
+        ${settingsToggle('Mono audio', 'Combine left and right channels', false)}
+        ${settingsToggle('Closed captions', 'Show captions for video', true)}
+        ${settingsToggle('Visual notifications for sound', 'Flash the screen for alerts', false)}
+        <h3 style="margin:14px 0 8px;">Interaction</h3>
+        ${settingsToggle('Sticky keys', 'Press one key at a time for shortcuts', false)}
+        ${settingsToggle('Toggle keys', 'Hear a tone when caps/num lock toggled', false)}
+        ${settingsToggle('Filter keys', 'Ignore brief or repeated keystrokes', false)}
+        ${settingsToggle('On-screen keyboard', 'Type without a physical keyboard', false)}
+        ${settingsToggle('Eye control', 'Use eye-tracking technology', false)}`;
+}
+
+function settingsRenderSearch() {
+    return `<h2>🔍 Search</h2>
+        ${settingsToggle('Show search box on taskbar', 'Quick access to search', true)}
+        ${settingsToggle('Show search highlights', 'Trending content from the web', true)}
+        ${settingsToggle('Cloud content search', 'Get results from OneDrive, Bing, Outlook', true)}
+        ${settingsToggle('SafeSearch — Strict', 'Filter adult content from web results', true)}
+        ${settingsToggle('History on this device', 'Personalize search results', true)}
+        ${settingsButton('Clear my device search history', 'Remove searches stored on this PC', 'Clear', "alert('Search history cleared.')")}
+        <h3 style="margin:14px 0 8px;">Indexing</h3>
+        <div class="setting-item"><div><div class="setting-label">Indexing status</div><div class="setting-description">3,847 items indexed • Indexing complete</div></div>
+            <span style="color:#107c10;">✓ Up to date</span></div>
+        ${settingsToggle('Enhanced indexing', 'Index entire PC instead of just libraries', false)}`;
+}
+
+function settingsRenderCortana() {
+    return `<h2>🎙️ Cortana</h2>
+        <div style="background:radial-gradient(circle at top,#00bcf2,#0078d4);color:white;padding:24px;border-radius:10px;margin-bottom:16px;text-align:center;">
+            <div style="font-size:54px;margin-bottom:8px;">🎙️</div>
+            <div style="font-size:18px;font-weight:300;">Hi, I'm Cortana. How can I help?</div>
+        </div>
+        ${settingsToggle('Let Cortana respond to "Hey Cortana"', 'Wake-word detection', true)}
+        ${settingsToggle('Use Cortana even when locked', 'Voice control on lock screen', false)}
+        ${settingsToggle('Keyboard shortcut', 'Win + C opens Cortana', true)}
+        <div class="setting-item"><div><div class="setting-label">Cortana voice</div><div class="setting-description">Choose a voice persona</div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>Aria (US, Female)</option><option>Davis (US, Male)</option><option>Jenny (UK, Female)</option><option>Ryan (UK, Male)</option></select></div>
+        ${settingsToggle('Microphone access', 'Allow Cortana to use your mic', true)}
+        ${settingsButton('Sign in to personalize', 'Use across devices with your Microsoft account', 'Sign in', "alert('Microsoft sign-in would open.')")}`;
+}
+
+function settingsRenderThemes() {
+    const themes = [
+        { name: 'Windows (light)', g: 'linear-gradient(135deg,#0078d4,#00bcf2)' },
+        { name: 'Windows (dark)',  g: 'linear-gradient(135deg,#1a1a2e,#16213e)' },
+        { name: 'Flowers',         g: 'linear-gradient(135deg,#ff9a9e,#fad0c4)' },
+        { name: 'Mountains',       g: 'linear-gradient(135deg,#667eea,#764ba2)' },
+        { name: 'Auroras',         g: 'linear-gradient(135deg,#43cea2,#185a9d)' },
+        { name: 'Sunset',          g: 'linear-gradient(135deg,#ee0979,#ff6a00)' },
+        { name: 'Ocean',           g: 'linear-gradient(135deg,#2193b0,#6dd5ed)' },
+        { name: 'Galaxy',          g: 'radial-gradient(ellipse at center,#1d2671,#c33764)' }
+    ];
+    return `<h2>🎨 Themes</h2>
+        <p style="color:#666;margin-bottom:16px;">A theme contains a desktop background, accent color, sounds, and mouse cursor.</p>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:20px;">
+            ${themes.map(t => `<div onclick="alert('Theme &quot;${t.name}&quot; applied!')" style="cursor:pointer;border:2px solid transparent;border-radius:8px;padding:8px;transition:.2s;" onmouseover="this.style.borderColor='#0078d4'" onmouseout="this.style.borderColor='transparent'">
+                <div style="height:100px;background:${t.g};border-radius:6px;margin-bottom:6px;"></div>
+                <div style="font-size:13px;color:#333;">${t.name}</div></div>`).join('')}
+        </div>
+        ${settingsButton('Get more themes in Microsoft Store', 'Hundreds of themes to choose from', 'Browse', "openApp('store')")}
+        <h3 style="margin:14px 0 8px;">Sounds</h3>
+        <div class="setting-item"><div><div class="setting-label">Sound scheme</div><div class="setting-description">Notification and event sounds</div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>Windows Default</option><option>Calligraphy</option><option>Characters</option><option>Cityscape</option><option>Delta</option><option>Festival</option><option>Garden</option><option>Heritage</option><option>Landscape</option><option>Quirky</option><option>Raga</option><option>Savannah</option><option>Sonata</option></select></div>`;
+}
+
+function settingsRenderLockScreen() {
+    return `<h2>🔒 Lock screen</h2>
+        <div style="height:200px;background:linear-gradient(135deg,#0078d4,#00bcf2);border-radius:10px;margin-bottom:16px;display:flex;align-items:flex-end;padding:20px;color:white;">
+            <div><div style="font-size:48px;font-weight:200;">9:41</div><div style="font-size:14px;opacity:.85;">Wednesday, October 15</div></div>
+        </div>
+        <div class="setting-item"><div><div class="setting-label">Background</div><div class="setting-description">Choose lock screen wallpaper</div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>Windows spotlight</option><option>Picture</option><option>Slideshow</option></select></div>
+        ${settingsToggle('Show fun facts, tips, tricks on lock screen', 'Microsoft serves daily content', true)}
+        ${settingsToggle('Show weather details on lock screen', 'Quick glance at the forecast', true)}
+        <h3 style="margin:14px 0 8px;">Apps with detailed status</h3>
+        ${settingsToggle('Calendar', 'Show upcoming events', true)}
+        ${settingsToggle('Mail', 'Show email count', false)}
+        ${settingsToggle('Weather', 'Show current conditions', true)}
+        <h3 style="margin:14px 0 8px;">Screen saver</h3>
+        <div class="setting-item"><div><div class="setting-label">Screen saver</div><div class="setting-description">Activate after 10 minutes of inactivity</div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>(None)</option><option>3D Text</option><option>Blank</option><option>Bubbles</option><option>Mystify</option><option>Photos</option><option>Ribbons</option></select></div>`;
+}
+
+function settingsRenderDisplay() {
+    return `<h2>🖥️ Display</h2>
+        ${settingsSlider('Brightness', 'Adjust screen brightness', 80)}
+        ${settingsToggle('Night light', 'Reduce blue light for better sleep', false)}
+        ${settingsSlider('Night light strength', 'Color temperature', 48)}
+        ${settingsToggle('Auto-adjust at sunset/sunrise', 'Schedule night light', true)}
+        <div class="setting-item"><div><div class="setting-label">Display resolution</div><div class="setting-description">Native: 3840 × 2160</div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>3840 × 2160 (Recommended)</option><option>2560 × 1440</option><option>1920 × 1080</option><option>1680 × 1050</option><option>1280 × 720</option></select></div>
+        <div class="setting-item"><div><div class="setting-label">Display orientation</div><div class="setting-description"></div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>Landscape</option><option>Portrait</option><option>Landscape (flipped)</option><option>Portrait (flipped)</option></select></div>
+        <div class="setting-item"><div><div class="setting-label">Scale & layout</div><div class="setting-description">Make text and apps bigger</div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>100% (Recommended)</option><option>125%</option><option>150%</option><option>175%</option><option>200%</option></select></div>
+        <div class="setting-item"><div><div class="setting-label">Refresh rate</div><div class="setting-description">Higher = smoother motion</div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>240 Hz</option><option>165 Hz</option><option>144 Hz</option><option>120 Hz</option><option>60 Hz</option></select></div>
+        ${settingsToggle('HDR', 'High Dynamic Range for compatible displays', true)}
+        ${settingsButton('Multiple displays', 'Detect or arrange external monitors', 'Detect', "alert('No additional displays detected.')")}`;
+}
+
+function settingsRenderSound() {
+    return `<h2>🔊 Sound</h2>
+        <h3 style="margin:14px 0 8px;">Output</h3>
+        <div class="setting-item"><div><div class="setting-label">Output device</div><div class="setting-description">Speakers (Realtek Audio)</div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>Speakers (Realtek)</option><option>Headphones</option><option>HDMI Audio</option><option>Sony WH-1000XM5</option></select></div>
+        ${settingsSlider('Master volume', '', 75)}
+        ${settingsSlider('Balance — Left', '', 100)}
+        ${settingsSlider('Balance — Right', '', 100)}
+        <h3 style="margin:14px 0 8px;">Input</h3>
+        <div class="setting-item"><div><div class="setting-label">Input device</div><div class="setting-description">Microphone (Realtek)</div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>Microphone (Realtek)</option><option>Headset Mic</option><option>USB Mic</option></select></div>
+        ${settingsSlider('Microphone volume', '', 80)}
+        ${settingsToggle('Microphone boost (+20 dB)', 'Increase mic sensitivity', false)}
+        ${settingsButton('Test microphone', 'Speak to see input level', 'Start test', "alert('🎤 Listening... mic is working.')")}
+        <h3 style="margin:14px 0 8px;">Advanced</h3>
+        ${settingsToggle('Spatial sound (Dolby Atmos)', '3D audio for movies & games', true)}
+        ${settingsToggle('Mono audio', 'Combine left and right', false)}
+        ${settingsButton('App volume mixer', 'Set volume per application', 'Open', "alert('Volume mixer would open.')")}`;
+}
+
+function settingsRenderNotifications() {
+    return `<h2>🔔 Notifications & actions</h2>
+        ${settingsToggle('Notifications', 'Get notifications from apps and other senders', true)}
+        ${settingsToggle('Notification sound', 'Play a sound when notifications arrive', true)}
+        ${settingsToggle('Show notifications on lock screen', 'See alerts before signing in', false)}
+        ${settingsToggle('Show reminders and incoming VoIP calls on lock screen', '', true)}
+        ${settingsToggle('Hide content of sensitive notifications', 'Until you sign in', true)}
+        ${settingsToggle('Allow notifications to play sounds', '', true)}
+        <h3 style="margin:14px 0 8px;">Focus assist</h3>
+        <div class="setting-item"><div><div class="setting-label">Focus assist</div><div class="setting-description">Hide notifications during certain times</div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>Off</option><option>Priority only</option><option>Alarms only</option></select></div>
+        ${settingsToggle('Automatic rule: When using full-screen apps', 'Like games or movies', true)}
+        ${settingsToggle('Automatic rule: When duplicating my display', 'Useful during presentations', true)}
+        ${settingsToggle('Automatic rule: During these hours', '10:00 PM – 7:00 AM', true)}
+        <h3 style="margin:14px 0 8px;">Notifications from these senders</h3>
+        ${settingsToggle('Mail', '', true)}
+        ${settingsToggle('Calendar', '', true)}
+        ${settingsToggle('Microsoft Edge', '', true)}
+        ${settingsToggle('Discord', '', true)}
+        ${settingsToggle('Microsoft Store', '', false)}`;
+}
+
+function settingsRenderPower() {
+    return `<h2>🔋 Power & sleep</h2>
+        <h3 style="margin:14px 0 8px;">Screen</h3>
+        <div class="setting-item"><div><div class="setting-label">On battery, turn off after</div><div class="setting-description"></div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>1 minute</option><option>3 minutes</option><option>5 minutes</option><option selected>10 minutes</option><option>15 minutes</option><option>30 minutes</option><option>Never</option></select></div>
+        <div class="setting-item"><div><div class="setting-label">When plugged in, turn off after</div><div class="setting-description"></div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>5 minutes</option><option>10 minutes</option><option selected>15 minutes</option><option>30 minutes</option><option>1 hour</option><option>Never</option></select></div>
+        <h3 style="margin:14px 0 8px;">Sleep</h3>
+        <div class="setting-item"><div><div class="setting-label">On battery, sleep after</div><div class="setting-description"></div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option selected>15 minutes</option><option>30 minutes</option><option>1 hour</option><option>Never</option></select></div>
+        <div class="setting-item"><div><div class="setting-label">When plugged in, sleep after</div><div class="setting-description"></div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>30 minutes</option><option selected>1 hour</option><option>3 hours</option><option>Never</option></select></div>
+        <h3 style="margin:14px 0 8px;">Battery</h3>
+        <div class="setting-item"><div><div class="setting-label">Battery level</div><div class="setting-description">87% — 4h 32m remaining</div></div>
+            <div style="width:200px;height:14px;background:#e0e0e0;border-radius:7px;overflow:hidden;"><div style="width:87%;height:100%;background:linear-gradient(90deg,#107c10,#4caf50);"></div></div></div>
+        ${settingsToggle('Battery saver', 'Automatically turn on at 20%', true)}
+        ${settingsToggle('Lower screen brightness while in battery saver', '', true)}
+        <div class="setting-item"><div><div class="setting-label">Power mode</div><div class="setting-description"></div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>Best battery life</option><option selected>Balanced</option><option>Best performance</option></select></div>`;
+}
+
+function settingsRenderStorage() {
+    return `<h2>💾 Storage</h2>
+        <div style="background:#f5f5f5;padding:18px;border-radius:8px;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><strong>Local Disk (C:)</strong><span style="color:#666;">237 GB free of 476 GB</span></div>
+            <div style="height:14px;background:#e0e0e0;border-radius:7px;overflow:hidden;display:flex;">
+                <div style="width:25%;background:#0078d4;" title="Apps"></div>
+                <div style="width:8%;background:#00bcf2;" title="Documents"></div>
+                <div style="width:6%;background:#107c10;" title="Pictures"></div>
+                <div style="width:5%;background:#ff8c00;" title="Music"></div>
+                <div style="width:6%;background:#e81123;" title="Videos"></div>
+            </div>
+            <div style="display:flex;gap:14px;margin-top:8px;font-size:11px;color:#666;flex-wrap:wrap;">
+                <span><span style="display:inline-block;width:10px;height:10px;background:#0078d4;border-radius:2px;"></span> Apps 119 GB</span>
+                <span><span style="display:inline-block;width:10px;height:10px;background:#00bcf2;border-radius:2px;"></span> Docs 38 GB</span>
+                <span><span style="display:inline-block;width:10px;height:10px;background:#107c10;border-radius:2px;"></span> Pics 28 GB</span>
+                <span><span style="display:inline-block;width:10px;height:10px;background:#ff8c00;border-radius:2px;"></span> Music 24 GB</span>
+                <span><span style="display:inline-block;width:10px;height:10px;background:#e81123;border-radius:2px;"></span> Video 30 GB</span>
+            </div>
+        </div>
+        ${settingsToggle('Storage Sense', 'Automatically free up space', true)}
+        ${settingsToggle('Delete temporary files', "Files apps don't use", true)}
+        ${settingsToggle('Delete files in Recycle Bin after 30 days', '', true)}
+        ${settingsToggle('Delete files in Downloads after 60 days', '', false)}
+        ${settingsButton('Clean up recommendations', 'Free up space now', 'Run cleanup', "alert('Storage cleanup would free 4.2 GB.')")}
+        <h3 style="margin:14px 0 8px;">More storage settings</h3>
+        ${settingsButton('Change where new content is saved', 'Apps, documents, pictures location', 'Change', "alert('Default save locations dialog.')")}
+        ${settingsButton('Manage Storage Spaces', 'Combine drives into pools', 'Manage', "alert('Storage Spaces would open.')")}
+        ${settingsButton('Optimize drives', 'Defragment and trim drives', 'Optimize', "alert('Drive optimization would start.')")}`;
+}
+
+function settingsRenderMouse() {
+    return `<h2>🖱️ Mouse</h2>
+        <div class="setting-item"><div><div class="setting-label">Primary button</div><div class="setting-description">Choose your main mouse button</div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option selected>Left</option><option>Right</option></select></div>
+        ${settingsSlider('Cursor speed', 'How fast your pointer moves', 10, 1, 20)}
+        ${settingsSlider('Scroll wheel speed', '', 3, 1, 10)}
+        <div class="setting-item"><div><div class="setting-label">Roll the mouse wheel to scroll</div><div class="setting-description"></div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option selected>Multiple lines at a time</option><option>One screen at a time</option></select></div>
+        ${settingsToggle('Scroll inactive windows when hovering', 'Wheel-scroll any window under cursor', true)}
+        <h3 style="margin:14px 0 8px;">Pointer</h3>
+        <div class="setting-item"><div><div class="setting-label">Cursor scheme</div><div class="setting-description"></div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>Windows Default</option><option>Windows Black</option><option>Windows Inverted</option><option>Windows Standard (large)</option><option>Magnified</option></select></div>
+        ${settingsSlider('Cursor size', '', 1, 1, 15)}
+        ${settingsToggle('Show pointer trails', 'Visible trail when moving', false)}
+        ${settingsToggle('Hide pointer while typing', '', true)}
+        ${settingsToggle('Show pointer location when I press Ctrl', 'Animated circle reveals cursor', true)}`;
+}
+
+function settingsRenderKeyboard() {
+    return `<h2>⌨️ Keyboard</h2>
+        ${settingsSlider('Repeat delay', 'Long → short', 2, 0, 4)}
+        ${settingsSlider('Repeat rate', 'Slow → fast', 25, 0, 30)}
+        ${settingsSlider('Cursor blink rate', '', 5, 0, 10)}
+        <h3 style="margin:14px 0 8px;">Input</h3>
+        <div class="setting-item"><div><div class="setting-label">Default input language</div><div class="setting-description"></div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>English (US) — US keyboard</option><option>English (UK)</option><option>Español</option><option>Français</option><option>Deutsch</option><option>日本語</option></select></div>
+        ${settingsToggle('Autocorrect misspelled words', '', true)}
+        ${settingsToggle('Highlight misspelled words', '', true)}
+        ${settingsToggle('Show text suggestions as I type', '', true)}
+        ${settingsToggle('Multilingual text suggestions', '', false)}
+        <h3 style="margin:14px 0 8px;">Advanced</h3>
+        ${settingsToggle('Use the desktop language bar when available', '', false)}
+        ${settingsToggle('Let me set a different input method for each app window', '', false)}
+        ${settingsButton('Keyboard shortcuts', 'Customize hotkeys', 'Customize', "alert('Keyboard shortcut customization.')")}`;
+}
+
+function settingsRenderMR() {
+    return `<h2>🥽 Mixed reality</h2>
+        <div style="background:linear-gradient(135deg,#5c2d91,#1a1a2e);color:white;padding:24px;border-radius:10px;margin-bottom:16px;text-align:center;">
+            <div style="font-size:54px;margin-bottom:8px;">🥽</div>
+            <div style="font-size:18px;font-weight:300;">Windows Mixed Reality</div>
+            <div style="opacity:.85;font-size:13px;margin-top:6px;">No mixed reality headset detected</div>
+        </div>
+        ${settingsToggle('Run Mixed Reality on this PC', '', true)}
+        ${settingsToggle('Use boundary', 'Set a play area for safe movement', true)}
+        ${settingsSlider('Boundary tracker range', 'meters', 3, 1, 10)}
+        <div class="setting-item"><div><div class="setting-label">Headset display</div><div class="setting-description"></div></div>
+            <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>Auto</option><option>60 Hz</option><option>90 Hz</option></select></div>
+        ${settingsToggle('Audio and speech', 'Use headset audio when worn', true)}
+        ${settingsToggle('Allow apps to access spatial mapping', '', false)}
+        ${settingsButton('Set up a mixed reality headset', 'Pair a Meta Quest, HoloLens, or other', 'Set up', "alert('Headset pairing wizard would launch.')")}`;
+}
+
+function settingsRenderAbout() {
+    return `<h2>ℹ️ About</h2>
+        <div style="background:#f5f5f5;padding:20px;border-radius:8px;margin-bottom:14px;">
+            <h3 style="margin-bottom:14px;">Device specifications</h3>
+            <div style="display:grid;grid-template-columns:140px 1fr;gap:6px 14px;font-size:13px;">
+                <div style="color:#666;">Device name</div><div><strong>DESKTOP-${(userData.username||'WIN10').toUpperCase().slice(0,8)}</strong></div>
+                <div style="color:#666;">Processor</div><div>Intel Core i9-14900K @ 8.0 GHz (24-core)</div>
+                <div style="color:#666;">Installed RAM</div><div>500 GB DDR5</div>
+                <div style="color:#666;">Device ID</div><div>A8F2B1C9-44E7-4D8A-9C32-6E5F8D3A1B7C</div>
+                <div style="color:#666;">Product ID</div><div>00330-80000-00000-AA420</div>
+                <div style="color:#666;">System type</div><div>64-bit operating system, x64-based processor</div>
+                <div style="color:#666;">Pen and touch</div><div>No pen or touch input is available for this display</div>
+            </div>
+        </div>
+        <div style="background:#f5f5f5;padding:20px;border-radius:8px;margin-bottom:14px;">
+            <h3 style="margin-bottom:14px;">Windows specifications</h3>
+            <div style="display:grid;grid-template-columns:140px 1fr;gap:6px 14px;font-size:13px;">
+                <div style="color:#666;">Edition</div><div>Windows 10 Pro</div>
+                <div style="color:#666;">Version</div><div>22H2</div>
+                <div style="color:#666;">Installed on</div><div>${new Date().toLocaleDateString()}</div>
+                <div style="color:#666;">OS build</div><div>19045.3803</div>
+                <div style="color:#666;">Experience</div><div>Windows Feature Experience Pack 1000.19053.1000.0</div>
+            </div>
+        </div>
+        ${settingsButton('Copy', 'Copy specs to clipboard', 'Copy', "navigator.clipboard.writeText('Windows 10 Pro 22H2'); alert('Specs copied!')")}
+        ${settingsButton('Rename this PC', 'Change your computer name', 'Rename', "const n=prompt('New PC name:'); if(n) alert('PC will be renamed to: '+n+' (after restart)')")}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BLUETOOTH APP
+// ═══════════════════════════════════════════════════════════════════════════
+let _btDevices = [
+    { name:'Sony WH-1000XM5',     icon:'🎧', type:'Audio',      paired:true,  connected:true,  batt:76 },
+    { name:'Logitech MX Master 3', icon:'🖱️', type:'Mouse',      paired:true,  connected:true,  batt:64 },
+    { name:'Logitech K380',        icon:'⌨️', type:'Keyboard',   paired:true,  connected:true,  batt:45 },
+    { name:'iPhone 15 Pro',        icon:'📱', type:'Phone',      paired:true,  connected:false, batt:92 },
+    { name:'AirPods Pro',          icon:'🎧', type:'Audio',      paired:true,  connected:false, batt:88 },
+    { name:'Xbox Wireless Ctrl',   icon:'🎮', type:'Controller', paired:true,  connected:false, batt:50 }
+];
+let _btScanning = false;
+
+function createBluetooth() {
+    setTimeout(renderBluetoothDevices, 50);
+    return `<div style="height:100%;background:#f5f5f5;display:flex;flex-direction:column;">
+        <div style="padding:18px 22px;background:#fff;border-bottom:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+                <h2 style="margin:0;font-weight:400;">📡 Bluetooth & other devices</h2>
+                <div style="color:#666;font-size:13px;margin-top:4px;">Discoverable as "DESKTOP-${(userData.username||'WIN10').toUpperCase().slice(0,8)}"</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="bt-master" checked onchange="btToggleMaster(this.checked)"><span class="toggle-slider"></span></label>
+        </div>
+        <div style="padding:18px 22px;border-bottom:1px solid #e0e0e0;background:#fff;">
+            <button onclick="btScanForDevices()" style="padding:10px 20px;background:#0078d4;color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px;">+ Add Bluetooth or other device</button>
+        </div>
+        <div id="bt-scanning" style="display:none;padding:14px 22px;background:#fff8e1;border-bottom:1px solid #ffe082;color:#5d4037;font-size:13px;">
+            🔍 Scanning for nearby devices... <span id="bt-found-count">0</span> found
+        </div>
+        <div id="bt-list" style="flex:1;overflow-y:auto;padding:0 22px;"></div>
+    </div>`;
+}
+
+function renderBluetoothDevices() {
+    const list = document.getElementById('bt-list');
+    if (!list) return;
+    const groups = {};
+    _btDevices.forEach(d => { (groups[d.type] = groups[d.type] || []).push(d); });
+    list.innerHTML = Object.keys(groups).map(type => {
+        const items = groups[type].map((d,gi) => {
+            const idx = _btDevices.indexOf(d);
+            const battColor = d.batt > 50 ? '#4caf50' : d.batt > 20 ? '#ff9800' : '#f44336';
+            return `<div style="display:flex;align-items:center;gap:14px;padding:14px;background:white;border-radius:8px;margin-bottom:8px;">
+                <div style="font-size:32px;">${d.icon}</div>
+                <div style="flex:1;">
+                    <div style="font-weight:500;font-size:14px;">${d.name}</div>
+                    <div style="color:${d.connected?'#107c10':'#666'};font-size:12px;">
+                        ${d.connected ? '● Connected' : (d.paired ? '○ Paired' : 'Available')} • Battery <span style="color:${battColor};font-weight:500;">${d.batt}%</span>
+                    </div>
+                </div>
+                <button onclick="btToggleConnect(${idx})" style="padding:6px 14px;border-radius:4px;border:1px solid ${d.connected?'#e81123':'#0078d4'};background:white;color:${d.connected?'#e81123':'#0078d4'};cursor:pointer;font-size:13px;">
+                    ${d.connected ? 'Disconnect' : 'Connect'}
+                </button>
+                <button onclick="btRemoveDevice(${idx})" style="padding:6px 10px;border-radius:4px;border:1px solid #ccc;background:white;color:#666;cursor:pointer;font-size:13px;">Remove</button>
+            </div>`;
+        }).join('');
+        return `<h3 style="margin:18px 0 10px;color:#444;font-size:14px;text-transform:uppercase;letter-spacing:.5px;">${type}</h3>${items}`;
+    }).join('');
+}
+
+function btToggleMaster(on) {
+    const list = document.getElementById('bt-list');
+    if (list) { list.style.opacity = on?'1':'0.4'; list.style.pointerEvents = on?'auto':'none'; }
+}
+
+function btToggleConnect(idx) {
+    const d = _btDevices[idx];
+    d.connected = !d.connected;
+    renderBluetoothDevices();
+    if (typeof playSound === 'function') playSound('notification');
+}
+
+function btRemoveDevice(idx) {
+    if (!confirm('Remove ' + _btDevices[idx].name + '?')) return;
+    _btDevices.splice(idx, 1);
+    renderBluetoothDevices();
+}
+
+function btScanForDevices() {
+    if (_btScanning) return;
+    _btScanning = true;
+    const banner = document.getElementById('bt-scanning');
+    const cnt    = document.getElementById('bt-found-count');
+    if (banner) banner.style.display = 'block';
+    let found = 0;
+    const candidates = [
+        { name:'JBL Flip 6',           icon:'🔊', type:'Audio',      batt:Math.floor(60+Math.random()*30) },
+        { name:'Magic Trackpad',       icon:'🖱️', type:'Mouse',      batt:Math.floor(60+Math.random()*30) },
+        { name:'Apple Watch Series 9', icon:'⌚', type:'Other',      batt:Math.floor(60+Math.random()*30) },
+        { name:'Samsung Galaxy Buds',  icon:'🎧', type:'Audio',      batt:Math.floor(60+Math.random()*30) }
+    ];
+    const t = setInterval(() => {
+        if (found >= candidates.length) {
+            clearInterval(t);
+            _btScanning = false;
+            if (banner) setTimeout(() => banner.style.display='none', 1500);
+            return;
+        }
+        const c = candidates[found];
+        if (!_btDevices.find(d => d.name === c.name)) {
+            _btDevices.push({ ...c, paired:false, connected:false });
+            renderBluetoothDevices();
+        }
+        found++;
+        if (cnt) cnt.textContent = found;
+    }, 800);
 }
 
 function createTaskManager() {
@@ -5090,39 +5615,217 @@ function showVirusAlert() {
     document.body.appendChild(alert);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// NETWORK & INTERNET — full multi-tab settings
+// ═══════════════════════════════════════════════════════════════════════════
+let _wifiTab = 'status';
+let _wifiAvailable = [
+    { name:'Home_WiFi_5G',     bars:4, secure:true,  connected:true,  speed:'1.2 Gbps', freq:'5 GHz' },
+    { name:'Home_WiFi_2.4G',   bars:4, secure:true,  connected:false, speed:'150 Mbps', freq:'2.4 GHz' },
+    { name:'Neighbors_Network',bars:3, secure:true,  connected:false, speed:'80 Mbps',  freq:'5 GHz' },
+    { name:'Coffee_Shop_Free', bars:3, secure:false, connected:false, speed:'30 Mbps',  freq:'2.4 GHz' },
+    { name:'Office_Guest',     bars:2, secure:true,  connected:false, speed:'50 Mbps',  freq:'5 GHz' },
+    { name:'TP-Link_5G',       bars:1, secure:true,  connected:false, speed:'?',        freq:'5 GHz' }
+];
+let _vpnList = [
+    { name:'Work VPN',        host:'vpn.company.com',     type:'L2TP/IPsec', connected:false },
+    { name:'Personal NordVPN',host:'us-server-3242',      type:'OpenVPN',    connected:true },
+    { name:'Home OpenVPN',    host:'home.example.com',    type:'OpenVPN',    connected:false }
+];
+
 function createWifiSettings() {
+    setTimeout(renderWifiTab, 50);
     return `
-        <div style="padding: 20px; height: 100%; background: white;">
-            <h2 style="margin-bottom: 20px;">📶 Network & Internet</h2>
-            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-size: 18px; font-weight: 500;">Wi-Fi</div>
-                        <div style="color: #666;">Connected to Home_WiFi_5G</div>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" checked>
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
+        <div style="height:100%;display:flex;background:#f5f5f5;">
+            <div style="width:230px;background:white;border-right:1px solid #e0e0e0;padding:14px 0;overflow-y:auto;">
+                <h2 style="padding:0 18px 14px;font-weight:400;font-size:18px;margin:0;">🌐 Network &amp; Internet</h2>
+                ${[
+                    ['status','📊 Status'],
+                    ['wifi','📶 Wi-Fi'],
+                    ['ethernet','🔌 Ethernet'],
+                    ['dialup','☎️ Dial-up'],
+                    ['vpn','🔐 VPN'],
+                    ['airplane','✈️ Airplane mode'],
+                    ['hotspot','📡 Mobile hotspot'],
+                    ['data','📈 Data usage'],
+                    ['proxy','🛡️ Proxy'],
+                    ['advanced','⚙️ Advanced']
+                ].map(([id,lbl]) => `<div onclick="wifiSwitchTab('${id}')" id="wifi-tab-${id}" style="padding:10px 18px;cursor:pointer;font-size:13px;border-left:3px solid transparent;${_wifiTab===id?'background:#e3f2fd;border-left-color:#0078d4;font-weight:500;':''}" onmouseover="if(_wifiTab!=='${id}') this.style.background='#f5f5f5'" onmouseout="if(_wifiTab!=='${id}') this.style.background='transparent'">${lbl}</div>`).join('')}
             </div>
-            <h3 style="margin-bottom: 10px;">Available networks</h3>
-            <div style="border: 1px solid #e0e0e0; border-radius: 8px;">
-                <div style="padding: 12px 16px; border-bottom: 1px solid #e0e0e0; background: #e3f2fd;">
-                    <strong>Home_WiFi_5G</strong> - Connected, secured 📶
-                </div>
-                <div style="padding: 12px 16px; border-bottom: 1px solid #e0e0e0;">
-                    Neighbors_Network - Secured 📶
-                </div>
-                <div style="padding: 12px 16px; border-bottom: 1px solid #e0e0e0;">
-                    Coffee_Shop_Free 5Ghz - Open 📶
-                </div>
-                <div style="padding: 12px 16px;">
-                    Office_Guest - Secured 📶
-                </div>
-            </div>
+            <div id="wifi-tab-content" style="flex:1;overflow-y:auto;padding:24px;background:white;"></div>
         </div>
     `;
+}
+
+function wifiSwitchTab(tab) { _wifiTab = tab; renderWifiTab(); }
+
+function renderWifiTab() {
+    const el = document.getElementById('wifi-tab-content');
+    if (!el) return;
+    document.querySelectorAll('[id^="wifi-tab-"]').forEach(n => {
+        if (n.id === 'wifi-tab-content') return;
+        const id = n.id.replace('wifi-tab-','');
+        if (id === _wifiTab) { n.style.background = '#e3f2fd'; n.style.borderLeftColor = '#0078d4'; n.style.fontWeight = '500'; }
+        else { n.style.background = 'transparent'; n.style.borderLeftColor = 'transparent'; n.style.fontWeight = '400'; }
+    });
+    const connected = _wifiAvailable.find(w => w.connected);
+    const tabs = {
+        status: () => `<h2 style="font-weight:400;margin-bottom:18px;">📊 Network status</h2>
+            <div style="background:linear-gradient(135deg,#0078d4,#00bcf2);color:white;padding:24px;border-radius:10px;margin-bottom:20px;">
+                <div style="font-size:64px;margin-bottom:10px;">🌐</div>
+                <div style="font-size:18px;font-weight:500;">${connected ? connected.name : 'Not connected'}</div>
+                <div style="opacity:.85;font-size:13px;margin-top:4px;">You're connected to the Internet • Public network</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;">
+                ${[
+                    ['IPv4 address','192.168.1.142'],
+                    ['IPv6 address','fe80::a4f7:9b21:3c8e:d2f4'],
+                    ['Default gateway','192.168.1.1'],
+                    ['DNS servers','1.1.1.1, 8.8.8.8'],
+                    ['MAC address','3C:6A:A7:B5:F2:91'],
+                    ['DHCP enabled','Yes'],
+                    ['Link speed (Receive/Transmit)','866/866 (Mbps)'],
+                    ['Signal quality','Excellent (5/5)']
+                ].map(([k,v]) => `<div style="background:#f5f5f5;padding:12px 14px;border-radius:6px;"><div style="color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">${k}</div><div style="font-weight:500;font-size:14px;margin-top:2px;">${v}</div></div>`).join('')}
+            </div>
+            <h3 style="margin:20px 0 10px;">Properties</h3>
+            ${settingsToggle('Set as metered connection', 'Some apps may use less data', false)}
+            ${settingsToggle('Random hardware addresses', 'Make harder to track', false)}
+            <div style="margin-top:14px;display:flex;gap:10px;">
+                <button onclick="alert('Network would be reset')" style="padding:10px 18px;background:#0078d4;color:white;border:none;border-radius:4px;cursor:pointer;">Reset network</button>
+                <button onclick="alert('Connection diagnosed: All systems normal')" style="padding:10px 18px;background:#f0f0f0;color:#333;border:1px solid #ccc;border-radius:4px;cursor:pointer;">Network troubleshooter</button>
+            </div>`,
+        wifi: () => `<h2 style="font-weight:400;margin-bottom:18px;">📶 Wi-Fi</h2>
+            <div style="background:#f5f5f5;padding:18px;border-radius:8px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;">
+                <div><div style="font-weight:500;font-size:15px;">Wi-Fi</div><div style="color:#666;font-size:13px;margin-top:2px;">${connected ? 'Connected to '+connected.name : 'Not connected'}</div></div>
+                <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <h3 style="margin-bottom:10px;">Available networks</h3>
+            <div style="border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;">
+                ${_wifiAvailable.map((n,i) => `<div onclick="wifiConnectTo(${i})" style="padding:12px 16px;border-bottom:${i<_wifiAvailable.length-1?'1px solid #e0e0e0':'none'};cursor:pointer;display:flex;align-items:center;gap:12px;${n.connected?'background:#e3f2fd;':''}" onmouseover="if(!${n.connected}) this.style.background='#f5f5f5'" onmouseout="if(!${n.connected}) this.style.background='white'">
+                    <span style="display:inline-flex;gap:2px;align-items:flex-end;height:18px;">
+                        <span style="width:3px;height:5px;background:#333;${n.bars>=1?'':'opacity:.25'}"></span>
+                        <span style="width:3px;height:9px;background:#333;${n.bars>=2?'':'opacity:.25'}"></span>
+                        <span style="width:3px;height:13px;background:#333;${n.bars>=3?'':'opacity:.25'}"></span>
+                        <span style="width:3px;height:18px;background:#333;${n.bars>=4?'':'opacity:.25'}"></span>
+                    </span>
+                    <div style="flex:1;"><div><strong>${n.name}</strong> ${n.connected?'<span style="color:#107c10">— Connected, secured</span>':''}</div><div style="font-size:12px;color:#666;">${n.freq} • ${n.speed} • ${n.secure?'🔒 Secured':'Open'}</div></div>
+                </div>`).join('')}
+            </div>
+            <div style="margin-top:14px;">${settingsToggle('Connect automatically when in range','Reconnect to known networks',true)}</div>
+            ${settingsToggle('Show available networks in taskbar','Quick Wi-Fi access',true)}
+            <button onclick="alert('Manage known networks dialog would open')" style="padding:10px 18px;background:#f0f0f0;color:#333;border:1px solid #ccc;border-radius:4px;cursor:pointer;margin-top:14px;">Manage known networks</button>`,
+        ethernet: () => `<h2 style="font-weight:400;margin-bottom:18px;">🔌 Ethernet</h2>
+            <div style="background:#f5f5f5;padding:18px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+                <div><div style="font-weight:500;font-size:15px;">Ethernet</div><div style="color:#666;font-size:13px;">Realtek PCIe GbE — No cable connected</div></div>
+                <span style="padding:4px 12px;background:#fbe9e7;color:#bf360c;border-radius:12px;font-size:12px;">Disconnected</span>
+            </div>
+            <h3 style="margin:18px 0 10px;">Related settings</h3>
+            <button onclick="alert('Adapter properties dialog')" style="padding:10px 18px;background:#f0f0f0;color:#333;border:1px solid #ccc;border-radius:4px;cursor:pointer;margin-right:8px;">Change adapter options</button>
+            <button onclick="alert('Sharing center')" style="padding:10px 18px;background:#f0f0f0;color:#333;border:1px solid #ccc;border-radius:4px;cursor:pointer;">Network and Sharing Center</button>`,
+        dialup: () => `<h2 style="font-weight:400;margin-bottom:18px;">☎️ Dial-up</h2>
+            <p style="color:#666;margin-bottom:14px;">Set up a dial-up connection</p>
+            <div style="background:#f5f5f5;padding:24px;border-radius:8px;text-align:center;color:#666;">
+                <div style="font-size:48px;margin-bottom:10px;">📞</div>
+                <p>You don't have any dial-up connections yet.</p>
+                <button onclick="alert('Set up a new connection wizard')" style="padding:10px 20px;background:#0078d4;color:white;border:none;border-radius:4px;cursor:pointer;margin-top:14px;">Set up a new connection</button>
+            </div>`,
+        vpn: () => `<h2 style="font-weight:400;margin-bottom:18px;">🔐 VPN</h2>
+            <button onclick="alert('Add VPN connection wizard')" style="padding:10px 18px;background:#0078d4;color:white;border:none;border-radius:4px;cursor:pointer;margin-bottom:18px;">+ Add a VPN connection</button>
+            ${_vpnList.map((v,i) => `<div style="background:#f5f5f5;padding:14px;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+                <div><div style="font-weight:500;">🔐 ${v.name}</div><div style="font-size:12px;color:#666;">${v.type} • ${v.host}</div></div>
+                <button onclick="_vpnList[${i}].connected=!_vpnList[${i}].connected; renderWifiTab();" style="padding:6px 14px;background:${v.connected?'#107c10':'#0078d4'};color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px;">${v.connected?'✓ Connected':'Connect'}</button>
+            </div>`).join('')}
+            <h3 style="margin:18px 0 10px;">Advanced options</h3>
+            ${settingsToggle('Allow VPN over metered networks','Use VPN even when on cellular',true)}
+            ${settingsToggle('Allow VPN while roaming','Use VPN when traveling',false)}`,
+        airplane: () => `<h2 style="font-weight:400;margin-bottom:18px;">✈️ Airplane mode</h2>
+            <div style="background:#f5f5f5;padding:18px;border-radius:8px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+                <div><div style="font-weight:500;font-size:15px;">Airplane mode</div><div style="color:#666;font-size:13px;">Stops all wireless communication</div></div>
+                <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+            </div>
+            <h3 style="margin:14px 0 10px;">Wireless devices</h3>
+            ${settingsToggle('Wi-Fi','',true)}
+            ${settingsToggle('Bluetooth','',true)}
+            ${settingsToggle('Cellular','No SIM detected',false)}
+            ${settingsToggle('GPS','Use location services',true)}
+            ${settingsToggle('NFC','Near field communication',false)}`,
+        hotspot: () => `<h2 style="font-weight:400;margin-bottom:18px;">📡 Mobile hotspot</h2>
+            <div style="background:#f5f5f5;padding:18px;border-radius:8px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+                <div><div style="font-weight:500;">Share my Internet connection with other devices</div></div>
+                <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="setting-item"><div><div class="setting-label">Share over</div><div class="setting-description">Choose how to share your connection</div></div>
+                <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>Wi-Fi</option><option>Bluetooth</option></select></div>
+            <div class="setting-item"><div><div class="setting-label">Network name</div><div class="setting-description">DESKTOP-${(userData.username||'WIN10').toUpperCase().slice(0,8)} 2354</div></div>
+                <button onclick="alert('Edit hotspot details')" style="padding:6px 14px;background:#f0f0f0;color:#333;border:1px solid #ccc;border-radius:4px;cursor:pointer;">Edit</button></div>
+            <div class="setting-item"><div><div class="setting-label">Network band</div><div class="setting-description">Choose 5GHz or 2.4GHz</div></div>
+                <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>Any available</option><option>5 GHz</option><option>2.4 GHz</option></select></div>
+            ${settingsToggle('Power saving','Turn off hotspot when no devices connected',true)}
+            ${settingsToggle('Turn on remotely','Activate via Bluetooth from paired devices',false)}
+            <h3 style="margin:14px 0 10px;">Connected devices: 0 of 8</h3>
+            <p style="color:#666;font-size:13px;">No devices currently connected.</p>`,
+        data: () => `<h2 style="font-weight:400;margin-bottom:18px;">📈 Data usage</h2>
+            <div style="background:linear-gradient(135deg,#0078d4,#00bcf2);color:white;padding:24px;border-radius:10px;margin-bottom:18px;">
+                <div style="opacity:.85;font-size:13px;">This month (Wi-Fi)</div>
+                <div style="font-size:36px;font-weight:300;margin:6px 0;">24.6 GB</div>
+                <div style="opacity:.85;font-size:13px;">of 100 GB limit</div>
+                <div style="height:8px;background:rgba(255,255,255,.25);border-radius:4px;margin-top:12px;overflow:hidden;"><div style="width:24.6%;height:100%;background:white;"></div></div>
+            </div>
+            <h3 style="margin:14px 0 10px;">Usage by app</h3>
+            ${[
+                ['Microsoft Edge','🌐',6.2],['YouTube','▶️',5.4],['Discord','💬',2.8],
+                ['Spotify','🎵',2.1],['Steam','🎮',1.9],['Windows Update','🔄',1.6],
+                ['OneDrive','☁️',1.4],['Mail','📧',0.9],['Other','📦',2.3]
+            ].map(([n,i,gb]) => `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f0f0f0;">
+                <span style="font-size:20px;">${i}</span>
+                <div style="flex:1;"><div style="font-size:13px;">${n}</div><div style="height:6px;background:#e0e0e0;border-radius:3px;margin-top:4px;overflow:hidden;"><div style="width:${gb*4}%;max-width:100%;height:100%;background:#0078d4;"></div></div></div>
+                <div style="font-size:13px;color:#666;font-weight:500;">${gb} GB</div>
+            </div>`).join('')}
+            <button onclick="alert('Data limit set')" style="padding:10px 18px;background:#0078d4;color:white;border:none;border-radius:4px;cursor:pointer;margin-top:14px;">Enter limit</button>`,
+        proxy: () => `<h2 style="font-weight:400;margin-bottom:18px;">🛡️ Proxy</h2>
+            <h3 style="margin-bottom:10px;">Automatic proxy setup</h3>
+            ${settingsToggle('Automatically detect settings','Best for most networks',true)}
+            ${settingsToggle('Use setup script','Use a configuration script (PAC) URL',false)}
+            <div style="display:flex;gap:8px;margin:8px 0 18px;">
+                <input type="text" placeholder="http://proxy.example.com/proxy.pac" style="flex:1;padding:10px;border:1px solid #ccc;border-radius:4px;">
+                <button onclick="alert('Proxy script saved')" style="padding:10px 18px;background:#f0f0f0;color:#333;border:1px solid #ccc;border-radius:4px;cursor:pointer;">Save</button>
+            </div>
+            <h3 style="margin-bottom:10px;">Manual proxy setup</h3>
+            ${settingsToggle('Use a proxy server','For LAN connections',false)}
+            <div style="display:grid;grid-template-columns:1fr 100px;gap:8px;margin:8px 0;">
+                <input type="text" placeholder="Proxy server address" style="padding:10px;border:1px solid #ccc;border-radius:4px;">
+                <input type="text" placeholder="Port" style="padding:10px;border:1px solid #ccc;border-radius:4px;">
+            </div>
+            <textarea placeholder="Use the proxy server except for addresses (semicolon-separated)" style="width:100%;height:60px;padding:10px;border:1px solid #ccc;border-radius:4px;"></textarea>
+            ${settingsToggle("Don't use proxy server for local addresses",'',true)}`,
+        advanced: () => `<h2 style="font-weight:400;margin-bottom:18px;">⚙️ Advanced network settings</h2>
+            <h3 style="margin-bottom:10px;">Related settings</h3>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+                ${[
+                    ['Change adapter options','View network adapters'],
+                    ['Network and Sharing Center','For network and sharing'],
+                    ['Network reset','Reinstall all adapters'],
+                    ['Windows Firewall','Allow apps through firewall'],
+                    ['Wi-Fi calling','Make calls over Wi-Fi'],
+                    ['DNS settings','Configure DNS providers']
+                ].map(([t,d]) => `<div onclick="alert('${t} would open')" style="background:#f5f5f5;padding:14px;border-radius:8px;cursor:pointer;transition:.2s;" onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background='#f5f5f5'">
+                    <div style="font-weight:500;">${t}</div><div style="color:#666;font-size:12px;margin-top:4px;">${d}</div>
+                </div>`).join('')}
+            </div>
+            <h3 style="margin:20px 0 10px;">DNS over HTTPS</h3>
+            ${settingsToggle('Encrypt DNS queries','More private DNS lookups',true)}
+            <div class="setting-item"><div><div class="setting-label">DNS provider</div><div class="setting-description"></div></div>
+                <select style="padding:8px;border-radius:4px;border:1px solid #ccc;"><option>Cloudflare (1.1.1.1)</option><option>Google (8.8.8.8)</option><option>Quad9 (9.9.9.9)</option><option>Custom</option></select></div>`
+    };
+    el.innerHTML = (tabs[_wifiTab] || tabs.status)();
+}
+
+function wifiConnectTo(i) {
+    _wifiAvailable.forEach(w => w.connected = false);
+    _wifiAvailable[i].connected = true;
+    if (typeof playSound === 'function') playSound('notification');
+    renderWifiTab();
 }
 
 // ── Discord OAuth2 state management ──────────────────────────────────────────
