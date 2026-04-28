@@ -434,9 +434,62 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateClock, 1000);
     
     startPerformanceMonitoring();
+    updatePlanBadge();
     
     checkUrlParams();
 });
+
+// ── Plan badge in the system tray (shows current VM plan, click for popup) ──
+function updatePlanBadge() {
+    const badge = document.getElementById('plan-badge');
+    if (!badge) return;
+    const s = window._vmSpecs || {};
+    if (!s.plan) { badge.style.display = 'none'; return; }
+    const meta = (typeof getPlanMeta === 'function') ? getPlanMeta(s.plan) : { name:s.plan, icon:'💻', color1:'#3ba55d', color2:'#22c55e' };
+    badge.style.display = 'inline-block';
+    badge.textContent = meta.icon + ' ' + meta.name.toUpperCase();
+    badge.style.background = `linear-gradient(135deg, ${meta.color1}, ${meta.color2})`;
+}
+
+// ── Click the plan badge → cool popup with current specs + switch button ──
+function openPlanPopup() {
+    document.getElementById('plan-popup')?.remove();
+    const s = window._vmSpecs || {};
+    const meta = getPlanMeta(s.plan);
+    const ramStr     = s.ram     ? `${s.ram} GB DDR5`             : '500 GB DDR5';
+    const cpuStr     = s.cpu     ? `${s.cpu} GHz`                 : '8.0 GHz';
+    const gpuStr     = s.gpu     ? `NVIDIA ${s.gpu}`              : 'NVIDIA RTX 4090 24GB';
+    const storageStr = s.storage ? (s.storage >= 1000 ? (s.storage/1000).toFixed(0)+' TB' : s.storage+' GB') : '100 TB';
+    const popup = document.createElement('div');
+    popup.id = 'plan-popup';
+    popup.style.cssText = 'position:fixed;bottom:54px;right:14px;width:300px;background:rgba(28,30,42,0.96);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:0;z-index:99999;color:white;font-family:Segoe UI,sans-serif;box-shadow:0 16px 40px rgba(0,0,0,0.5);animation:planPopupIn .25s cubic-bezier(.2,1.1,.4,1);overflow:hidden;';
+    popup.innerHTML = `
+        <style>
+            @keyframes planPopupIn { from { opacity:0; transform:translateY(10px) scale(.95); } to { opacity:1; transform:translateY(0) scale(1); } }
+        </style>
+        <div style="padding:16px 18px;background:linear-gradient(135deg,${meta.color1},${meta.color2});">
+            <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;opacity:.85;font-weight:700;">Active VM Plan</div>
+            <div style="font-size:20px;font-weight:700;margin-top:4px;">${meta.icon} ${meta.name}</div>
+            <div style="font-size:11px;opacity:.85;margin-top:2px;">${meta.tagline}</div>
+        </div>
+        <div style="padding:14px 18px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+            <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:8px;"><div style="font-size:10px;color:#8e9bff;letter-spacing:1px;font-weight:700;">CPU</div><div style="font-size:13px;font-weight:600;margin-top:2px;">${cpuStr}</div></div>
+            <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:8px;"><div style="font-size:10px;color:#8e9bff;letter-spacing:1px;font-weight:700;">RAM</div><div style="font-size:13px;font-weight:600;margin-top:2px;">${ramStr}</div></div>
+            <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:8px;grid-column:span 2;"><div style="font-size:10px;color:#8e9bff;letter-spacing:1px;font-weight:700;">GPU</div><div style="font-size:13px;font-weight:600;margin-top:2px;">${gpuStr}</div></div>
+            <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:8px;grid-column:span 2;"><div style="font-size:10px;color:#8e9bff;letter-spacing:1px;font-weight:700;">Storage</div><div style="font-size:13px;font-weight:600;margin-top:2px;">${storageStr} NVMe SSD</div></div>
+        </div>
+        <div style="padding:0 18px 16px;display:flex;gap:8px;">
+            <button onclick="openApp('settings');setTimeout(()=>{document.querySelectorAll('.settings-menu-item').forEach(m=>{if(m.textContent.trim()==='About') m.click();});},150);document.getElementById('plan-popup').remove();" style="flex:1;padding:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:white;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">View details</button>
+            <button onclick="window.location.href='/run_vm_on.html'" style="flex:1;padding:10px;border:none;background:linear-gradient(135deg,${meta.color1},${meta.color2});color:white;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;">Switch plan</button>
+        </div>
+    `;
+    document.body.appendChild(popup);
+    // Click outside to close
+    setTimeout(() => {
+        const close = (e) => { if (!popup.contains(e.target)) { popup.remove(); document.removeEventListener('click', close); } };
+        document.addEventListener('click', close);
+    }, 100);
+}
 
 function checkUrlParams() {
     const params = new URLSearchParams(window.location.search);
@@ -2610,13 +2663,29 @@ function settingsRenderMR() {
 }
 
 function settingsRenderAbout() {
+    const s = window._vmSpecs || {};
+    const planMeta = getPlanMeta(s.plan);
+    const cpuStr  = s.cpu     ? `Intel® Core™ @ ${s.cpu} GHz` : 'Intel® Core™ i9-14900K @ 8.0 GHz (24-core)';
+    const ramStr  = s.ram     ? `${s.ram} GB DDR5` : '500 GB DDR5';
+    const gpuStr  = s.gpu     ? `NVIDIA ${s.gpu}` : 'NVIDIA RTX 4090 24GB';
+    const diskStr = s.storage ? (s.storage >= 1000 ? (s.storage/1000).toFixed(0)+' TB' : s.storage+' GB') + ' NVMe SSD' : '100 TB Samsung NVMe SSD';
     return `<h2>ℹ️ About</h2>
+        <div style="background:linear-gradient(135deg,${planMeta.color1},${planMeta.color2});color:white;padding:18px 22px;border-radius:10px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 6px 20px ${planMeta.shadow};">
+            <div>
+                <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:.85;font-weight:700;">Active VM Plan</div>
+                <div style="font-size:24px;font-weight:700;margin-top:2px;">${planMeta.icon} ${planMeta.name}</div>
+                <div style="font-size:12px;opacity:.85;margin-top:4px;">${planMeta.tagline}</div>
+            </div>
+            <button onclick="window.location.href='/run_vm_on.html'" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:white;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;backdrop-filter:blur(8px);">Switch plan →</button>
+        </div>
         <div style="background:#f5f5f5;padding:20px;border-radius:8px;margin-bottom:14px;">
             <h3 style="margin-bottom:14px;">Device specifications</h3>
             <div style="display:grid;grid-template-columns:140px 1fr;gap:6px 14px;font-size:13px;">
                 <div style="color:#666;">Device name</div><div><strong>DESKTOP-${(userData.username||'WIN10').toUpperCase().slice(0,8)}</strong></div>
-                <div style="color:#666;">Processor</div><div>Intel Core i9-14900K @ 8.0 GHz (24-core)</div>
-                <div style="color:#666;">Installed RAM</div><div>500 GB DDR5</div>
+                <div style="color:#666;">Processor</div><div>${cpuStr}</div>
+                <div style="color:#666;">Installed RAM</div><div>${ramStr}</div>
+                <div style="color:#666;">Graphics</div><div>${gpuStr}</div>
+                <div style="color:#666;">Storage</div><div>${diskStr}</div>
                 <div style="color:#666;">Device ID</div><div>A8F2B1C9-44E7-4D8A-9C32-6E5F8D3A1B7C</div>
                 <div style="color:#666;">Product ID</div><div>00330-80000-00000-AA420</div>
                 <div style="color:#666;">System type</div><div>64-bit operating system, x64-based processor</div>
@@ -2633,8 +2702,20 @@ function settingsRenderAbout() {
                 <div style="color:#666;">Experience</div><div>Windows Feature Experience Pack 1000.19053.1000.0</div>
             </div>
         </div>
-        ${settingsButton('Copy', 'Copy specs to clipboard', 'Copy', "navigator.clipboard.writeText('Windows 10 Pro 22H2'); alert('Specs copied!')")}
-        ${settingsButton('Rename this PC', 'Change your computer name', 'Rename', "const n=prompt('New PC name:'); if(n) alert('PC will be renamed to: '+n+' (after restart)')")}`;
+        ${settingsButton('Copy', 'Copy specs to clipboard', 'Copy', `navigator.clipboard.writeText('Windows 10 Pro 22H2 — ${planMeta.name} VM\\n${cpuStr}\\n${ramStr}\\n${gpuStr}\\n${diskStr}'); alert('Specs copied!')`)}
+        ${settingsButton('Rename this PC', 'Change your computer name', 'Rename', "const n=prompt('New PC name:'); if(n) alert('PC will be renamed to: '+n+' (after restart)')")}
+        ${settingsButton('Reset VM plan', 'Choose a different VM plan', 'Choose plan', "if(confirm('Pick a new VM plan? Your apps & data stay.')){localStorage.removeItem('vmSpecs');window.location.href='/run_vm_on.html';}")}`;
+}
+
+// ── VM plan metadata (shared by About, taskbar badge, etc.) ──
+function getPlanMeta(plan) {
+    const plans = {
+        free:      { name:'Free',      icon:'💻', tagline:'Standard VM for everyday use',         color1:'#3ba55d', color2:'#22c55e', shadow:'rgba(59,165,93,0.35)' },
+        pro:       { name:'Pro',       icon:'🚀', tagline:'High-performance VM for power users',  color1:'#5865f2', color2:'#7289da', shadow:'rgba(88,101,242,0.35)' },
+        master:    { name:'Master',    icon:'⚡', tagline:'Beast-tier hardware for serious work', color1:'#e67e22', color2:'#e91e8c', shadow:'rgba(230,126,34,0.35)' },
+        exclusive: { name:'Exclusive', icon:'💎', tagline:'The ultimate VM — no compromises',     color1:'#9b59b6', color2:'#e91e8c', shadow:'rgba(155,89,182,0.45)' }
+    };
+    return plans[plan] || plans.free;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

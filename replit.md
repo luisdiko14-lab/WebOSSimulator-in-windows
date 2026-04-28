@@ -63,6 +63,11 @@ Preferred communication style: Simple, everyday language.
 - Boot animation completes → navigates to `/?plan=...&ram=...&cpu=...&gpu=...&storage=...`
 - script.js IIFE at top reads the params and stores them in `localStorage.vmSpecs` + `window._vmSpecs`; About/Task Manager/Device Manager all read from `_vmSpecs` to show plan-specific hardware
 
+### Active VM plan UI (Settings + tray badge)
+- `getPlanMeta(plan)` returns icon/name/tagline + 2 gradient colors for free/pro/master/exclusive
+- **Tray badge**: `index.html` system-tray has `<span id="plan-badge">`; `updatePlanBadge()` runs on DOMContentLoaded and after any plan change; click → `openPlanPopup()` opens a glass-style popup with current CPU/RAM/GPU/Storage and "View details" + "Switch plan" buttons
+- **Settings → About**: now opens with a colored gradient banner at the top showing the active plan + a "Switch plan →" button; the device-specs grid reads CPU/RAM/Graphics/Storage from `_vmSpecs`; "Reset VM plan" button at the bottom clears `vmSpecs` and reroutes to the launcher
+
 ### Screen Management
 - Multiple "screen" divs for boot, lock, login, desktop, setup steps
 - `showScreen()` toggles `.active` class + `style.display`
