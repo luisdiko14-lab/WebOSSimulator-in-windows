@@ -86,19 +86,44 @@ app.get('/proxy', async (req, res) => {
         const upstream = await fetch(target, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                'Accept': '*/*',
-                'Accept-Language': 'en-US,en;q=0.9'
+                'Accept': req.headers['accept'] || '*/*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': new URL(target).origin + '/'
             },
             redirect: 'follow'
         });
 
-        const ct = upstream.headers.get('content-type') || 'text/html; charset=utf-8';
+        let ct = upstream.headers.get('content-type') || '';
         const finalUrl = upstream.url || target;
         const baseUrl = new URL(finalUrl);
+
+        // Sniff Content-Type from URL extension when upstream lies (fixes "CSS not applied")
+        const urlPath = baseUrl.pathname.toLowerCase();
+        const acceptHdr = (req.headers['accept'] || '');
+        const wantsCss = /text\/css/i.test(acceptHdr);
+        if (/\.css(\?|$)/.test(urlPath) || wantsCss) {
+            if (!ct.includes('text/css')) ct = 'text/css; charset=utf-8';
+        } else if (/\.(js|mjs|cjs)(\?|$)/.test(urlPath)) {
+            if (!ct.includes('javascript')) ct = 'application/javascript; charset=utf-8';
+        } else if (/\.json(\?|$)/.test(urlPath)) {
+            if (!ct.includes('json')) ct = 'application/json; charset=utf-8';
+        } else if (/\.(png|jpe?g|gif|webp|avif|svg|ico|bmp)(\?|$)/.test(urlPath)) {
+            if (!ct.startsWith('image/')) {
+                const ext = urlPath.match(/\.(png|jpe?g|gif|webp|avif|svg|ico|bmp)/)[1];
+                ct = 'image/' + (ext === 'jpg' ? 'jpeg' : ext === 'svg' ? 'svg+xml' : ext === 'ico' ? 'x-icon' : ext);
+            }
+        } else if (/\.(woff2?|ttf|otf|eot)(\?|$)/.test(urlPath)) {
+            if (!ct.includes('font') && !ct.startsWith('font/')) {
+                ct = 'font/' + urlPath.match(/\.(woff2?|ttf|otf|eot)/)[1];
+            }
+        } else if (!ct) {
+            ct = 'text/html; charset=utf-8';
+        }
 
         // Pass through only safe headers; strip frame-blocking ones
         res.setHeader('Content-Type', ct);
         res.setHeader('Cache-Control', 'no-store');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
         res.removeHeader('X-Frame-Options');
         res.removeHeader('Content-Security-Policy');
 
@@ -138,21 +163,57 @@ app.get('/proxy', async (req, res) => {
                 return `url(${q}${rewrite(url)}${q})`;
             });
 
-            const baseTag = `<base href="${baseUrl.origin}${baseUrl.pathname.replace(/[^/]*$/, '')}">`;
+            const baseHref = `${baseUrl.origin}${baseUrl.pathname.replace(/[^/]*$/, '')}`;
+            const baseTag = `<base href="${baseHref}">`;
+            // The proxy script: rewrites fetch/XHR + watches DOM for dynamically-added link/script/img/iframe (fixes "no style on some sites")
             const proxyScript = `<script>(function(){
-                var BASE=${JSON.stringify(baseUrl.origin)};
-                function P(u){try{return '/proxy?url='+encodeURIComponent(new URL(u,BASE).href);}catch(e){return u;}}
+                var BASE=${JSON.stringify(baseHref)};
+                function abs(u){try{return new URL(u,BASE).href;}catch(e){return null;}}
+                function P(u){if(!u||/^(data:|blob:|javascript:|mailto:|tel:|#|about:)/i.test(u))return u;var a=abs(u);return a?'/proxy?url='+encodeURIComponent(a):u;}
+                // ---- fetch (handles strings, Requests, AND relative URLs) ----
                 var of=window.fetch;
                 if(of) window.fetch=function(input,init){
-                    if(typeof input==='string' && /^https?:\\/\\//i.test(input)) input=P(input);
-                    else if(input && input.url && /^https?:\\/\\//i.test(input.url)) input=new Request(P(input.url),input);
+                    try{
+                        if(typeof input==='string'){ input=P(input); }
+                        else if(input && input.url){ input=new Request(P(input.url),input); }
+                    }catch(e){}
                     return of.call(this,input,init);
                 };
+                // ---- XHR ----
                 var ox=XMLHttpRequest.prototype.open;
                 XMLHttpRequest.prototype.open=function(m,u){
-                    if(typeof u==='string' && /^https?:\\/\\//i.test(u)) u=P(u);
+                    try{ if(typeof u==='string') u=P(u); }catch(e){}
                     return ox.apply(this,[m,u].concat([].slice.call(arguments,2)));
                 };
+                // ---- DOM mutations: rewrite href/src on dynamically-added link/script/img/iframe/source ----
+                var URL_ATTRS={LINK:'href',SCRIPT:'src',IMG:'src',IFRAME:'src',SOURCE:'src',VIDEO:'src',AUDIO:'src'};
+                function fixEl(el){
+                    if(!el||el.nodeType!==1)return;
+                    var tag=el.tagName, attr=URL_ATTRS[tag];
+                    if(attr){
+                        var v=el.getAttribute(attr);
+                        if(v && !/^\\/proxy\\?/.test(v) && !/^(data:|blob:|javascript:|mailto:|#|about:)/i.test(v)){
+                            var p=P(v); if(p!==v) el.setAttribute(attr,p);
+                        }
+                    }
+                    if(tag==='IMG'||tag==='SOURCE'){
+                        var ss=el.getAttribute('srcset');
+                        if(ss && ss.indexOf('/proxy?')===-1){
+                            el.setAttribute('srcset', ss.split(',').map(function(s){var p=s.trim().split(/\\s+/);if(p[0])p[0]=P(p[0]);return p.join(' ');}).join(', '));
+                        }
+                    }
+                    // recurse into children that came along (e.g. parsed HTML chunks)
+                    if(el.children) for(var i=0;i<el.children.length;i++) fixEl(el.children[i]);
+                }
+                if(window.MutationObserver){
+                    new MutationObserver(function(muts){
+                        for(var i=0;i<muts.length;i++){
+                            var ns=muts[i].addedNodes;
+                            for(var j=0;j<ns.length;j++) fixEl(ns[j]);
+                            if(muts[i].type==='attributes') fixEl(muts[i].target);
+                        }
+                    }).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['src','href','srcset']});
+                }
             })();</script>`;
 
             if (/<head[^>]*>/i.test(html)) {
