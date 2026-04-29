@@ -439,6 +439,128 @@ document.addEventListener('DOMContentLoaded', () => {
     checkUrlParams();
 });
 
+// ── Save Database: dumps all localStorage + user info to storage.json on the server ──
+async function saveDatabaseToServer() {
+    // Build a friendly status overlay
+    document.getElementById('save-db-overlay')?.remove();
+    const ov = document.createElement('div');
+    ov.id = 'save-db-overlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:Segoe UI,sans-serif;';
+    ov.innerHTML = `
+        <div style="background:rgba(28,30,42,0.97);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:28px 32px;width:440px;color:white;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                <div style="font-size:34px;">💾</div>
+                <div>
+                    <div style="font-size:17px;font-weight:700;">Saving Database…</div>
+                    <div id="save-db-sub" style="font-size:11px;opacity:.7;margin-top:2px;">Collecting your data</div>
+                </div>
+            </div>
+            <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin:14px 0;">
+                <div id="save-db-bar" style="height:100%;width:10%;background:linear-gradient(90deg,#0078d4,#3ba55d);transition:width .3s;"></div>
+            </div>
+            <div id="save-db-log" style="font-size:11px;font-family:Consolas,monospace;color:#8e9bff;background:rgba(0,0,0,0.3);padding:10px;border-radius:6px;max-height:140px;overflow-y:auto;line-height:1.6;"></div>
+            <button id="save-db-close" style="display:none;margin-top:14px;width:100%;padding:10px;border:none;background:linear-gradient(135deg,#0078d4,#3ba55d);color:white;border-radius:6px;cursor:pointer;font-weight:600;">Done</button>
+        </div>
+    `;
+    document.body.appendChild(ov);
+    const sub = document.getElementById('save-db-sub');
+    const bar = document.getElementById('save-db-bar');
+    const logBox = document.getElementById('save-db-log');
+    const log = (msg) => { logBox.innerHTML += `> ${msg}<br>`; logBox.scrollTop = logBox.scrollHeight; };
+
+    try {
+        // 1) Collect every localStorage key
+        sub.textContent = 'Collecting localStorage…'; bar.style.width = '25%'; log('Reading localStorage…');
+        const allLocalStorage = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            const raw = localStorage.getItem(k);
+            try { allLocalStorage[k] = JSON.parse(raw); } catch { allLocalStorage[k] = raw; }
+        }
+        log(`Found ${Object.keys(allLocalStorage).length} localStorage keys`);
+
+        // 2) Pull out the most important pieces by name (so the JSON is easy to read)
+        const userData          = allLocalStorage.windowsUserData || null;
+        const vmSpecs           = allLocalStorage.vmSpecs || window._vmSpecs || null;
+        const discordUser       = allLocalStorage.discord_user_data || null;
+        const installedDate     = allLocalStorage.windowsInstalledDate || null;
+
+        // 3) Browser-side info
+        const browserInfo = {
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            language: navigator.language,
+            languages: navigator.languages,
+            cookieEnabled: navigator.cookieEnabled,
+            onLine: navigator.onLine,
+            screen: { width: screen.width, height: screen.height, colorDepth: screen.colorDepth, pixelRatio: window.devicePixelRatio },
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            timezoneOffset: new Date().getTimezoneOffset()
+        };
+
+        // 4) Try to get geolocation (with permission) — best-effort, 4s timeout
+        sub.textContent = 'Requesting location (optional)…'; bar.style.width = '45%'; log('Asking browser for GPS location…');
+        let browserGeo = { status: 'unavailable' };
+        if (navigator.geolocation) {
+            browserGeo = await new Promise(resolve => {
+                const timer = setTimeout(() => resolve({ status: 'timeout' }), 4500);
+                navigator.geolocation.getCurrentPosition(
+                    pos => { clearTimeout(timer); resolve({ status: 'ok', latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy }); },
+                    err => { clearTimeout(timer); resolve({ status: 'denied', error: err.message }); },
+                    { timeout: 4000, maximumAge: 60000 }
+                );
+            });
+            log(`GPS: ${browserGeo.status}`);
+        }
+
+        // 5) Build the payload
+        sub.textContent = 'Sending to server…'; bar.style.width = '70%'; log('POST /api/save-storage…');
+        const payload = {
+            username: userData?.username || userData?.name || discordUser?.username || 'unknown',
+            email: userData?.email || discordUser?.email || null,
+            createdAt: installedDate || userData?.createdAt || null,
+            account: userData,
+            vmPlan: vmSpecs,
+            discord: discordUser,
+            browserGeolocation: browserGeo,
+            browser: browserInfo,
+            settings: {
+                theme: userData?.theme || null,
+                accent: userData?.accent || null,
+                timezone: userData?.timezone || null,
+                cortana: userData?.cortana || null,
+                findDevice: userData?.findDevice || null,
+                privacy: userData ? Object.fromEntries(Object.entries(userData).filter(([k]) => k.startsWith('privacy'))) : null
+            },
+            allLocalStorage
+        };
+
+        // 6) POST to the server
+        const r = await fetch('/api/save-storage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const out = await r.json();
+        if (!out.ok) throw new Error(out.error || 'Server returned an error');
+
+        bar.style.width = '100%';
+        sub.textContent = 'Saved successfully';
+        log(`✓ Record #${out.recordNumber} saved to storage.json`);
+        log(`✓ IP: ${out.ip}`);
+        if (out.location?.city) log(`✓ Location: ${out.location.city}, ${out.location.country}`);
+        document.getElementById('save-db-close').style.display = 'block';
+        document.getElementById('save-db-close').onclick = () => ov.remove();
+    } catch (e) {
+        bar.style.background = '#ef4444';
+        sub.textContent = 'Failed to save';
+        log(`✗ Error: ${e.message}`);
+        document.getElementById('save-db-close').style.display = 'block';
+        document.getElementById('save-db-close').textContent = 'Close';
+        document.getElementById('save-db-close').onclick = () => ov.remove();
+    }
+}
+
 // ── Plan badge in the system tray (shows current VM plan, click for popup) ──
 function updatePlanBadge() {
     const badge = document.getElementById('plan-badge');

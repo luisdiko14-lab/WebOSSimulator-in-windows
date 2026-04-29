@@ -1,0 +1,362 @@
+{
+  "records": [
+    {
+      "savedAt": "2026-04-29T05:38:31.299Z",
+      "client": {
+        "ip": "127.0.0.1",
+        "ipForwardedFor": null,
+        "userAgent": "curl/8.14.1",
+        "acceptLanguage": null,
+        "referer": null,
+        "mac": "Not available — browsers do not expose MAC addresses for privacy",
+        "location": {
+          "source": "ip-api.com",
+          "status": "private-ip",
+          "note": "Local/private IP — no geolocation available"
+        }
+      },
+      "server": {
+        "hostname": "2d7a5d248eb7",
+        "platform": "linux",
+        "macAddresses": [
+          {
+            "interface": "eth0",
+            "mac": "02:42:ac:1f:72:e2",
+            "family": "IPv4",
+            "address": "172.31.114.226"
+          }
+        ]
+      },
+      "payload": {
+        "username": "testuser",
+        "email": "test@example.com",
+        "account": {
+          "name": "Test"
+        },
+        "vmPlan": {
+          "plan": "pro",
+          "ram": 100
+        }
+      }
+    },
+    {
+      "savedAt": "2026-04-29T05:38:43.620Z",
+      "client": {
+        "ip": "193.187.100.70",
+        "ipForwardedFor": "193.187.100.70, 10.83.1.77, 127.0.0.1",
+        "userAgent": "Mozilla/5.0 (iPad; CPU OS 18_7_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/147.0.7727.99 Mobile/15E148 Safari/604.1",
+        "acceptLanguage": "en-GB,en;q=0.9",
+        "referer": "https://dc97442b-2e83-447c-806e-1718dc226361-00-ry3rm930k0c5.worf.replit.dev/index.html",
+        "mac": "Not available — browsers do not expose MAC addresses for privacy",
+        "location": {
+          "source": "ip-api.com",
+          "status": "success",
+          "country": "Albania",
+          "countryCode": "AL",
+          "region": "03",
+          "regionName": "Elbasan County",
+          "city": "Elbasan",
+          "zip": "",
+          "lat": 41.1122,
+          "lon": 20.0818,
+          "timezone": "Europe/Tirane",
+          "isp": "SKY ELBASAN sh.p.k",
+          "org": "SkyElbasanNetwork",
+          "as": "AS210003 SKY ELBASAN sh.p.k"
+        }
+      },
+      "server": {
+        "hostname": "2d7a5d248eb7",
+        "platform": "linux",
+        "macAddresses": [
+          {
+            "interface": "eth0",
+            "mac": "02:42:ac:1f:72:e2",
+            "family": "IPv4",
+            "address": "172.31.114.226"
+          }
+        ]
+      },
+      "payload": {
+        "username": ".",
+        "email": "luisdiko732@gmail.com",
+        "createdAt": null,
+        "account": {
+          "username": ".",
+          "password": ".",
+          "email": "",
+          "accountType": "local",
+          "wifiNetwork": "offline",
+          "bluetoothDevices": [
+            "AirPods Pro"
+          ],
+          "pin": "1234",
+          "securityQ1": "What was your first pet's name?",
+          "securityA1": "Kdisk",
+          "securityQ2": "What's your mother's maiden name?",
+          "securityA2": "Smjssjjss",
+          "theme": "dark",
+          "accent": "#0078d4",
+          "accentColor": "#0078d4",
+          "timezone": "America/Sao_Paulo",
+          "timezoneLabel": "(UTC-03:00) Brasilia",
+          "cortana": true,
+          "findDevice": true,
+          "privacyLocation": true,
+          "privacyDiagnostics": true,
+          "privacyTailored": true,
+          "privacyInk": true,
+          "privacyAds": true,
+          "privacyActivity": true
+        },
+        "vmPlan": {
+          "plan": "free",
+          "ram": "8",
+          "cpu": "3.2",
+          "gpu": "Intel+UHD",
+          "storage": "256"
+        },
+        "discord": {
+          "id": "1370394029665030295",
+          "username": "luisthegoat7301",
+          "discriminator": "0",
+          "email": "luisdiko732@gmail.com",
+          "avatar": "https://cdn.discordapp.com/avatars/1370394029665030295/2a5c45d6f2aa1c58ed62f0cdc6c7cd44.png",
+          "guilds": [
+            {
+              "id": "321845546534830085",
+              "name": "Emoji.gg",
+              "icon": "https://cdn.discordapp.com/icons/321845546534830085/a_650fa1ce364722e61d08b2d7280dc18f.png"
+            },
+            {
+              "id": "819285379982557265",
+              "name": "Lanyard",
+              "icon": "https://cdn.discordapp.com/icons/819285379982557265/cdc9672c2a7efcd8cd8f3b8b732d21ab.png"
+            },
+            {
+              "id": "822426820447567872",
+              "name": "BotGhost 👻",
+              "icon": "https://cdn.discordapp.com/icons/822426820447567872/a_f2cee9e9732c3dc5f3bc9cd56aa6dc4e.png"
+            },
+            {
+              "id": "846496831533088768",
+              "name": "BeluGANG",
+              "icon": "https://cdn.discordapp.com/icons/846496831533088768/b077d580989c02a4486d3a39469b2de5.png"
+            },
+            {
+              "id": "870407365508358184",
+              "name": "Foltyn's Family",
+              "icon": "https://cdn.discordapp.com/icons/870407365508358184/dd8f778dfd692047fa343eb84cb31ee5.png"
+            },
+            {
+              "id": "1035887795295752253",
+              "name": "Fozmu Studios",
+              "icon": "https://cdn.discordapp.com/icons/1035887795295752253/a9b24aa03580744465aacaa75212c62f.png"
+            },
+            {
+              "id": "1092173065967911002",
+              "name": "Geneplore AI | Access ChatGPT, o3, Claude",
+              "icon": "https://cdn.discordapp.com/icons/1092173065967911002/a_49c07adbc4843c80f3c636d2115e7a23.png"
+            },
+            {
+              "id": "1092952464766021632",
+              "name": "MonkeyBytes-Hosting",
+              "icon": "https://cdn.discordapp.com/icons/1092952464766021632/0b0927ce5b03cc87db5751234e0998ae.png"
+            },
+            {
+              "id": "1133137001198137496",
+              "name": "Throwback Gaming",
+              "icon": "https://cdn.discordapp.com/icons/1133137001198137496/90ef4572841aff3eb85e9b6aecc94ce4.png"
+            },
+            {
+              "id": "1151156552888238183",
+              "name": "joinmoco",
+              "icon": "https://cdn.discordapp.com/icons/1151156552888238183/3b9ae2b86e9414d8a9ceb5f861e77a66.png"
+            }
+          ]
+        },
+        "browserGeolocation": {
+          "status": "denied",
+          "error": "User denied Geolocation"
+        },
+        "browser": {
+          "userAgent": "Mozilla/5.0 (iPad; CPU OS 18_7_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/147.0.7727.99 Mobile/15E148 Safari/604.1",
+          "platform": "iPad",
+          "language": "en-GB",
+          "languages": [
+            "en-GB"
+          ],
+          "cookieEnabled": true,
+          "onLine": true,
+          "screen": {
+            "width": 820,
+            "height": 1180,
+            "colorDepth": 24,
+            "pixelRatio": 2
+          },
+          "timezone": "Europe/Tirane",
+          "timezoneOffset": -120
+        },
+        "settings": {
+          "theme": "dark",
+          "accent": "#0078d4",
+          "timezone": "America/Sao_Paulo",
+          "cortana": true,
+          "findDevice": true,
+          "privacy": {
+            "privacyLocation": true,
+            "privacyDiagnostics": true,
+            "privacyTailored": true,
+            "privacyInk": true,
+            "privacyAds": true,
+            "privacyActivity": true
+          }
+        },
+        "allLocalStorage": {
+          "discord_user_data": {
+            "id": "1370394029665030295",
+            "username": "luisthegoat7301",
+            "discriminator": "0",
+            "email": "luisdiko732@gmail.com",
+            "avatar": "https://cdn.discordapp.com/avatars/1370394029665030295/2a5c45d6f2aa1c58ed62f0cdc6c7cd44.png",
+            "guilds": [
+              {
+                "id": "321845546534830085",
+                "name": "Emoji.gg",
+                "icon": "https://cdn.discordapp.com/icons/321845546534830085/a_650fa1ce364722e61d08b2d7280dc18f.png"
+              },
+              {
+                "id": "819285379982557265",
+                "name": "Lanyard",
+                "icon": "https://cdn.discordapp.com/icons/819285379982557265/cdc9672c2a7efcd8cd8f3b8b732d21ab.png"
+              },
+              {
+                "id": "822426820447567872",
+                "name": "BotGhost 👻",
+                "icon": "https://cdn.discordapp.com/icons/822426820447567872/a_f2cee9e9732c3dc5f3bc9cd56aa6dc4e.png"
+              },
+              {
+                "id": "846496831533088768",
+                "name": "BeluGANG",
+                "icon": "https://cdn.discordapp.com/icons/846496831533088768/b077d580989c02a4486d3a39469b2de5.png"
+              },
+              {
+                "id": "870407365508358184",
+                "name": "Foltyn's Family",
+                "icon": "https://cdn.discordapp.com/icons/870407365508358184/dd8f778dfd692047fa343eb84cb31ee5.png"
+              },
+              {
+                "id": "1035887795295752253",
+                "name": "Fozmu Studios",
+                "icon": "https://cdn.discordapp.com/icons/1035887795295752253/a9b24aa03580744465aacaa75212c62f.png"
+              },
+              {
+                "id": "1092173065967911002",
+                "name": "Geneplore AI | Access ChatGPT, o3, Claude",
+                "icon": "https://cdn.discordapp.com/icons/1092173065967911002/a_49c07adbc4843c80f3c636d2115e7a23.png"
+              },
+              {
+                "id": "1092952464766021632",
+                "name": "MonkeyBytes-Hosting",
+                "icon": "https://cdn.discordapp.com/icons/1092952464766021632/0b0927ce5b03cc87db5751234e0998ae.png"
+              },
+              {
+                "id": "1133137001198137496",
+                "name": "Throwback Gaming",
+                "icon": "https://cdn.discordapp.com/icons/1133137001198137496/90ef4572841aff3eb85e9b6aecc94ce4.png"
+              },
+              {
+                "id": "1151156552888238183",
+                "name": "joinmoco",
+                "icon": "https://cdn.discordapp.com/icons/1151156552888238183/3b9ae2b86e9414d8a9ceb5f861e77a66.png"
+              }
+            ]
+          },
+          "windowsSetupData": {
+            "username": ".",
+            "password": ".",
+            "email": "",
+            "accountType": "local",
+            "wifiNetwork": "offline",
+            "wifiPassword": "",
+            "bluetoothDevices": [
+              "AirPods Pro"
+            ],
+            "pin": "1234",
+            "securityQ1": "What was your first pet's name?",
+            "securityA1": "Kdisk",
+            "securityQ2": "What's your mother's maiden name?",
+            "securityA2": "Smjssjjss",
+            "theme": "dark",
+            "accent": "#0078d4",
+            "timezone": "America/Sao_Paulo",
+            "timezoneLabel": "(UTC-03:00) Brasilia",
+            "cortana": true,
+            "findDevice": true,
+            "privacyLocation": true,
+            "privacyDiagnostics": true,
+            "privacyTailored": true,
+            "privacyInk": true,
+            "privacyAds": true,
+            "privacyActivity": true
+          },
+          "windowsUsers": [
+            {
+              "username": "User",
+              "password": "",
+              "email": "",
+              "avatar": "👤",
+              "avatarColor": "#0078d4",
+              "accountType": "local"
+            },
+            {
+              "username": ",",
+              "password": ".",
+              "email": "",
+              "avatar": "👤",
+              "avatarColor": "#82c3d4",
+              "accountType": "local"
+            }
+          ],
+          "windowsUserData": {
+            "username": ".",
+            "password": ".",
+            "email": "",
+            "accountType": "local",
+            "wifiNetwork": "offline",
+            "bluetoothDevices": [
+              "AirPods Pro"
+            ],
+            "pin": "1234",
+            "securityQ1": "What was your first pet's name?",
+            "securityA1": "Kdisk",
+            "securityQ2": "What's your mother's maiden name?",
+            "securityA2": "Smjssjjss",
+            "theme": "dark",
+            "accent": "#0078d4",
+            "accentColor": "#0078d4",
+            "timezone": "America/Sao_Paulo",
+            "timezoneLabel": "(UTC-03:00) Brasilia",
+            "cortana": true,
+            "findDevice": true,
+            "privacyLocation": true,
+            "privacyDiagnostics": true,
+            "privacyTailored": true,
+            "privacyInk": true,
+            "privacyAds": true,
+            "privacyActivity": true
+          },
+          "vmSpecs": {
+            "plan": "free",
+            "ram": "8",
+            "cpu": "3.2",
+            "gpu": "Intel+UHD",
+            "storage": "256"
+          }
+        }
+      }
+    }
+  ],
+  "lastSavedAt": "2026-04-29T05:38:43.620Z",
+  "totalRecords": 2
+}

