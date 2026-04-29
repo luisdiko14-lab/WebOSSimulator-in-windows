@@ -27,6 +27,19 @@ body {
     100% { transform: rotate(360deg); }
 }
 
+@keyframes asPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.4); }
+}
+
+#autosave-status { transition: background .3s, color .3s; }
+#autosave-status:hover { filter: brightness(1.15); }
+
+/* Discord channel hover/active states */
+.discord-ch { transition: background .12s, color .12s; }
+.discord-ch:hover:not(.active) { background: rgba(79,84,92,0.3) !important; color: #dcddde !important; }
+.discord-ch.active { background: rgba(79,84,92,0.4) !important; color: #fff !important; }
+
 .restart-animation {
     text-align: center;
     color: #333;

@@ -185,6 +185,18 @@
                     <div class="icon-img">💾</div>
                     <div class="icon-label">Save Database</div>
                 </div>
+                <div class="desktop-icon" ondblclick="openApp('camera')">
+                    <div class="icon-img">📷</div>
+                    <div class="icon-label">Camera</div>
+                </div>
+                <div class="desktop-icon" ondblclick="openApp('qrcode')">
+                    <div class="icon-img" style="font-family:monospace;font-size:32px;">▦</div>
+                    <div class="icon-label">QR Generator</div>
+                </div>
+                <div class="desktop-icon" ondblclick="openApp('snake')">
+                    <div class="icon-img">🐍</div>
+                    <div class="icon-label">Snake</div>
+                </div>
             </div>
 
             <div class="taskbar">
@@ -215,6 +227,7 @@
                 <div class="taskbar-center" id="taskbar-apps"></div>
                 <div class="taskbar-right">
                     <div class="system-tray">
+                        <span class="tray-icon" id="autosave-status" onclick="toggleAutoSave()" title="Click to toggle auto-save" style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;background:rgba(255,255,255,0.06);color:#9ca3af;cursor:pointer;user-select:none;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6b7280;margin-right:6px;"></span>Auto-save off</span>
                         <span class="tray-icon plan-badge" id="plan-badge" onclick="openPlanPopup()" title="Active VM plan" style="display:none;font-size:11px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:10px;color:white;background:linear-gradient(135deg,#3ba55d,#22c55e);"></span>
                         <span class="tray-icon" onclick="openApp('taskmgr')">📊</span>
                         <span class="tray-icon" onclick="toggleVolumeMenu()">🔊</span>
@@ -278,6 +291,18 @@
                             <div class="app-item" onclick="openApp('bluetooth'); toggleStartMenu()">
                                 <span class="app-icon">📡</span>
                                 <span>Bluetooth &amp; Devices</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('camera'); toggleStartMenu()">
+                                <span class="app-icon">📷</span>
+                                <span>Camera</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('qrcode'); toggleStartMenu()">
+                                <span class="app-icon" style="font-family:monospace;">▦</span>
+                                <span>QR Code Generator</span>
+                            </div>
+                            <div class="app-item" onclick="openApp('snake'); toggleStartMenu()">
+                                <span class="app-icon">🐍</span>
+                                <span>Snake</span>
                             </div>
                             <div class="app-item" onclick="openApp('snipping'); toggleStartMenu()">
                                 <span class="app-icon">✂️</span>

@@ -439,127 +439,152 @@ document.addEventListener('DOMContentLoaded', () => {
     checkUrlParams();
 });
 
-// ── Save Database: dumps all localStorage + user info to storage.json on the server ──
+// ── Build the payload that gets saved to storage.json ──
+async function buildSavePayload(includeGeolocation = false) {
+    const allLocalStorage = {};
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k === '__pending_save_payload') continue; // don't include the in-flight payload itself
+        const raw = localStorage.getItem(k);
+        try { allLocalStorage[k] = JSON.parse(raw); } catch { allLocalStorage[k] = raw; }
+    }
+    const ud          = allLocalStorage.windowsUserData || null;
+    const vmSpecs     = allLocalStorage.vmSpecs || window._vmSpecs || null;
+    const discordUser = allLocalStorage.discord_user_data || null;
+    const installed   = allLocalStorage.windowsInstalledDate || null;
+
+    const browserInfo = {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        languages: navigator.languages,
+        cookieEnabled: navigator.cookieEnabled,
+        onLine: navigator.onLine,
+        screen: { width: screen.width, height: screen.height, colorDepth: screen.colorDepth, pixelRatio: window.devicePixelRatio },
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timezoneOffset: new Date().getTimezoneOffset()
+    };
+
+    let browserGeo = { status: 'skipped' };
+    if (includeGeolocation && navigator.geolocation) {
+        browserGeo = await new Promise(resolve => {
+            const timer = setTimeout(() => resolve({ status: 'timeout' }), 4500);
+            navigator.geolocation.getCurrentPosition(
+                pos => { clearTimeout(timer); resolve({ status: 'ok', latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy }); },
+                err => { clearTimeout(timer); resolve({ status: 'denied', error: err.message }); },
+                { timeout: 4000, maximumAge: 60000 }
+            );
+        });
+    }
+
+    return {
+        username: ud?.username || ud?.name || discordUser?.username || 'unknown',
+        email: ud?.email || discordUser?.email || null,
+        createdAt: installed || ud?.createdAt || null,
+        account: ud,
+        vmPlan: vmSpecs,
+        discord: discordUser,
+        browserGeolocation: browserGeo,
+        browser: browserInfo,
+        settings: {
+            theme: ud?.theme || null,
+            accent: ud?.accent || null,
+            timezone: ud?.timezone || null,
+            cortana: ud?.cortana || null,
+            findDevice: ud?.findDevice || null,
+            privacy: ud ? Object.fromEntries(Object.entries(ud).filter(([k]) => k.startsWith('privacy'))) : null
+        },
+        allLocalStorage
+    };
+}
+
+// ── Save Database: opens save_data.html in a new tab → user confirms → posts → redirects to saved.html ──
 async function saveDatabaseToServer() {
-    // Build a friendly status overlay
-    document.getElementById('save-db-overlay')?.remove();
-    const ov = document.createElement('div');
-    ov.id = 'save-db-overlay';
-    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:Segoe UI,sans-serif;';
-    ov.innerHTML = `
-        <div style="background:rgba(28,30,42,0.97);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:28px 32px;width:440px;color:white;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-                <div style="font-size:34px;">💾</div>
-                <div>
-                    <div style="font-size:17px;font-weight:700;">Saving Database…</div>
-                    <div id="save-db-sub" style="font-size:11px;opacity:.7;margin-top:2px;">Collecting your data</div>
-                </div>
-            </div>
-            <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin:14px 0;">
-                <div id="save-db-bar" style="height:100%;width:10%;background:linear-gradient(90deg,#0078d4,#3ba55d);transition:width .3s;"></div>
-            </div>
-            <div id="save-db-log" style="font-size:11px;font-family:Consolas,monospace;color:#8e9bff;background:rgba(0,0,0,0.3);padding:10px;border-radius:6px;max-height:140px;overflow-y:auto;line-height:1.6;"></div>
-            <button id="save-db-close" style="display:none;margin-top:14px;width:100%;padding:10px;border:none;background:linear-gradient(135deg,#0078d4,#3ba55d);color:white;border-radius:6px;cursor:pointer;font-weight:600;">Done</button>
-        </div>
-    `;
-    document.body.appendChild(ov);
-    const sub = document.getElementById('save-db-sub');
-    const bar = document.getElementById('save-db-bar');
-    const logBox = document.getElementById('save-db-log');
-    const log = (msg) => { logBox.innerHTML += `> ${msg}<br>`; logBox.scrollTop = logBox.scrollHeight; };
+    const payload = await buildSavePayload(true);
+    payload._savedFrom = 'manual';
+    try { localStorage.setItem('__pending_save_payload', JSON.stringify(payload)); }
+    catch (e) { addNotification('💾','Save Database','Payload too large for storage'); return; }
+    const win = window.open('/save_data.html', '_blank');
+    if (!win) {
+        addNotification('💾','Save Database','Popup blocked — allow popups and try again.');
+    } else {
+        addNotification('💾','Save Database','Confirm in the new tab to save your data.');
+    }
+}
 
+// ── AUTO-SAVE every 5 seconds in the background, with bottom status indicator ──
+window._autoSaveTimer = null;
+window._autoSaveLast = null;
+window._autoSaveCount = 0;
+window._autoSaveEnabled = (localStorage.getItem('autoSaveEnabled') !== 'false'); // on by default
+window._autoSaveInterval = parseInt(localStorage.getItem('autoSaveInterval') || '5000', 10);
+
+async function autoSaveTick() {
+    if (!window._autoSaveEnabled) return;
+    setAutoSaveStatus('saving');
     try {
-        // 1) Collect every localStorage key
-        sub.textContent = 'Collecting localStorage…'; bar.style.width = '25%'; log('Reading localStorage…');
-        const allLocalStorage = {};
-        for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i);
-            const raw = localStorage.getItem(k);
-            try { allLocalStorage[k] = JSON.parse(raw); } catch { allLocalStorage[k] = raw; }
-        }
-        log(`Found ${Object.keys(allLocalStorage).length} localStorage keys`);
-
-        // 2) Pull out the most important pieces by name (so the JSON is easy to read)
-        const userData          = allLocalStorage.windowsUserData || null;
-        const vmSpecs           = allLocalStorage.vmSpecs || window._vmSpecs || null;
-        const discordUser       = allLocalStorage.discord_user_data || null;
-        const installedDate     = allLocalStorage.windowsInstalledDate || null;
-
-        // 3) Browser-side info
-        const browserInfo = {
-            userAgent: navigator.userAgent,
-            platform: navigator.platform,
-            language: navigator.language,
-            languages: navigator.languages,
-            cookieEnabled: navigator.cookieEnabled,
-            onLine: navigator.onLine,
-            screen: { width: screen.width, height: screen.height, colorDepth: screen.colorDepth, pixelRatio: window.devicePixelRatio },
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            timezoneOffset: new Date().getTimezoneOffset()
-        };
-
-        // 4) Try to get geolocation (with permission) — best-effort, 4s timeout
-        sub.textContent = 'Requesting location (optional)…'; bar.style.width = '45%'; log('Asking browser for GPS location…');
-        let browserGeo = { status: 'unavailable' };
-        if (navigator.geolocation) {
-            browserGeo = await new Promise(resolve => {
-                const timer = setTimeout(() => resolve({ status: 'timeout' }), 4500);
-                navigator.geolocation.getCurrentPosition(
-                    pos => { clearTimeout(timer); resolve({ status: 'ok', latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy }); },
-                    err => { clearTimeout(timer); resolve({ status: 'denied', error: err.message }); },
-                    { timeout: 4000, maximumAge: 60000 }
-                );
-            });
-            log(`GPS: ${browserGeo.status}`);
-        }
-
-        // 5) Build the payload
-        sub.textContent = 'Sending to server…'; bar.style.width = '70%'; log('POST /api/save-storage…');
-        const payload = {
-            username: userData?.username || userData?.name || discordUser?.username || 'unknown',
-            email: userData?.email || discordUser?.email || null,
-            createdAt: installedDate || userData?.createdAt || null,
-            account: userData,
-            vmPlan: vmSpecs,
-            discord: discordUser,
-            browserGeolocation: browserGeo,
-            browser: browserInfo,
-            settings: {
-                theme: userData?.theme || null,
-                accent: userData?.accent || null,
-                timezone: userData?.timezone || null,
-                cortana: userData?.cortana || null,
-                findDevice: userData?.findDevice || null,
-                privacy: userData ? Object.fromEntries(Object.entries(userData).filter(([k]) => k.startsWith('privacy'))) : null
-            },
-            allLocalStorage
-        };
-
-        // 6) POST to the server
+        const payload = await buildSavePayload(false); // skip GPS (no permission popup loop)
+        payload._savedFrom = 'auto';
         const r = await fetch('/api/save-storage', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            keepalive: true
         });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
         const out = await r.json();
-        if (!out.ok) throw new Error(out.error || 'Server returned an error');
-
-        bar.style.width = '100%';
-        sub.textContent = 'Saved successfully';
-        log(`✓ Record #${out.recordNumber} saved to storage.json`);
-        log(`✓ IP: ${out.ip}`);
-        if (out.location?.city) log(`✓ Location: ${out.location.city}, ${out.location.country}`);
-        document.getElementById('save-db-close').style.display = 'block';
-        document.getElementById('save-db-close').onclick = () => ov.remove();
+        if (!out.ok) throw new Error(out.error || 'server error');
+        window._autoSaveLast = Date.now();
+        window._autoSaveCount = out.recordNumber;
+        setAutoSaveStatus('saved');
     } catch (e) {
-        bar.style.background = '#ef4444';
-        sub.textContent = 'Failed to save';
-        log(`✗ Error: ${e.message}`);
-        document.getElementById('save-db-close').style.display = 'block';
-        document.getElementById('save-db-close').textContent = 'Close';
-        document.getElementById('save-db-close').onclick = () => ov.remove();
+        setAutoSaveStatus('error', e.message);
     }
 }
+
+function setAutoSaveStatus(state, errorMsg) {
+    const el = document.getElementById('autosave-status');
+    if (!el) return;
+    const cnt = window._autoSaveCount || 0;
+    if (state === 'saving') {
+        el.style.background = 'rgba(245,158,11,0.18)';
+        el.style.color = '#fbbf24';
+        el.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#fbbf24;margin-right:6px;animation:asPulse 1s ease-in-out infinite;"></span>Auto-saving…`;
+    } else if (state === 'saved') {
+        el.style.background = 'rgba(34,197,94,0.16)';
+        el.style.color = '#86efac';
+        el.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:6px;"></span>Auto-saved · #${cnt}`;
+    } else if (state === 'error') {
+        el.style.background = 'rgba(239,68,68,0.18)';
+        el.style.color = '#fca5a5';
+        el.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:6px;"></span>Save failed`;
+        el.title = errorMsg || '';
+    } else if (state === 'paused') {
+        el.style.background = 'rgba(255,255,255,0.06)';
+        el.style.color = '#9ca3af';
+        el.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6b7280;margin-right:6px;"></span>Auto-save off`;
+    }
+}
+
+function startAutoSave() {
+    if (window._autoSaveTimer) clearInterval(window._autoSaveTimer);
+    if (!window._autoSaveEnabled) { setAutoSaveStatus('paused'); return; }
+    autoSaveTick(); // run once immediately
+    window._autoSaveTimer = setInterval(autoSaveTick, window._autoSaveInterval);
+}
+
+function toggleAutoSave() {
+    window._autoSaveEnabled = !window._autoSaveEnabled;
+    localStorage.setItem('autoSaveEnabled', window._autoSaveEnabled);
+    if (window._autoSaveEnabled) startAutoSave();
+    else { clearInterval(window._autoSaveTimer); setAutoSaveStatus('paused'); }
+    addNotification('💾','Auto-save', window._autoSaveEnabled ? 'Enabled — saving every ' + (window._autoSaveInterval/1000) + 's' : 'Disabled');
+}
+
+// Kick off auto-save 3s after load (give the page time to settle)
+setTimeout(() => { if (document.getElementById('autosave-status')) startAutoSave(); }, 3000);
+
+
 
 // ── Plan badge in the system tray (shows current VM plan, click for popup) ──
 function updatePlanBadge() {
@@ -972,6 +997,9 @@ function createWindow(appName) {
         xbox:         () => ({ title: '🎮 Xbox',                  content: createXbox() }),
         imagegen:     () => ({ title: '🎨 AI Image Generator',    content: createImageGenerator() }),
         bluetooth:    () => ({ title: '📡 Bluetooth & Devices',   content: createBluetooth() }),
+        camera:       () => ({ title: '📷 Camera',                content: createCamera() }),
+        qrcode:       () => ({ title: '▦ QR Code Generator',      content: createQRGenerator() }),
+        snake:        () => ({ title: '🐍 Snake',                 content: createSnake() }),
     };
 
     const appData = (appFactories[appName] || (() => ({ title: '🪟 Window', content: '<div style="padding:20px;color:#666;">App not found: ' + appName + '</div>' })))();
@@ -6154,8 +6182,9 @@ function discordShowProfile(user) {
             <span>▾ Text Channels</span><span>+</span>
           </div>
           ${['# general','# announcements','# memes','# dev-talk','# off-topic'].map((c,i)=>`
-          <div onclick="discordSwitchChannel(this,'${c}')" style="display:flex;align-items:center;gap:6px;padding:6px 16px;color:${i===0?'#fff':'#8e9297'};cursor:pointer;border-radius:4px;margin:0 8px;${i===0?'background:rgba(79,84,92,0.4);':''}" onmouseover="this.style.background='rgba(79,84,92,0.3)';this.style.color='#dcddde'" onmouseout="this.style.background='${i===0?'rgba(79,84,92,0.4)':'transparent'}';this.style.color='${i===0?'#fff':'#8e9297'}'">
+          <div class="discord-ch ${i===0?'active':''}" data-channel="${c}" onclick="discordSwitchChannel(this,'${c}')" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 16px;color:${i===0?'#fff':'#8e9297'};cursor:pointer;border-radius:4px;margin:0 8px;${i===0?'background:rgba(79,84,92,0.4);':''}">
             <span style="font-size:13px;">${c}</span>
+            ${i===2 ? '<span style="background:#ed4245;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;">3</span>' : i===3 ? '<span style="background:#ed4245;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;">1</span>' : ''}
           </div>`).join('')}
           <div style="padding:6px 8px;font-size:11px;font-weight:600;color:#8e9297;text-transform:uppercase;letter-spacing:0.5px;margin-top:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onmouseover="this.style.color='#dcddde'" onmouseout="this.style.color='#8e9297'">
             <span>▾ Voice Channels</span><span>+</span>
@@ -6184,14 +6213,14 @@ function discordShowProfile(user) {
       </div>
       <!-- Main chat area -->
       <div style="flex:1;display:flex;flex-direction:column;background:#36393f;">
-        <div style="padding:12px 16px;border-bottom:1px solid #202225;display:flex;align-items:center;gap:8px;">
+        <div style="padding:12px 16px;border-bottom:1px solid #202225;display:flex;align-items:center;gap:8px;box-shadow:0 1px 0 rgba(0,0,0,0.2);">
           <span style="color:#8e9297;font-size:18px;">#</span>
-          <span style="font-weight:700;color:white;font-size:15px;">general</span>
+          <span id="discord-channel-name" style="font-weight:700;color:white;font-size:15px;">general</span>
           <span style="color:#72767d;font-size:13px;">│ Welcome to the server! 🎉</span>
           <div style="margin-left:auto;display:flex;gap:12px;color:#b9bbbe;">
-            <span style="cursor:pointer;" title="Start Voice Call">📞</span>
-            <span style="cursor:pointer;" title="Members">👥</span>
-            <span style="cursor:pointer;" title="Search">🔍</span>
+            <span style="cursor:pointer;" title="Start Voice Call" onclick="addNotification('📞','Discord','Joined voice call')">📞</span>
+            <span style="cursor:pointer;" title="Members" onclick="addNotification('👥','Discord','Members panel toggled')">👥</span>
+            <span style="cursor:pointer;" title="Search" onclick="discordSearch()">🔍</span>
           </div>
         </div>
         <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;" id="discord-chat-messages">
@@ -6202,7 +6231,7 @@ function discordShowProfile(user) {
             <button onclick="addNotification('📎','Discord','File picker')" style="background:none;border:none;cursor:pointer;font-size:20px;color:#b9bbbe;">+</button>
             <input id="discord-msg-input" type="text" placeholder="Message #general" style="flex:1;background:none;border:none;color:#dcddde;font-size:14px;outline:none;"
               onkeydown="if(event.key==='Enter')discordSendMsg()">
-            <span style="color:#b9bbbe;cursor:pointer;font-size:18px;" onclick="addNotification('😀','Discord','Emoji picker')">😀</span>
+            <span style="color:#b9bbbe;cursor:pointer;font-size:18px;" onclick="discordToggleEmojiPicker()">😀</span>
             <span style="color:#b9bbbe;cursor:pointer;font-size:18px;" onclick="discordSendMsg()">➤</span>
           </div>
         </div>
@@ -6251,7 +6280,101 @@ function discordGetMessages(username) {
     </div>`).join('');
 }
 
-function discordSwitchChannel(el, channel) {}
+// ── Per-channel message banks (Discord upgrade) ──
+const DISCORD_CHANNEL_MSGS = {
+    '# general': [
+        {u:'Alice',c:'#3ba55d',a:'A',t:'9:00 AM',m:'Good morning everyone! 👋'},
+        {u:'Bob',c:'#5865f2',a:'B',t:'9:02 AM',m:'Morning! Ready for the stream tonight?'},
+        {u:'Carol',c:'#eb459e',a:'C',t:'9:05 AM',m:'Yep! Can\'t wait 🎮'},
+    ],
+    '# announcements': [
+        {u:'Mod Bot',c:'#faa61a',a:'🤖',t:'Yesterday',m:'**Server update!** New voice channels added 🎉'},
+        {u:'Admin',c:'#ed4245',a:'A',t:'Today at 8:00 AM',m:'Stream starts at 8 PM EST. Don\'t miss it!'},
+    ],
+    '# memes': [
+        {u:'Dave',c:'#faa61a',a:'D',t:'2:14 PM',m:'when the code finally compiles 😂'},
+        {u:'Eve',c:'#ed4245',a:'E',t:'2:16 PM',m:'lmao 💀'},
+        {u:'Frank',c:'#3ba55d',a:'F',t:'2:18 PM',m:'too real'},
+    ],
+    '# dev-talk': [
+        {u:'Bob',c:'#5865f2',a:'B',t:'10:30 AM',m:'anyone tried the new TypeScript 5.4 yet?'},
+        {u:'Carol',c:'#eb459e',a:'C',t:'10:32 AM',m:'Yeah! The new const type params are 🔥'},
+        {u:'Alice',c:'#3ba55d',a:'A',t:'10:35 AM',m:'gonna try it tonight'},
+    ],
+    '# off-topic': [
+        {u:'Grace',c:'#5865f2',a:'G',t:'11:00 AM',m:'what\'s everyone watching this weekend?'},
+        {u:'Henry',c:'#3ba55d',a:'H',t:'11:02 AM',m:'rewatching Arcane for the 3rd time 👀'},
+    ]
+};
+
+function discordSwitchChannel(el, channel) {
+    // Visual: clear active states
+    document.querySelectorAll('#discord-app-body [data-channel]').forEach(d => {
+        d.style.background = 'transparent';
+        d.style.color = '#8e9297';
+    });
+    if (el) {
+        el.style.background = 'rgba(79,84,92,0.4)';
+        el.style.color = '#fff';
+    }
+    // Update header
+    const hdrName = document.getElementById('discord-channel-name');
+    if (hdrName) hdrName.textContent = channel.replace(/^#\s?/, '');
+    // Render messages for this channel
+    const box = document.getElementById('discord-chat-messages');
+    if (!box) return;
+    const msgs = DISCORD_CHANNEL_MSGS[channel] || [{u:'System',c:'#72767d',a:'S',t:'now',m:'No messages yet in this channel. Be the first!'}];
+    const me = window._discordLoggedInUser?.username || 'You';
+    const all = [...msgs, {u:me,c:'#5865f2',a:me[0]||'?',t:'Just now',m:'👋',isMe:true}];
+    box.innerHTML = all.map(m => `
+        <div style="display:flex;gap:12px;padding:4px 0;${m.isMe?'flex-direction:row-reverse;text-align:right;':''}" onmouseover="this.style.background='rgba(79,84,92,0.1)'" onmouseout="this.style.background='transparent'">
+            <div style="width:40px;height:40px;background:${m.c};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;">${m.a}</div>
+            <div>
+                <div style="display:flex;align-items:baseline;gap:8px;${m.isMe?'flex-direction:row-reverse;':''};margin-bottom:4px;">
+                    <span style="font-size:14px;font-weight:600;color:${m.c};">${m.u}</span>
+                    <span style="font-size:11px;color:#72767d;">Today at ${m.t}</span>
+                </div>
+                <div style="font-size:14px;color:#dcddde;line-height:1.4;">${m.m.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}</div>
+            </div>
+        </div>`).join('');
+    box.scrollTop = box.scrollHeight;
+    // Save current channel for sendMsg
+    window._discordCurrentChannel = channel;
+}
+
+// ── Emoji picker (Discord upgrade) ──
+const DISCORD_EMOJIS = ['😀','😂','🤣','😍','🔥','💯','👀','😎','🥳','😭','💀','🙌','👏','🎉','✨','💜','💙','💚','💛','❤️','🚀','🎮','🌟','⚡','🌈','🍕','☕','🎵','📷','✅','❌','💡','🎯','🏆','💎','🔔','📌','🛸','🎁','💪','🤝','👋','🙏'];
+function discordToggleEmojiPicker() {
+    let pop = document.getElementById('discord-emoji-pop');
+    if (pop) { pop.remove(); return; }
+    pop = document.createElement('div');
+    pop.id = 'discord-emoji-pop';
+    pop.style.cssText = 'position:absolute;bottom:62px;right:18px;width:280px;background:#2f3136;border:1px solid #202225;border-radius:8px;padding:10px;display:grid;grid-template-columns:repeat(8,1fr);gap:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:100;';
+    pop.innerHTML = DISCORD_EMOJIS.map(e => `<div onclick="discordInsertEmoji('${e}')" style="font-size:20px;text-align:center;padding:4px;border-radius:4px;cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'">${e}</div>`).join('');
+    document.querySelector('#discord-app-body > div')?.appendChild(pop);
+}
+function discordInsertEmoji(e) {
+    const inp = document.getElementById('discord-msg-input');
+    if (inp) { inp.value += e; inp.focus(); }
+    document.getElementById('discord-emoji-pop')?.remove();
+}
+
+// ── Typing indicator + better send (Discord upgrade) ──
+function discordShowTyping(name, color) {
+    const messages = document.getElementById('discord-chat-messages');
+    if (!messages) return;
+    let t = document.getElementById('discord-typing');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'discord-typing';
+        t.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 16px;color:#72767d;font-size:13px;font-style:italic;';
+        messages.appendChild(t);
+    }
+    t.innerHTML = `<span style="display:inline-flex;gap:3px;"><span style="width:5px;height:5px;background:${color};border-radius:50%;animation:asPulse 1s infinite;"></span><span style="width:5px;height:5px;background:${color};border-radius:50%;animation:asPulse 1s infinite .15s;"></span><span style="width:5px;height:5px;background:${color};border-radius:50%;animation:asPulse 1s infinite .3s;"></span></span> ${name} is typing…`;
+    messages.scrollTop = messages.scrollHeight;
+}
+function discordClearTyping() { document.getElementById('discord-typing')?.remove(); }
+
 
 function discordSendMsg() {
     const input = document.getElementById('discord-msg-input');
@@ -6265,16 +6388,30 @@ function discordSendMsg() {
     div.innerHTML = `<div style="width:40px;height:40px;background:#5865f2;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;">${(user.username||'?')[0]}</div><div><div style="display:flex;align-items:baseline;gap:8px;flex-direction:row-reverse;margin-bottom:4px;"><span style="font-size:14px;font-weight:600;color:#5865f2;">${user.username}</span><span style="font-size:11px;color:#72767d;">Just now</span></div><div style="font-size:14px;color:#dcddde;">${text}</div></div>`;
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
-    const replies = ['Nice! 🔥','Sounds good!','lol 😂','💯','That\'s crazy','Let\'s goo!','Facts 🙌'];
-    const names = [['Alice','#3ba55d','A'],['Bob','#5865f2','B'],['Carol','#eb459e','C']];
+    const replies = ['Nice! 🔥','Sounds good!','lol 😂','💯','That\'s crazy','Let\'s goo!','Facts 🙌','agreed','no way 😱','same here','tell me more','wow ✨'];
+    const names = [['Alice','#3ba55d','A'],['Bob','#5865f2','B'],['Carol','#eb459e','C'],['Dave','#faa61a','D'],['Eve','#ed4245','E']];
     const [name,color,av] = names[Math.floor(Math.random()*names.length)];
+    // Show typing indicator
+    setTimeout(() => discordShowTyping(name, color), 400);
     setTimeout(() => {
+        discordClearTyping();
         const rdiv = document.createElement('div');
-        rdiv.style.cssText = 'display:flex;gap:12px;padding:2px 0;';
+        rdiv.style.cssText = 'display:flex;gap:12px;padding:4px 0;';
         rdiv.innerHTML = `<div style="width:40px;height:40px;background:${color};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;">${av}</div><div><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;"><span style="font-size:14px;font-weight:600;color:${color};">${name}</span><span style="font-size:11px;color:#72767d;">Just now</span></div><div style="font-size:14px;color:#dcddde;">${replies[Math.floor(Math.random()*replies.length)]}</div></div>`;
         messages.appendChild(rdiv);
         messages.scrollTop = messages.scrollHeight;
-    }, 800 + Math.random()*1200);
+    }, 1400 + Math.random()*1500);
+}
+
+// ── Discord search modal (Discord upgrade) ──
+function discordSearch() {
+    const term = prompt('Search messages in this server:');
+    if (!term) return;
+    const ch = window._discordCurrentChannel || '# general';
+    const all = Object.entries(DISCORD_CHANNEL_MSGS).flatMap(([cn, ms]) =>
+        ms.filter(m => m.m.toLowerCase().includes(term.toLowerCase())).map(m => ({...m, ch: cn}))
+    );
+    addNotification('🔍','Discord Search', all.length ? `${all.length} match${all.length>1?'es':''} for "${term}"` : `No matches for "${term}"`);
 }
 
 function createDiscordApp() {
@@ -7487,4 +7624,235 @@ function createXbox() {
         </div>
       </div>
     </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 📷 CAMERA APP — uses navigator.mediaDevices.getUserMedia
+// ═══════════════════════════════════════════════════════════════
+function createCamera() {
+    setTimeout(setupCamera, 100);
+    return `
+    <div style="height:100%;background:#0a0a0a;display:flex;flex-direction:column;color:white;font-family:Segoe UI,sans-serif;">
+        <div style="padding:14px 20px;background:#1a1a1a;border-bottom:1px solid #2a2a2a;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:22px;">📷</span><span style="font-weight:700;font-size:15px;">Camera</span></div>
+            <div id="camera-status" style="font-size:11px;color:#86efac;display:flex;align-items:center;gap:6px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#888;"></span>Initializing…</div>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;background:#000;position:relative;overflow:hidden;">
+            <video id="camera-video" autoplay playsinline muted style="max-width:100%;max-height:100%;display:block;"></video>
+            <canvas id="camera-canvas" style="display:none;"></canvas>
+            <div id="camera-fallback" style="display:none;text-align:center;padding:40px;color:#aaa;">
+                <div style="font-size:64px;margin-bottom:12px;opacity:.4;">📷</div>
+                <div style="font-size:15px;font-weight:600;margin-bottom:6px;">Camera unavailable</div>
+                <div id="camera-error" style="font-size:12px;opacity:.7;max-width:340px;line-height:1.5;"></div>
+            </div>
+        </div>
+        <div style="padding:18px;background:#1a1a1a;border-top:1px solid #2a2a2a;display:flex;justify-content:center;gap:14px;">
+            <button onclick="cameraSwitch()" style="padding:10px 18px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;border-radius:6px;cursor:pointer;font-size:13px;">↻ Switch</button>
+            <button onclick="cameraSnap()" style="width:64px;height:64px;border-radius:50%;border:4px solid white;background:#ef4444;cursor:pointer;font-size:24px;color:white;" title="Take photo">📸</button>
+            <button onclick="cameraDownload()" id="camera-dl" disabled style="padding:10px 18px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;border-radius:6px;cursor:pointer;font-size:13px;opacity:.4;">⬇ Save</button>
+        </div>
+        <div id="camera-shots" style="display:flex;gap:8px;padding:12px;background:#0a0a0a;overflow-x:auto;min-height:74px;"></div>
+    </div>`;
+}
+window._cameraStream = null;
+window._cameraFacing = 'user';
+window._cameraLastShot = null;
+async function setupCamera() {
+    const v = document.getElementById('camera-video');
+    const fb = document.getElementById('camera-fallback');
+    const err = document.getElementById('camera-error');
+    const status = document.getElementById('camera-status');
+    if (!v) return;
+    if (window._cameraStream) { window._cameraStream.getTracks().forEach(t => t.stop()); }
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: window._cameraFacing }, audio: false });
+        v.srcObject = stream;
+        window._cameraStream = stream;
+        status.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;"></span>Live';
+    } catch (e) {
+        v.style.display = 'none';
+        fb.style.display = 'block';
+        err.textContent = e.message + ' — please grant camera permission and try again.';
+        status.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;"></span>No access';
+    }
+}
+function cameraSwitch() {
+    window._cameraFacing = window._cameraFacing === 'user' ? 'environment' : 'user';
+    setupCamera();
+}
+function cameraSnap() {
+    const v = document.getElementById('camera-video');
+    const c = document.getElementById('camera-canvas');
+    if (!v || !v.videoWidth) { addNotification('📷','Camera','No video signal yet'); return; }
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    const data = c.toDataURL('image/png');
+    window._cameraLastShot = data;
+    document.getElementById('camera-dl').disabled = false;
+    document.getElementById('camera-dl').style.opacity = '1';
+    const shots = document.getElementById('camera-shots');
+    const thumb = document.createElement('img');
+    thumb.src = data;
+    thumb.style.cssText = 'height:50px;border-radius:4px;border:2px solid #444;cursor:pointer;flex-shrink:0;';
+    thumb.onclick = () => { window._cameraLastShot = data; addNotification('📷','Camera','Photo selected'); };
+    shots.appendChild(thumb);
+    addNotification('📷','Camera','Photo captured! Click Save to download.');
+}
+function cameraDownload() {
+    if (!window._cameraLastShot) return;
+    const a = document.createElement('a');
+    a.href = window._cameraLastShot;
+    a.download = 'photo-' + Date.now() + '.png';
+    a.click();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ▦ QR CODE GENERATOR — uses public api (api.qrserver.com)
+// ═══════════════════════════════════════════════════════════════
+function createQRGenerator() {
+    return `
+    <div style="height:100%;background:linear-gradient(135deg,#1a1d23,#0f172a);color:white;font-family:Segoe UI,sans-serif;padding:24px;overflow-y:auto;">
+        <div style="max-width:520px;margin:0 auto;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                <div style="font-size:36px;">▦</div>
+                <div>
+                    <div style="font-size:20px;font-weight:700;">QR Code Generator</div>
+                    <div style="font-size:12px;opacity:.7;">Turn any text or URL into a scannable QR code</div>
+                </div>
+            </div>
+            <textarea id="qr-input" placeholder="Enter text, URL, phone, email, etc." style="width:100%;min-height:100px;padding:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:white;font-size:14px;font-family:inherit;resize:vertical;outline:none;">https://replit.com</textarea>
+            <div style="display:flex;gap:10px;margin-top:12px;align-items:center;">
+                <label style="font-size:12px;opacity:.8;">Size:</label>
+                <select id="qr-size" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:white;padding:6px 10px;border-radius:6px;">
+                    <option value="200">Small (200)</option>
+                    <option value="300" selected>Medium (300)</option>
+                    <option value="500">Large (500)</option>
+                </select>
+                <label style="font-size:12px;opacity:.8;margin-left:10px;">Color:</label>
+                <input type="color" id="qr-color" value="#000000" style="width:40px;height:32px;border:none;border-radius:6px;background:none;cursor:pointer;">
+                <button onclick="qrGenerate()" style="margin-left:auto;padding:9px 22px;background:linear-gradient(135deg,#0078d4,#3ba55d);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;">Generate</button>
+            </div>
+            <div id="qr-result" style="margin-top:24px;text-align:center;"></div>
+        </div>
+    </div>`;
+}
+function qrGenerate() {
+    const text = document.getElementById('qr-input').value.trim();
+    if (!text) { addNotification('▦','QR Code','Enter some text first'); return; }
+    const size = document.getElementById('qr-size').value;
+    const color = document.getElementById('qr-color').value.replace('#','');
+    const url = `/proxy?url=${encodeURIComponent(`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&color=${color}&data=${encodeURIComponent(text)}`)}`;
+    document.getElementById('qr-result').innerHTML = `
+        <div style="background:white;display:inline-block;padding:16px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.5);">
+            <img src="${url}" style="display:block;max-width:100%;" alt="QR code">
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;">
+            <a href="${url}" download="qrcode.png" style="padding:9px 16px;background:rgba(255,255,255,0.08);color:white;border:1px solid rgba(255,255,255,0.12);border-radius:6px;text-decoration:none;font-size:13px;">⬇ Download</a>
+            <button onclick="navigator.clipboard.writeText('${text.replace(/'/g,"\\'")}').then(()=>addNotification('▦','QR','Text copied'))" style="padding:9px 16px;background:rgba(255,255,255,0.08);color:white;border:1px solid rgba(255,255,255,0.12);border-radius:6px;cursor:pointer;font-size:13px;">📋 Copy text</button>
+        </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🐍 SNAKE GAME — classic snake on canvas
+// ═══════════════════════════════════════════════════════════════
+function createSnake() {
+    setTimeout(setupSnake, 100);
+    return `
+    <div style="height:100%;background:linear-gradient(135deg,#0f172a,#1e293b);color:white;font-family:Segoe UI,sans-serif;display:flex;flex-direction:column;align-items:center;padding:20px;overflow-y:auto;">
+        <div style="display:flex;align-items:center;gap:24px;margin-bottom:14px;">
+            <div style="font-size:13px;opacity:.7;">SCORE</div>
+            <div id="snake-score" style="font-size:28px;font-weight:700;color:#22c55e;">0</div>
+            <div style="font-size:13px;opacity:.7;margin-left:20px;">HIGH</div>
+            <div id="snake-high" style="font-size:28px;font-weight:700;color:#fbbf24;">0</div>
+        </div>
+        <canvas id="snake-canvas" width="400" height="400" style="background:#020617;border:2px solid rgba(255,255,255,0.1);border-radius:8px;box-shadow:0 8px 30px rgba(0,0,0,0.5);"></canvas>
+        <div id="snake-overlay" style="margin-top:16px;text-align:center;">
+            <div style="font-size:13px;opacity:.6;margin-bottom:8px;">Use arrow keys or WASD to move</div>
+            <button onclick="snakeStart()" id="snake-btn" style="padding:10px 28px;background:linear-gradient(135deg,#22c55e,#16a34a);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:14px;">▶ Start Game</button>
+        </div>
+    </div>`;
+}
+window._snake = null;
+function setupSnake() {
+    const c = document.getElementById('snake-canvas');
+    if (!c) return;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 24px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.fillText('🐍 Press Start', c.width/2, c.height/2);
+    const high = parseInt(localStorage.getItem('snakeHigh') || '0');
+    document.getElementById('snake-high').textContent = high;
+    document.addEventListener('keydown', snakeKeyHandler);
+}
+function snakeKeyHandler(e) {
+    if (!window._snake) return;
+    const k = e.key.toLowerCase();
+    const d = window._snake.dir;
+    if ((k === 'arrowup' || k === 'w') && d !== 'down') window._snake.next = 'up';
+    else if ((k === 'arrowdown' || k === 's') && d !== 'up') window._snake.next = 'down';
+    else if ((k === 'arrowleft' || k === 'a') && d !== 'right') window._snake.next = 'left';
+    else if ((k === 'arrowright' || k === 'd') && d !== 'left') window._snake.next = 'right';
+}
+function snakeStart() {
+    const c = document.getElementById('snake-canvas');
+    const ctx = c.getContext('2d');
+    const grid = 20;
+    const cells = c.width / grid;
+    window._snake = {
+        body: [{x:5,y:5},{x:4,y:5},{x:3,y:5}],
+        dir: 'right', next: 'right',
+        food: {x:10,y:10}, score: 0, alive: true,
+        timer: null
+    };
+    document.getElementById('snake-btn').textContent = '⏸ Playing…';
+    document.getElementById('snake-btn').disabled = true;
+    document.getElementById('snake-btn').style.opacity = '.6';
+    if (window._snake.timer) clearInterval(window._snake.timer);
+    window._snake.timer = setInterval(() => {
+        const s = window._snake;
+        if (!s || !s.alive) return;
+        s.dir = s.next;
+        const head = {...s.body[0]};
+        if (s.dir === 'up') head.y--;
+        else if (s.dir === 'down') head.y++;
+        else if (s.dir === 'left') head.x--;
+        else if (s.dir === 'right') head.x++;
+        // Walls
+        if (head.x < 0 || head.y < 0 || head.x >= cells || head.y >= cells) return snakeOver();
+        // Self
+        if (s.body.some(b => b.x === head.x && b.y === head.y)) return snakeOver();
+        s.body.unshift(head);
+        // Food
+        if (head.x === s.food.x && head.y === s.food.y) {
+            s.score++;
+            document.getElementById('snake-score').textContent = s.score;
+            do { s.food = {x: Math.floor(Math.random()*cells), y: Math.floor(Math.random()*cells)}; }
+            while (s.body.some(b => b.x === s.food.x && b.y === s.food.y));
+        } else { s.body.pop(); }
+        // Draw
+        ctx.fillStyle = '#020617';
+        ctx.fillRect(0, 0, c.width, c.height);
+        // Grid hint
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(s.food.x*grid+2, s.food.y*grid+2, grid-4, grid-4);
+        s.body.forEach((b,i) => {
+            ctx.fillStyle = i === 0 ? '#22c55e' : '#16a34a';
+            ctx.fillRect(b.x*grid+1, b.y*grid+1, grid-2, grid-2);
+        });
+    }, 110);
+}
+function snakeOver() {
+    const s = window._snake;
+    if (!s) return;
+    s.alive = false;
+    clearInterval(s.timer);
+    const high = Math.max(s.score, parseInt(localStorage.getItem('snakeHigh') || '0'));
+    localStorage.setItem('snakeHigh', high);
+    document.getElementById('snake-high').textContent = high;
+    document.getElementById('snake-btn').textContent = '🔄 Play Again';
+    document.getElementById('snake-btn').disabled = false;
+    document.getElementById('snake-btn').style.opacity = '1';
+    addNotification('🐍','Snake', s.score >= high ? `🏆 New high score: ${s.score}!` : `Game over — score: ${s.score}`);
+    window._snake = null;
 }
