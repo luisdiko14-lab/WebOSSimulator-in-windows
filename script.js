@@ -948,7 +948,14 @@ function createWindow(appName) {
         wordpad: { w: 700, h: 500 },
         code: { w: 800, h: 550 },
         stickynotes: { w: 300, h: 300 },
-        calculator: { w: 320, h: 430 }
+        calculator:  { w: 320, h: 430 },
+        clock:       { w: 620, h: 480 },
+        maps:        { w: 800, h: 560 },
+        music:       { w: 720, h: 480 },
+        solitaire:   { w: 760, h: 520 },
+        minesweeper: { w: 560, h: 520 },
+        recorder:    { w: 520, h: 500 },
+        todo:        { w: 540, h: 560 },
     };
     const size = defaultSizes[appName] || { w: 700, h: 480 };
     windowEl.style.width = size.w + 'px';
@@ -1000,6 +1007,9 @@ function createWindow(appName) {
         camera:       () => ({ title: '📷 Camera',                content: createCamera() }),
         qrcode:       () => ({ title: '▦ QR Code Generator',      content: createQRGenerator() }),
         snake:        () => ({ title: '🐍 Snake',                 content: createSnake() }),
+        minesweeper:  () => ({ title: '💣 Minesweeper',           content: createMinesweeper() }),
+        recorder:     () => ({ title: '🎙️ Voice Recorder',        content: createVoiceRecorder() }),
+        todo:         () => ({ title: '✅ To-Do',                  content: createToDo() }),
     };
 
     const appData = (appFactories[appName] || (() => ({ title: '🪟 Window', content: '<div style="padding:20px;color:#666;">App not found: ' + appName + '</div>' })))();
@@ -5207,74 +5217,482 @@ function createCalendar() {
 
 // Clock App
 function createClockApp() {
-    setTimeout(() => {
-        updateClockApp();
-        setInterval(updateClockApp, 1000);
-    }, 100);
-    
+    window._clock = { swRunning:false, swMs:0, swStart:null, swInterval:null, timerLeft:0, timerTotal:0, timerInterval:null, alarms:JSON.parse(localStorage.getItem('clockAlarms')||'[]') };
+    setTimeout(clockTabSwitch, 80, 'clock');
     return `
-        <div class="clock-app">
-            <div class="clock-display" id="clock-app-time">00:00:00</div>
-            <div class="clock-date" id="clock-app-date">Loading...</div>
-        </div>
-    `;
+    <div style="height:100%;background:linear-gradient(135deg,#0f172a,#1e293b);color:white;font-family:Segoe UI,sans-serif;display:flex;flex-direction:column;">
+      <div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.08);">
+        ${['clock','alarm','stopwatch','timer'].map(t=>`<button id="clktab-${t}" onclick="clockTabSwitch('${t}')" style="flex:1;padding:14px;background:none;border:none;color:#9ca3af;font-size:13px;font-weight:600;cursor:pointer;text-transform:capitalize;letter-spacing:.5px;transition:color .15s,border-bottom .15s;">${t==='clock'?'⏰':t==='alarm'?'🔔':t==='stopwatch'?'⏱️':'⏲️'} ${t.charAt(0).toUpperCase()+t.slice(1)}</button>`).join('')}
+      </div>
+      <div id="clock-body" style="flex:1;overflow:auto;"></div>
+    </div>`;
+}
+function clockTabSwitch(tab) {
+    ['clock','alarm','stopwatch','timer'].forEach(t=>{
+        const b=document.getElementById('clktab-'+t);
+        if(b){b.style.color=t===tab?'#60a5fa':'#9ca3af';b.style.borderBottom=t===tab?'2px solid #60a5fa':'2px solid transparent';}
+    });
+    const body=document.getElementById('clock-body');
+    if(!body)return;
+    if(tab==='clock'){
+        body.innerHTML=`<div style="text-align:center;padding:40px 20px;">
+          <div id="clk-time" style="font-size:72px;font-weight:200;letter-spacing:-2px;font-feature-settings:'tnum';"></div>
+          <div id="clk-date" style="font-size:18px;opacity:.6;margin-top:8px;"></div>
+          <div style="margin-top:40px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:420px;margin-inline:auto;">
+            ${[['🗽','New York','America/New_York'],['🏰','London','Europe/London'],['🗼','Paris','Europe/Paris'],['🏯','Tokyo','Asia/Tokyo'],['🏙️','Sydney','Australia/Sydney'],['🕌','Dubai','Asia/Dubai']].map(([ic,city,tz])=>`<div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:24px;">${ic}</div><div id="wclk-${tz.replace('/','_')}" style="font-size:18px;font-weight:600;"></div><div style="font-size:11px;opacity:.6;">${city}</div></div>`).join('')}
+          </div>
+        </div>`;
+        clearInterval(window._clockInterval);
+        window._clockInterval=setInterval(clockTick,1000);
+        clockTick();
+    } else if(tab==='alarm'){
+        const al=window._clock.alarms;
+        body.innerHTML=`<div style="padding:24px;max-width:420px;margin:0 auto;">
+          <div style="display:flex;gap:10px;margin-bottom:20px;align-items:center;">
+            <input id="alarm-time" type="time" style="flex:1;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;padding:10px;border-radius:8px;font-size:16px;">
+            <input id="alarm-lbl" type="text" placeholder="Label (optional)" style="flex:2;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;padding:10px;border-radius:8px;font-size:14px;">
+            <button onclick="clockAddAlarm()" style="padding:10px 16px;background:#3b82f6;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;">+ Add</button>
+          </div>
+          <div id="alarm-list">${al.length?al.map((a,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:rgba(255,255,255,0.05);border-radius:10px;margin-bottom:8px;"><div><div style="font-size:22px;font-weight:600;">${a.time}</div><div style="font-size:12px;opacity:.6;">${a.label||'Alarm'}</div></div><button onclick="clockDelAlarm(${i})" style="background:#ef4444;border:none;color:white;border-radius:6px;padding:6px 12px;cursor:pointer;">✕</button></div>`).join(''):'<div style="text-align:center;opacity:.4;padding:40px 0;">No alarms set</div>'}</div>
+        </div>`;
+    } else if(tab==='stopwatch'){
+        body.innerHTML=`<div style="text-align:center;padding:40px 20px;">
+          <div id="sw-display" style="font-size:64px;font-weight:200;letter-spacing:-1px;font-feature-settings:'tnum';">00:00.00</div>
+          <div style="display:flex;gap:14px;justify-content:center;margin-top:28px;">
+            <button id="sw-btn" onclick="swToggle()" style="width:80px;height:80px;border-radius:50%;background:#22c55e;border:none;color:white;font-size:20px;cursor:pointer;">▶</button>
+            <button onclick="swReset()" style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:white;font-size:20px;cursor:pointer;">↺</button>
+          </div>
+          <div id="sw-laps" style="margin-top:24px;max-height:180px;overflow-y:auto;"></div>
+        </div>`;
+    } else if(tab==='timer'){
+        body.innerHTML=`<div style="text-align:center;padding:40px 20px;">
+          <div id="tmr-display" style="font-size:72px;font-weight:200;letter-spacing:-2px;font-feature-settings:'tnum';">00:00</div>
+          <div id="tmr-ring" style="width:200px;height:200px;margin:20px auto;position:relative;display:none;">
+            <svg viewBox="0 0 100 100" style="width:100%;transform:rotate(-90deg);">
+              <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8"/>
+              <circle id="tmr-arc" cx="50" cy="50" r="45" fill="none" stroke="#3b82f6" stroke-width="8" stroke-dasharray="283" stroke-dashoffset="0" style="transition:stroke-dashoffset .9s linear;"/>
+            </svg>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:center;margin-bottom:20px;flex-wrap:wrap;">
+            ${[[5,'5m'],[10,'10m'],[15,'15m'],[25,'25m'],[60,'1h']].map(([m,l])=>`<button onclick="timerSet(${m*60})" style="padding:8px 14px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:white;border-radius:6px;cursor:pointer;">${l}</button>`).join('')}
+          </div>
+          <div style="display:flex;gap:10px;justify-content:center;margin-bottom:20px;align-items:center;">
+            <input id="tmr-h" type="number" min="0" max="23" placeholder="h" style="width:60px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:white;padding:8px;border-radius:6px;font-size:18px;text-align:center;">
+            <span style="font-size:24px;">:</span>
+            <input id="tmr-m" type="number" min="0" max="59" placeholder="m" style="width:60px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:white;padding:8px;border-radius:6px;font-size:18px;text-align:center;">
+            <span style="font-size:24px;">:</span>
+            <input id="tmr-s" type="number" min="0" max="59" placeholder="s" style="width:60px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:white;padding:8px;border-radius:6px;font-size:18px;text-align:center;">
+          </div>
+          <div style="display:flex;gap:14px;justify-content:center;">
+            <button id="tmr-btn" onclick="timerToggle()" style="width:80px;height:80px;border-radius:50%;background:#3b82f6;border:none;color:white;font-size:20px;cursor:pointer;">▶</button>
+            <button onclick="timerReset()" style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:white;font-size:20px;cursor:pointer;">↺</button>
+          </div>
+        </div>`;
+    }
+}
+function clockTick(){
+    const n=new Date();
+    const t=document.getElementById('clk-time');
+    const d=document.getElementById('clk-date');
+    if(t)t.textContent=n.toLocaleTimeString('en-US',{hour12:true,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    if(d)d.textContent=n.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    [{tz:'America/New_York'},{tz:'Europe/London'},{tz:'Europe/Paris'},{tz:'Asia/Tokyo'},{tz:'Australia/Sydney'},{tz:'Asia/Dubai'}].forEach(({tz})=>{
+        const el=document.getElementById('wclk-'+tz.replace('/','_'));
+        if(el)el.textContent=new Date().toLocaleTimeString('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:true});
+    });
+    // check alarms
+    const hm=n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');
+    (window._clock?.alarms||[]).forEach(a=>{if(a.time===hm&&!a.fired){a.fired=true;addNotification('🔔','Alarm',a.label||'Alarm ringing!');playSound&&playSound('notification');}});
+    if(n.getMinutes()===0)window._clock?.alarms?.forEach(a=>a.fired=false);
+}
+function clockAddAlarm(){
+    const t=document.getElementById('alarm-time')?.value;
+    const l=document.getElementById('alarm-lbl')?.value||'Alarm';
+    if(!t){addNotification('🔔','Alarm','Pick a time first');return;}
+    window._clock.alarms.push({time:t,label:l,fired:false});
+    localStorage.setItem('clockAlarms',JSON.stringify(window._clock.alarms));
+    clockTabSwitch('alarm');
+}
+function clockDelAlarm(i){
+    window._clock.alarms.splice(i,1);
+    localStorage.setItem('clockAlarms',JSON.stringify(window._clock.alarms));
+    clockTabSwitch('alarm');
+}
+let _swLapN=0;
+function swToggle(){
+    const c=window._clock;const btn=document.getElementById('sw-btn');
+    if(c.swRunning){
+        clearInterval(c.swInterval);c.swRunning=false;
+        c.swMs+=(Date.now()-c.swStart);
+        if(btn)btn.textContent='▶';
+        // lap
+        _swLapN++;
+        const laps=document.getElementById('sw-laps');
+        if(laps){const d=document.createElement('div');d.style.cssText='padding:6px 12px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;font-size:14px;';d.innerHTML=`<span style="opacity:.6">Lap ${_swLapN}</span><span>${swFmt(c.swMs)}</span>`;laps.prepend(d);}
+    } else {
+        c.swStart=Date.now();c.swRunning=true;
+        if(btn)btn.textContent='⏸';
+        c.swInterval=setInterval(()=>{
+            const el=document.getElementById('sw-display');
+            if(el)el.textContent=swFmt(c.swMs+(Date.now()-c.swStart));
+        },50);
+    }
+}
+function swReset(){const c=window._clock;clearInterval(c.swInterval);c.swRunning=false;c.swMs=0;c.swStart=null;_swLapN=0;const el=document.getElementById('sw-display');if(el)el.textContent='00:00.00';const laps=document.getElementById('sw-laps');if(laps)laps.innerHTML='';const btn=document.getElementById('sw-btn');if(btn)btn.textContent='▶';}
+function swFmt(ms){const m=Math.floor(ms/60000);const s=Math.floor((ms%60000)/1000);const cs=Math.floor((ms%1000)/10);return`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;}
+function timerSet(secs){window._clock.timerLeft=secs;window._clock.timerTotal=secs;timerUpdateDisplay();const ring=document.getElementById('tmr-ring');if(ring)ring.style.display='none';}
+function timerToggle(){
+    const c=window._clock;const btn=document.getElementById('tmr-btn');
+    if(c.timerInterval){clearInterval(c.timerInterval);c.timerInterval=null;if(btn)btn.textContent='▶';return;}
+    if(!c.timerLeft){
+        const h=parseInt(document.getElementById('tmr-h')?.value||0);
+        const m=parseInt(document.getElementById('tmr-m')?.value||0);
+        const s=parseInt(document.getElementById('tmr-s')?.value||0);
+        c.timerLeft=h*3600+m*60+s;c.timerTotal=c.timerLeft;
+    }
+    if(!c.timerLeft)return;
+    const ring=document.getElementById('tmr-ring');if(ring)ring.style.display='block';
+    if(btn)btn.textContent='⏸';
+    c.timerInterval=setInterval(()=>{
+        c.timerLeft--;timerUpdateDisplay();
+        if(c.timerLeft<=0){clearInterval(c.timerInterval);c.timerInterval=null;if(btn)btn.textContent='▶';addNotification('⏲️','Timer','Time\'s up!');playSound&&playSound('notification');}
+    },1000);
+}
+function timerReset(){const c=window._clock;clearInterval(c.timerInterval);c.timerInterval=null;c.timerLeft=0;c.timerTotal=0;timerUpdateDisplay();const btn=document.getElementById('tmr-btn');if(btn)btn.textContent='▶';const ring=document.getElementById('tmr-ring');if(ring)ring.style.display='none';}
+function timerUpdateDisplay(){
+    const c=window._clock;
+    const h=Math.floor(c.timerLeft/3600);const m=Math.floor((c.timerLeft%3600)/60);const s=c.timerLeft%60;
+    const el=document.getElementById('tmr-display');
+    if(el)el.textContent=h?`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    const arc=document.getElementById('tmr-arc');
+    if(arc&&c.timerTotal)arc.style.strokeDashoffset=283*(1-c.timerLeft/c.timerTotal);
 }
 
-function updateClockApp() {
-    const now = new Date();
-    const timeEl = document.getElementById('clock-app-time');
-    const dateEl = document.getElementById('clock-app-date');
-    if (timeEl) timeEl.textContent = now.toLocaleTimeString();
-    if (dateEl) dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-}
-
-// Maps App
+// Maps App — real OpenStreetMap
 function createMaps() {
+    const cities = [
+        { name:'New York', lat:40.7128, lon:-74.0060 },
+        { name:'London', lat:51.5074, lon:-0.1278 },
+        { name:'Paris', lat:48.8566, lon:2.3522 },
+        { name:'Tokyo', lat:35.6895, lon:139.6917 },
+        { name:'Sydney', lat:-33.8688, lon:151.2093 },
+        { name:'Dubai', lat:25.2048, lon:55.2708 },
+    ];
+    window._mapsLat = 40.7128; window._mapsLon = -74.0060; window._mapsZoom = 13;
+    setTimeout(mapsLoad, 80);
     return `
-        <div class="maps-app">
-            <div class="maps-search">
-                <input type="text" placeholder="Search for a place...">
-            </div>
-            <div class="maps-content">🗺️</div>
+    <div style="height:100%;display:flex;flex-direction:column;background:#1a1d23;font-family:Segoe UI,sans-serif;">
+      <div style="padding:10px 14px;background:#1e2130;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input id="maps-input" type="text" placeholder="🔍 Search city or address…" style="flex:1;min-width:160px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:white;padding:9px 14px;border-radius:8px;font-size:14px;outline:none;" onkeydown="if(event.key==='Enter')mapsSearch()">
+        <button onclick="mapsSearch()" style="padding:9px 16px;background:#0078d4;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;">Go</button>
+        <select id="maps-zoom" onchange="mapsLoad()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:white;padding:9px 10px;border-radius:8px;font-size:13px;">
+          ${[5,8,10,11,12,13,14,15,16,17].map(z=>`<option value="${z}" ${z===13?'selected':''}>${z===5?'World':z<=10?'Country':z<=12?'Region':z<=14?'City':z<=15?'District':z<=16?'Street':'Building'} (${z})</option>`).join('')}
+        </select>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${cities.map(c=>`<button onclick="mapsGoTo(${c.lat},${c.lon})" style="padding:5px 10px;background:rgba(255,255,255,0.07);color:#93c5fd;border:1px solid rgba(255,255,255,0.1);border-radius:6px;cursor:pointer;font-size:12px;">${c.name}</button>`).join('')}
         </div>
-    `;
+      </div>
+      <div style="flex:1;position:relative;">
+        <iframe id="maps-frame" style="width:100%;height:100%;border:none;" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
+        <div id="maps-loading" style="position:absolute;inset:0;background:#0f172a;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+          <div style="font-size:48px;">🗺️</div>
+          <div style="color:white;font-size:14px;">Loading map…</div>
+        </div>
+      </div>
+    </div>`;
+}
+function mapsLoad() {
+    const zoom = parseInt(document.getElementById('maps-zoom')?.value || 13);
+    window._mapsZoom = zoom;
+    const lat = window._mapsLat, lon = window._mapsLon;
+    const frame = document.getElementById('maps-frame');
+    const loading = document.getElementById('maps-loading');
+    if (!frame) return;
+    if (loading) loading.style.display = 'flex';
+    frame.src = `https://www.openstreetmap.org/export/embed.html?bbox=${lon-0.05},${lat-0.03},${lon+0.05},${lat+0.03}&layer=mapnik&marker=${lat},${lon}`;
+    frame.onload = () => { if (loading) loading.style.display = 'none'; };
+}
+function mapsGoTo(lat, lon) {
+    window._mapsLat = lat; window._mapsLon = lon;
+    mapsLoad();
+}
+async function mapsSearch() {
+    const q = document.getElementById('maps-input')?.value?.trim();
+    if (!q) return;
+    try {
+        const r = await fetch(`/proxy?url=${encodeURIComponent('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q)+'&format=json&limit=1')}`);
+        const data = await r.json();
+        if (data && data[0]) {
+            window._mapsLat = parseFloat(data[0].lat);
+            window._mapsLon = parseFloat(data[0].lon);
+            mapsLoad();
+            addNotification('🗺️','Maps',`Showing: ${data[0].display_name.split(',').slice(0,2).join(',')}`);
+        } else {
+            addNotification('🗺️','Maps','Location not found');
+        }
+    } catch(e) {
+        addNotification('🗺️','Maps','Search failed — check connection');
+    }
 }
 
-// Microsoft Store App
+// Groove Music — interactive playlist player
 function createMusicPlayer() {
-    return `
-        <div style="padding: 20px; background: #111; color: white; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <div style="font-size: 80px; margin-bottom: 20px;">🎵</div>
-            <h3>Now Playing</h3>
-            <p style="color: #888;">Windows 10 Remix.mp3</p>
-            <div style="width: 100%; height: 4px; background: #333; margin: 20px 0; border-radius: 2px;">
-                <div style="width: 45%; height: 100%; background: #0078d4; border-radius: 2px;"></div>
-            </div>
-            <div style="display: flex; gap: 20px; font-size: 24px;">
-                <span>⏮️</span>
-                <span style="font-size: 32px;">⏸️</span>
-                <span>⏭️</span>
-            </div>
+    window._music = {
+        tracks: [
+            { title:'Neon Dreams',        artist:'Synthwave Studio',  duration:214, genre:'Synthwave',  color:'#6366f1', emoji:'🎹' },
+            { title:'Ocean Drive',        artist:'Chill Collective',  duration:187, genre:'Lo-Fi',      color:'#0ea5e9', emoji:'🌊' },
+            { title:'Midnight City',      artist:'Urban Beats',       duration:241, genre:'Indie',      color:'#ec4899', emoji:'🏙️' },
+            { title:'Solar Flare',        artist:'Electronic Pulse',  duration:198, genre:'EDM',        color:'#f59e0b', emoji:'☀️' },
+            { title:'Forest Walk',        artist:'Ambient Journeys',  duration:267, genre:'Ambient',    color:'#22c55e', emoji:'🌿' },
+            { title:'Retro Arcade',       artist:'Chiptune Masters',  duration:173, genre:'Chiptune',   color:'#a855f7', emoji:'🕹️' },
+            { title:'Rainy Café',         artist:'Jazz Collective',   duration:231, genre:'Jazz',       color:'#94a3b8', emoji:'☕' },
+            { title:'Cosmic Voyage',      artist:'Space Ambient',     duration:312, genre:'Ambient',    color:'#38bdf8', emoji:'🚀' },
+            { title:'Thunderstruck',      artist:'Rock Legends',      duration:292, genre:'Rock',       color:'#ef4444', emoji:'⚡' },
+            { title:'Bossa Nova Sunset',  artist:'Latin Groove',      duration:204, genre:'Bossa Nova', color:'#f97316', emoji:'🌅' },
+        ],
+        idx: 0, pos: 0, playing: false, interval: null, volume: 80, shuffle: false, repeat: false
+    };
+    setTimeout(() => musicRender(), 50);
+    return `<div id="music-root" style="height:100%;background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 100%);color:white;font-family:Segoe UI,sans-serif;display:flex;flex-direction:column;"></div>`;
+}
+function musicRender() {
+    const root = document.getElementById('music-root');
+    if (!root) return;
+    const m = window._music;
+    const t = m.tracks[m.idx];
+    root.innerHTML = `
+    <div style="display:flex;height:100%;overflow:hidden;">
+      <!-- Sidebar playlist -->
+      <div style="width:260px;flex-shrink:0;background:rgba(0,0,0,0.3);border-right:1px solid rgba(255,255,255,0.07);overflow-y:auto;padding:8px 0;">
+        <div style="padding:12px 16px;font-size:11px;font-weight:700;letter-spacing:1px;opacity:.5;text-transform:uppercase;">Playlist (${m.tracks.length})</div>
+        ${m.tracks.map((tr,i)=>`
+        <div onclick="musicPlay(${i})" style="padding:10px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;border-left:3px solid ${i===m.idx?tr.color:'transparent'};background:${i===m.idx?'rgba(255,255,255,0.07)':'none'};transition:background .1s;">
+          <div style="width:36px;height:36px;border-radius:8px;background:${tr.color}22;border:1px solid ${tr.color}44;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${tr.emoji}</div>
+          <div style="min-width:0;">
+            <div style="font-size:13px;font-weight:${i===m.idx?700:400};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${tr.title}</div>
+            <div style="font-size:11px;opacity:.5;">${tr.artist} · ${musicFmt(tr.duration)}</div>
+          </div>
+          ${i===m.idx&&m.playing?`<div style="margin-left:auto;display:flex;gap:2px;align-items:flex-end;">${[4,6,5,7,4].map(h=>`<div style="width:3px;height:${h}px;background:${tr.color};border-radius:2px;animation:musicBar .5s ease-in-out infinite alternate;"></div>`).join('')}</div>`:''}
+        </div>`).join('')}
+      </div>
+      <!-- Now playing -->
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;position:relative;overflow:hidden;">
+        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,${t.color}22,transparent 70%);pointer-events:none;"></div>
+        <div style="width:160px;height:160px;border-radius:20px;background:linear-gradient(135deg,${t.color}66,${t.color}22);border:2px solid ${t.color}44;display:flex;align-items:center;justify-content:center;font-size:72px;margin-bottom:24px;box-shadow:0 20px 60px ${t.color}33;">${t.emoji}</div>
+        <div style="font-size:22px;font-weight:700;margin-bottom:6px;">${t.title}</div>
+        <div style="font-size:14px;opacity:.6;margin-bottom:4px;">${t.artist}</div>
+        <div style="font-size:12px;opacity:.4;margin-bottom:24px;">${t.genre}</div>
+        <!-- Progress bar -->
+        <div style="width:100%;max-width:380px;">
+          <div onclick="musicSeek(event,this)" style="height:5px;background:rgba(255,255,255,0.1);border-radius:3px;cursor:pointer;margin-bottom:6px;position:relative;">
+            <div id="music-bar" style="height:100%;background:${t.color};border-radius:3px;width:${Math.round(m.pos/t.duration*100)}%;transition:width .9s linear;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;opacity:.5;">
+            <span id="music-pos">${musicFmt(m.pos)}</span>
+            <span>${musicFmt(t.duration)}</span>
+          </div>
         </div>
-    `;
+        <!-- Controls -->
+        <div style="display:flex;align-items:center;gap:18px;margin-top:24px;">
+          <button onclick="musicToggleShuffle()" title="Shuffle" style="background:none;border:none;font-size:20px;cursor:pointer;opacity:${m.shuffle?.9:.35};color:${m.shuffle?t.color:'white'};">🔀</button>
+          <button onclick="musicPrev()" style="background:none;border:none;font-size:26px;cursor:pointer;color:white;">⏮</button>
+          <button onclick="musicToggle()" style="width:60px;height:60px;border-radius:50%;background:${t.color};border:none;color:white;font-size:26px;cursor:pointer;box-shadow:0 4px 20px ${t.color}66;">${m.playing?'⏸':'▶'}</button>
+          <button onclick="musicNext()" style="background:none;border:none;font-size:26px;cursor:pointer;color:white;">⏭</button>
+          <button onclick="musicToggleRepeat()" title="Repeat" style="background:none;border:none;font-size:20px;cursor:pointer;opacity:${m.repeat?.9:.35};color:${m.repeat?t.color:'white'};">🔁</button>
+        </div>
+        <!-- Volume -->
+        <div style="display:flex;align-items:center;gap:10px;margin-top:20px;max-width:280px;width:100%;">
+          <span style="font-size:16px;opacity:.6;">🔈</span>
+          <input type="range" min="0" max="100" value="${m.volume}" oninput="window._music.volume=+this.value" style="flex:1;accent-color:${t.color};">
+          <span style="font-size:16px;opacity:.6;">🔊</span>
+        </div>
+      </div>
+    </div>`;
+}
+function musicFmt(s){return`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;}
+function musicPlay(i){
+    const m=window._music;
+    clearInterval(m.interval);m.interval=null;
+    m.idx=i;m.pos=0;m.playing=true;
+    musicRender();
+    musicTick();
+}
+function musicToggle(){
+    const m=window._music;
+    m.playing=!m.playing;
+    if(m.playing)musicTick();else{clearInterval(m.interval);m.interval=null;}
+    musicRender();
+}
+function musicNext(){
+    const m=window._music;
+    const next=m.shuffle?Math.floor(Math.random()*m.tracks.length):(m.idx+1)%m.tracks.length;
+    musicPlay(next);
+}
+function musicPrev(){const m=window._music;musicPlay(m.idx>0?m.idx-1:m.tracks.length-1);}
+function musicToggleShuffle(){window._music.shuffle=!window._music.shuffle;musicRender();}
+function musicToggleRepeat(){window._music.repeat=!window._music.repeat;musicRender();}
+function musicTick(){
+    const m=window._music;
+    clearInterval(m.interval);
+    m.interval=setInterval(()=>{
+        m.pos++;
+        const bar=document.getElementById('music-bar');
+        const pos=document.getElementById('music-pos');
+        if(bar)bar.style.width=Math.round(m.pos/m.tracks[m.idx].duration*100)+'%';
+        if(pos)pos.textContent=musicFmt(m.pos);
+        if(m.pos>=m.tracks[m.idx].duration){
+            clearInterval(m.interval);
+            if(m.repeat)musicPlay(m.idx);else musicNext();
+        }
+    },1000);
+}
+function musicSeek(e,bar){
+    const m=window._music;
+    const t=m.tracks[m.idx];
+    const pct=e.offsetX/bar.offsetWidth;
+    m.pos=Math.floor(pct*t.duration);
+    const barEl=document.getElementById('music-bar');
+    const posEl=document.getElementById('music-pos');
+    if(barEl)barEl.style.width=Math.round(pct*100)+'%';
+    if(posEl)posEl.textContent=musicFmt(m.pos);
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 🃏 KLONDIKE SOLITAIRE — real working game
+// ═══════════════════════════════════════════════════════════════
 function createSolitaire() {
-    return `
-        <div style="padding: 20px; background: #0e4e2c; height: 100%; color: white;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                <div>Score: 1250</div>
-                <div>Time: 04:23</div>
-            </div>
-            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <div style="width: 80px; height: 120px; background: white; border-radius: 5px; border: 1px solid #ccc; color: red; padding: 5px;">A ❤️</div>
-                <div style="width: 80px; height: 120px; background: white; border-radius: 5px; border: 1px solid #ccc; color: black; padding: 5px;">K ♠️</div>
-                <div style="width: 80px; height: 120px; background: white; border-radius: 5px; border: 1px solid #ccc; color: red; padding: 5px;">Q ♦️</div>
-                <div style="width: 80px; height: 120px; background: white; border-radius: 5px; border: 1px solid #ccc; color: black; padding: 5px;">J ♣️</div>
-            </div>
-            <div style="margin-top: 50px; text-align: center; opacity: 0.5;">[ Game in Progress ]</div>
+    setTimeout(solInit, 60);
+    return `<div id="sol-root" style="height:100%;background:linear-gradient(135deg,#0e5c2e,#0a3d1e);font-family:Segoe UI,sans-serif;padding:14px;overflow:auto;user-select:none;"></div>`;
+}
+const SOL_SUITS = ['♠','♥','♦','♣'];
+const SOL_RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const SOL_RED = new Set(['♥','♦']);
+window._sol = null;
+function solMakeDeck(){return SOL_SUITS.flatMap(s=>SOL_RANKS.map((r,i)=>({suit:s,rank:r,val:i+1,red:SOL_RED.has(s),up:false})));}
+function solShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function solInit(){
+    const deck=solShuffle(solMakeDeck());
+    const tab=Array.from({length:7},(_,i)=>{const pile=deck.splice(0,i+1);pile[pile.length-1].up=true;return pile;});
+    const s={stock:deck.map(c=>({...c,up:false})),waste:[],found:[[[],[],[],[]]],tab,sel:null,score:0,moves:0};
+    s.found=[[], [], [], []];
+    window._sol=s;
+    solRender();
+}
+function solCard(c,pile,idx,isTop,selected){
+    if(!c.up)return`<div style="width:60px;height:90px;border-radius:6px;background:linear-gradient(135deg,#1a56db,#1e40af);border:1px solid rgba(255,255,255,0.2);flex-shrink:0;"></div>`;
+    const col=c.red?'#dc2626':'#111827';
+    const sel=selected?'outline:3px solid #fbbf24;outline-offset:2px;':'';
+    return`<div onclick="solClick('${pile}',${idx})" style="width:60px;height:90px;border-radius:6px;background:white;border:1px solid #d1d5db;color:${col};font-size:13px;font-weight:700;padding:4px 5px;cursor:pointer;flex-shrink:0;position:relative;box-shadow:0 2px 6px rgba(0,0,0,0.25);${sel}"><div>${c.rank}${c.suit}</div><div style="position:absolute;bottom:4px;right:5px;transform:rotate(180deg);">${c.rank}${c.suit}</div><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:22px;">${c.suit}</div></div>`;
+}
+function solRender(){
+    const root=document.getElementById('sol-root');
+    if(!root||!window._sol)return;
+    const s=window._sol;
+    // Stock + Waste + Foundations
+    const stockHtml=s.stock.length?`<div onclick="solDraw()" style="width:60px;height:90px;border-radius:6px;background:linear-gradient(135deg,#1a56db,#1e40af);border:2px dashed rgba(255,255,255,0.4);cursor:pointer;display:flex;align-items:center;justify-content:center;color:white;font-size:24px;" title="Draw">${s.stock.length}</div>`:`<div onclick="solRestock()" style="width:60px;height:90px;border-radius:6px;border:2px dashed rgba(255,255,255,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.4);font-size:28px;" title="Restart stock">↺</div>`;
+    const wasteHtml=s.waste.length?solCard(s.waste[s.waste.length-1],'waste',s.waste.length-1,true,s.sel?.pile==='waste'):`<div style="width:60px;height:90px;border-radius:6px;border:2px dashed rgba(255,255,255,0.2);"></div>`;
+    const foundHtml=s.found.map((f,fi)=>{
+        const top=f[f.length-1];
+        const col=top?SOL_RED.has(top.suit)?'#dc2626':'#111827':'rgba(255,255,255,0.3)';
+        const sel=s.sel===null&&false;
+        return top?`<div onclick="solClick('found',${fi})" style="width:60px;height:90px;border-radius:6px;background:white;border:2px solid #6ee7b7;color:${col};font-size:13px;font-weight:700;padding:4px 5px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.2);${s.sel?.pile==='found'&&s.sel.pileIdx===fi?'outline:3px solid #fbbf24;':''}" title="Foundation ${SOL_SUITS[fi]}"><div>${top.rank}${top.suit}</div></div>`:`<div onclick="solClick('found',${fi})" style="width:60px;height:90px;border-radius:6px;border:2px dashed ${s.found[fi].length===0?'rgba(255,255,255,0.25)':'#6ee7b7'};display:flex;align-items:center;justify-content:center;font-size:22px;opacity:.5;cursor:pointer;">${SOL_SUITS[fi]}</div>`;
+    }).join('');
+    // Tableau
+    const tabHtml=s.tab.map((pile,pi)=>`
+      <div style="flex:1;min-width:68px;position:relative;min-height:120px;">
+        <div onclick="solClick('tab',${pi})" style="width:60px;min-height:90px;border-radius:6px;border:2px dashed rgba(255,255,255,0.2);position:relative;">
+          ${pile.length===0?`<div style="width:60px;height:90px;border-radius:6px;"></div>`:''}
+          ${pile.map((c,ci)=>`<div style="position:${ci===0?'relative':'absolute'};top:${ci*22}px;z-index:${ci};">${solCard(c,'tab',pi+'_'+ci,ci===pile.length-1,s.sel&&s.sel.pile==='tab'&&s.sel.pileIdx===pi&&ci>=s.sel.cardIdx)}</div>`).join('')}
         </div>
-    `;
+      </div>`).join('');
+    root.innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      ${stockHtml}${wasteHtml}
+      <div style="flex:1;min-width:20px;"></div>
+      ${foundHtml}
+      <div style="margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+        <div style="color:white;font-size:13px;font-weight:600;">Score: ${s.score}</div>
+        <div style="color:rgba(255,255,255,0.6);font-size:11px;">Moves: ${s.moves}</div>
+        <button onclick="solInit()" style="padding:5px 12px;background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);border-radius:6px;cursor:pointer;font-size:12px;">New Game</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-start;">${tabHtml}</div>`;
+    // Win check
+    if(s.found.every(f=>f.length===13)){
+        setTimeout(()=>{root.innerHTML+='<div style="position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999;"><div style="background:linear-gradient(135deg,#22c55e,#16a34a);border-radius:20px;padding:40px 60px;text-align:center;"><div style="font-size:60px;">🎉</div><div style="font-size:28px;color:white;font-weight:700;margin-top:10px;">You Win!</div><div style="color:rgba(255,255,255,.8);margin-top:6px;">Score: ${s.score} · Moves: ${s.moves}</div><button onclick="solInit()" style="margin-top:20px;padding:12px 28px;background:white;color:#16a34a;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:16px;">Play Again</button></div></div>';},100);
+        addNotification('🃏','Solitaire',`You won! Score: ${s.score}`);
+    }
+}
+function solDraw(){const s=window._sol;if(!s)return;const c=s.stock.pop();c.up=true;s.waste.push(c);s.moves++;solRender();}
+function solRestock(){const s=window._sol;if(!s)return;s.stock=s.waste.reverse().map(c=>({...c,up:false}));s.waste=[];s.moves++;solRender();}
+function solClick(pile,idx){
+    const s=window._sol;if(!s)return;
+    if(pile==='tab'){
+        const [pi,ci]=String(idx).split('_').map(Number);
+        const card=s.tab[pi][ci];
+        if(!card.up){if(ci===s.tab[pi].length-1){s.tab[pi][ci].up=true;s.moves++;solRender();}return;}
+        if(s.sel){
+            // try to move sel → this tab pile
+            const srcCards=solGetSelCards();
+            if(solCanPlaceTab(srcCards[0],s.tab[pi])){
+                solDoMove(s.tab[pi]);
+                return;
+            }
+            s.sel=null;solRender();return;
+        }
+        s.sel={pile:'tab',pileIdx:pi,cardIdx:ci};solRender();
+    } else if(pile==='waste'){
+        if(s.sel){s.sel=null;solRender();return;}
+        if(!s.waste.length)return;
+        s.sel={pile:'waste'};solRender();
+    } else if(pile==='found'){
+        const fi=idx;
+        if(s.sel){
+            const srcCards=solGetSelCards();
+            if(srcCards.length===1&&solCanPlaceFound(srcCards[0],s.found[fi])){
+                solDoMove(null,fi);
+                return;
+            }
+            s.sel=null;solRender();return;
+        }
+        if(s.found[fi].length){s.sel={pile:'found',pileIdx:fi};solRender();}
+    }
+}
+function solGetSelCards(){
+    const s=window._sol;const sel=s.sel;
+    if(sel.pile==='waste')return[s.waste[s.waste.length-1]];
+    if(sel.pile==='found')return[s.found[sel.pileIdx][s.found[sel.pileIdx].length-1]];
+    return s.tab[sel.pileIdx].slice(sel.cardIdx);
+}
+function solCanPlaceTab(card,pile){
+    if(!pile.length)return card.rank==='K';
+    const top=pile[pile.length-1];
+    return top.up&&top.val===card.val+1&&top.red!==card.red;
+}
+function solCanPlaceFound(card,found){
+    if(!found.length)return card.rank==='A';
+    const top=found[found.length-1];
+    return top.suit===card.suit&&top.val===card.val-1;
+}
+function solDoMove(tabDest,foundIdx){
+    const s=window._sol;const sel=s.sel;
+    const cards=solGetSelCards();
+    // Remove from source
+    if(sel.pile==='waste')s.waste.splice(s.waste.length-1,1);
+    else if(sel.pile==='found')s.found[sel.pileIdx].splice(s.found[sel.pileIdx].length-1,1);
+    else s.tab[sel.pileIdx].splice(sel.cardIdx);
+    // Flip top of source if tableau
+    if(sel.pile==='tab'&&s.tab[sel.pileIdx].length>0){
+        const newTop=s.tab[sel.pileIdx][s.tab[sel.pileIdx].length-1];
+        if(!newTop.up){newTop.up=true;s.score+=5;}
+    }
+    // Place at destination
+    if(tabDest!==null)tabDest.push(...cards);
+    else s.found[foundIdx].push(...cards);
+    s.score+=foundIdx!==undefined?10:2;
+    s.moves++;
+    s.sel=null;
+    solRender();
 }
 
 // Weather App
@@ -7856,3 +8274,400 @@ function snakeOver() {
     addNotification('🐍','Snake', s.score >= high ? `🏆 New high score: ${s.score}!` : `Game over — score: ${s.score}`);
     window._snake = null;
 }
+
+// ═══════════════════════════════════════════════════════════════
+// 💣 MINESWEEPER — real working game
+// ═══════════════════════════════════════════════════════════════
+function createMinesweeper() {
+    window._mine = null;
+    setTimeout(() => mineSetup(9,9,10), 60);
+    return `
+    <div style="height:100%;background:linear-gradient(135deg,#1a1d23,#0f172a);color:white;font-family:Segoe UI,sans-serif;display:flex;flex-direction:column;align-items:center;padding:20px;overflow:auto;">
+      <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap;justify-content:center;">
+        <button onclick="mineSetup(9,9,10)" style="padding:7px 14px;background:rgba(255,255,255,0.08);color:white;border:1px solid rgba(255,255,255,0.15);border-radius:6px;cursor:pointer;font-size:13px;">😊 Beginner</button>
+        <button onclick="mineSetup(16,16,40)" style="padding:7px 14px;background:rgba(255,255,255,0.08);color:white;border:1px solid rgba(255,255,255,0.15);border-radius:6px;cursor:pointer;font-size:13px;">😐 Intermediate</button>
+        <button onclick="mineSetup(30,16,99)" style="padding:7px 14px;background:rgba(255,255,255,0.08);color:white;border:1px solid rgba(255,255,255,0.15);border-radius:6px;cursor:pointer;font-size:13px;">😰 Expert</button>
+      </div>
+      <div id="mine-info" style="display:flex;gap:30px;margin-bottom:12px;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;">
+        <span>💣 <span id="mine-count">10</span></span>
+        <button onclick="mineReset()" id="mine-face" style="background:none;border:none;font-size:24px;cursor:pointer;">😊</button>
+        <span>⏱ <span id="mine-time">0</span></span>
+      </div>
+      <div id="mine-grid" style="display:inline-block;background:#374151;border-radius:6px;padding:6px;box-shadow:0 8px 30px rgba(0,0,0,0.5);overflow:auto;max-width:100%;"></div>
+    </div>`;
+}
+function mineSetup(cols, rows, mines) {
+    clearInterval(window._mineTimer);
+    window._mine = {
+        cols, rows, mines,
+        cells: Array.from({length:rows*cols}, (_,i) => ({idx:i, mine:false, revealed:false, flagged:false, adj:0})),
+        state: 'idle', // idle|playing|won|lost
+        started: false, minesLeft: mines, elapsed: 0
+    };
+    document.getElementById('mine-count').textContent = mines;
+    document.getElementById('mine-face').textContent = '😊';
+    document.getElementById('mine-time').textContent = '0';
+    mineRenderGrid();
+}
+function minePlaceMines(cols, rows, mines, safeIdx) {
+    const m = window._mine;
+    const candidates = m.cells.map((_,i) => i).filter(i => i !== safeIdx);
+    for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random()*(i+1));
+        [candidates[i],candidates[j]] = [candidates[j],candidates[i]];
+    }
+    candidates.slice(0, mines).forEach(i => m.cells[i].mine = true);
+    m.cells.forEach((c,i) => {
+        c.adj = mineNeighbors(i).filter(n => m.cells[n].mine).length;
+    });
+}
+function mineNeighbors(idx) {
+    const m = window._mine;
+    const r = Math.floor(idx/m.cols), co = idx%m.cols;
+    const ns = [];
+    for (let dr=-1;dr<=1;dr++) for (let dc=-1;dc<=1;dc++) {
+        if (!dr&&!dc) continue;
+        const nr=r+dr, nc=co+dc;
+        if (nr>=0&&nr<m.rows&&nc>=0&&nc<m.cols) ns.push(nr*m.cols+nc);
+    }
+    return ns;
+}
+function mineReveal(idx) {
+    const m = window._mine;
+    if (m.state==='won'||m.state==='lost') return;
+    if (!m.started) {
+        m.started = true; m.state='playing';
+        minePlaceMines(m.cols, m.rows, m.mines, idx);
+        window._mineTimer = setInterval(() => {
+            m.elapsed++;
+            const el = document.getElementById('mine-time');
+            if (el) el.textContent = m.elapsed;
+        }, 1000);
+    }
+    const c = m.cells[idx];
+    if (c.revealed || c.flagged) return;
+    c.revealed = true;
+    if (c.mine) {
+        m.state='lost';
+        clearInterval(window._mineTimer);
+        document.getElementById('mine-face').textContent='😵';
+        m.cells.forEach(c => { if(c.mine) c.revealed=true; });
+        addNotification('💣','Minesweeper','BOOM! You hit a mine 💥');
+        mineRenderGrid(); return;
+    }
+    if (c.adj===0) mineNeighbors(idx).forEach(n => mineReveal(n));
+    // Win?
+    const unrevealed = m.cells.filter(c => !c.revealed).length;
+    if (unrevealed === m.mines) {
+        m.state='won';
+        clearInterval(window._mineTimer);
+        document.getElementById('mine-face').textContent='😎';
+        addNotification('💣','Minesweeper',`You won in ${m.elapsed}s! 🎉`);
+    }
+    mineRenderGrid();
+}
+function mineFlag(e, idx) {
+    e.preventDefault(); e.stopPropagation();
+    const m = window._mine;
+    if (m.state==='won'||m.state==='lost') return;
+    const c = m.cells[idx];
+    if (c.revealed) return;
+    c.flagged = !c.flagged;
+    m.minesLeft += c.flagged ? -1 : 1;
+    document.getElementById('mine-count').textContent = m.minesLeft;
+    mineRenderGrid();
+}
+function mineReset() { const m=window._mine; if(m) mineSetup(m.cols, m.rows, m.mines); }
+const MINE_COLORS = ['','#3b82f6','#22c55e','#ef4444','#7c3aed','#9f1239','#06b6d4','#000','#6b7280'];
+function mineRenderGrid() {
+    const m = window._mine;
+    const grid = document.getElementById('mine-grid');
+    if (!grid || !m) return;
+    const cs = Math.max(24, Math.min(32, Math.floor(480/m.cols)));
+    grid.innerHTML = `<div style="display:grid;grid-template-columns:repeat(${m.cols},${cs}px);gap:2px;">` +
+        m.cells.map((c,i) => {
+            if (c.revealed) {
+                if (c.mine) return `<div style="width:${cs}px;height:${cs}px;background:#ef4444;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:${cs*0.55}px;">💣</div>`;
+                const txt = c.adj > 0 ? `<span style="color:${MINE_COLORS[c.adj]};font-weight:700;font-size:${cs*0.5}px;">${c.adj}</span>` : '';
+                return `<div style="width:${cs}px;height:${cs}px;background:rgba(255,255,255,0.07);border-radius:3px;display:flex;align-items:center;justify-content:center;">${txt}</div>`;
+            }
+            const inner = c.flagged ? `<span style="font-size:${cs*0.55}px;">🚩</span>` : '';
+            return `<div onclick="mineReveal(${i})" oncontextmenu="mineFlag(event,${i})" style="width:${cs}px;height:${cs}px;background:rgba(255,255,255,0.12);border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid rgba(255,255,255,0.08);transition:background .1s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">${inner}</div>`;
+        }).join('') + '</div>';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🎙️ VOICE RECORDER — MediaRecorder API
+// ═══════════════════════════════════════════════════════════════
+function createVoiceRecorder() {
+    window._vrec = { recorder: null, chunks: [], clips: JSON.parse(localStorage.getItem('voiceClips')||'[]'), recording: false, duration: 0, timer: null };
+    setTimeout(vrRender, 60);
+    return `<div id="vr-root" style="height:100%;background:linear-gradient(135deg,#0f172a,#1e293b);color:white;font-family:Segoe UI,sans-serif;display:flex;flex-direction:column;"></div>`;
+}
+function vrRender() {
+    const root = document.getElementById('vr-root');
+    if (!root) return;
+    const vr = window._vrec;
+    root.innerHTML = `
+    <div style="padding:24px;display:flex;flex-direction:column;align-items:center;gap:20px;flex:1;">
+      <div style="font-size:28px;font-weight:700;">🎙️ Voice Recorder</div>
+      <div id="vr-visualizer" style="width:100%;max-width:400px;height:80px;background:rgba(255,255,255,0.04);border-radius:12px;display:flex;align-items:center;justify-content:center;gap:3px;overflow:hidden;">
+        ${vr.recording ? Array.from({length:40},(_,i)=>`<div class="vr-bar" style="width:5px;background:#ef4444;border-radius:3px;height:${Math.random()*60+4}px;animation:vrPulse ${0.3+Math.random()*0.4}s ease-in-out infinite alternate;"></div>`).join('') : '<span style="opacity:.3;font-size:13px;">Press record to start</span>'}
+      </div>
+      <div style="font-size:48px;font-weight:200;font-variant-numeric:tabular-nums;color:${vr.recording?'#ef4444':'white'};" id="vr-time">${vrFmt(vr.duration)}</div>
+      <div style="display:flex;gap:16px;">
+        ${vr.recording
+            ? `<button onclick="vrStop()" style="width:72px;height:72px;border-radius:50%;background:#ef4444;border:none;color:white;font-size:28px;cursor:pointer;box-shadow:0 0 0 4px rgba(239,68,68,0.3);">⏹</button>`
+            : `<button onclick="vrStart()" style="width:72px;height:72px;border-radius:50%;background:#ef4444;border:none;color:white;font-size:28px;cursor:pointer;">🎙️</button>`}
+      </div>
+      ${vr.clips.length ? `
+      <div style="width:100%;max-width:500px;">
+        <div style="font-size:13px;font-weight:700;opacity:.6;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Recordings (${vr.clips.length})</div>
+        ${vr.clips.map((c,i)=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(255,255,255,0.05);border-radius:10px;margin-bottom:6px;">
+          <span style="font-size:18px;">🎵</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;">${c.name}</div>
+            <div style="font-size:11px;opacity:.5;">${c.dur} · ${c.date}</div>
+          </div>
+          <audio controls src="${c.url}" style="height:28px;max-width:160px;"></audio>
+          <a href="${c.url}" download="${c.name}" style="color:#93c5fd;font-size:18px;text-decoration:none;" title="Download">⬇</a>
+          <button onclick="vrDelete(${i})" style="background:none;border:none;color:#f87171;font-size:16px;cursor:pointer;" title="Delete">✕</button>
+        </div>`).join('')}
+      </div>` : ''}
+    </div>`;
+}
+function vrFmt(s){return`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;}
+async function vrStart() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+        const vr = window._vrec;
+        vr.chunks = []; vr.duration = 0; vr.recording = true;
+        vr.recorder = new MediaRecorder(stream);
+        vr.recorder.ondataavailable = e => vr.chunks.push(e.data);
+        vr.recorder.onstop = vrSave;
+        vr.recorder.start();
+        vr.timer = setInterval(() => {
+            vr.duration++;
+            const el = document.getElementById('vr-time');
+            if (el) el.textContent = vrFmt(vr.duration);
+        }, 1000);
+        vrRender();
+    } catch(e) {
+        addNotification('🎙️','Recorder','Microphone access denied');
+    }
+}
+function vrStop() {
+    const vr = window._vrec;
+    if (!vr.recorder) return;
+    clearInterval(vr.timer);
+    vr.recording = false;
+    vr.recorder.stop();
+    vr.recorder.stream.getTracks().forEach(t => t.stop());
+}
+function vrSave() {
+    const vr = window._vrec;
+    const blob = new Blob(vr.chunks, {type:'audio/webm'});
+    const url = URL.createObjectURL(blob);
+    const dur = vrFmt(vr.duration);
+    const name = `Recording ${vr.clips.length+1} (${dur}).webm`;
+    const date = new Date().toLocaleString();
+    vr.clips.unshift({name, url, dur, date});
+    // Don't persist blob URLs to localStorage (they expire)
+    addNotification('🎙️','Recorder',`Saved: ${name}`);
+    vr.duration = 0;
+    vrRender();
+}
+function vrDelete(i) {
+    const vr = window._vrec;
+    URL.revokeObjectURL(vr.clips[i].url);
+    vr.clips.splice(i,1);
+    vrRender();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ✅ TO-DO — persistent task list with priorities & categories
+// ═══════════════════════════════════════════════════════════════
+function createToDo() {
+    window._todo = JSON.parse(localStorage.getItem('todoTasks')||'[]');
+    window._todoFilter = 'all';
+    setTimeout(todoRender, 60);
+    return `<div id="todo-root" style="height:100%;background:linear-gradient(135deg,#f8fafc,#f1f5f9);font-family:Segoe UI,sans-serif;display:flex;flex-direction:column;overflow:hidden;"></div>`;
+}
+function todoRender() {
+    const root = document.getElementById('todo-root');
+    if (!root) return;
+    const tasks = window._todo;
+    const f = window._todoFilter;
+    const filtered = tasks.filter(t => f==='all'||(f==='active'&&!t.done)||(f==='done'&&t.done)||(f===t.cat));
+    const cats = ['Work','Personal','Shopping','Health','Other'];
+    const prios = {high:'#ef4444',medium:'#f59e0b',low:'#22c55e'};
+    root.innerHTML = `
+    <div style="padding:18px 20px;background:linear-gradient(135deg,#0078d4,#0ea5e9);color:white;">
+      <div style="font-size:22px;font-weight:700;margin-bottom:2px;">✅ To-Do</div>
+      <div style="font-size:13px;opacity:.8;">${tasks.filter(t=>!t.done).length} tasks remaining · ${tasks.filter(t=>t.done).length} completed</div>
+    </div>
+    <div style="padding:14px 20px;background:white;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input id="todo-input" type="text" placeholder="Add a new task…" onkeydown="if(event.key==='Enter')todoAdd()" style="flex:1;min-width:180px;padding:9px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;outline:none;" />
+      <select id="todo-cat" style="padding:9px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;">
+        ${cats.map(c=>`<option>${c}</option>`).join('')}
+      </select>
+      <select id="todo-prio" style="padding:9px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;">
+        <option value="high">🔴 High</option>
+        <option value="medium" selected>🟡 Medium</option>
+        <option value="low">🟢 Low</option>
+      </select>
+      <button onclick="todoAdd()" style="padding:9px 16px;background:#0078d4;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:14px;">+ Add</button>
+    </div>
+    <div style="padding:8px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;gap:6px;flex-wrap:wrap;">
+      ${['all','active','done',...cats].map(f2=>`<button onclick="window._todoFilter='${f2}';todoRender()" style="padding:4px 12px;border-radius:20px;border:1px solid ${f===f2?'#0078d4':'#d1d5db'};background:${f===f2?'#0078d4':'white'};color:${f===f2?'white':'#374151'};cursor:pointer;font-size:12px;">${f2.charAt(0).toUpperCase()+f2.slice(1)}</button>`).join('')}
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:12px 20px;display:flex;flex-direction:column;gap:6px;">
+      ${filtered.length ? filtered.map((t,fi) => {
+          const realIdx = tasks.indexOf(t);
+          return `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:white;border-radius:10px;border:1px solid #e2e8f0;border-left:4px solid ${prios[t.prio]||'#94a3b8'};opacity:${t.done?.7:1};">
+            <input type="checkbox" ${t.done?'checked':''} onchange="todoToggle(${realIdx})" style="width:18px;height:18px;cursor:pointer;accent-color:#0078d4;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;${t.done?'text-decoration:line-through;color:#9ca3af;':''}">${t.text}</div>
+              <div style="font-size:11px;color:#94a3b8;margin-top:2px;">${t.cat} · ${t.prio} priority · ${t.date}</div>
+            </div>
+            <button onclick="todoDel(${realIdx})" style="background:none;border:none;color:#f87171;font-size:18px;cursor:pointer;padding:2px;">✕</button>
+          </div>`;
+      }).join('') : `<div style="text-align:center;padding:60px;opacity:.4;"><div style="font-size:48px;">✅</div><div style="font-size:15px;margin-top:12px;">No tasks here</div></div>`}
+    </div>`;
+}
+function todoAdd() {
+    const input = document.getElementById('todo-input');
+    const cat = document.getElementById('todo-cat')?.value || 'Other';
+    const prio = document.getElementById('todo-prio')?.value || 'medium';
+    const text = input?.value?.trim();
+    if (!text) return;
+    window._todo.unshift({ text, cat, prio, done:false, date:new Date().toLocaleDateString() });
+    localStorage.setItem('todoTasks', JSON.stringify(window._todo));
+    todoRender();
+}
+function todoToggle(i) {
+    window._todo[i].done = !window._todo[i].done;
+    localStorage.setItem('todoTasks', JSON.stringify(window._todo));
+    todoRender();
+}
+function todoDel(i) {
+    window._todo.splice(i, 1);
+    localStorage.setItem('todoTasks', JSON.stringify(window._todo));
+    todoRender();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🖱️ DESKTOP RIGHT-CLICK CONTEXT MENU
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('contextmenu', function(e) {
+    const desktop = document.getElementById('screen-desktop') || document.querySelector('.desktop-icons');
+    const isDesktop = e.target.closest('#screen-desktop') && !e.target.closest('.window') && !e.target.closest('.taskbar') && !e.target.closest('.start-menu');
+    if (!isDesktop) return;
+    e.preventDefault();
+    const menu = document.getElementById('desktop-ctx-menu');
+    if (!menu) return;
+    menu.style.display = 'block';
+    const x = Math.min(e.clientX, window.innerWidth - 210);
+    const y = Math.min(e.clientY, window.innerHeight - menu.offsetHeight - 10);
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+});
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#desktop-ctx-menu')) ctxClose();
+});
+function ctxClose() { const m = document.getElementById('desktop-ctx-menu'); if(m) m.style.display='none'; }
+function ctxRefresh() {
+    ctxClose();
+    addNotification('🔄','Desktop','Refreshed');
+    const icons = document.querySelector('.desktop-icons');
+    if (icons) { icons.style.opacity='0'; setTimeout(()=>icons.style.opacity='1',150); }
+}
+function ctxView(size) {
+    ctxClose();
+    const icons = document.querySelectorAll('.desktop-icon');
+    const sizes = { large:{w:'90px',fs:'38px'}, medium:{w:'74px',fs:'32px'}, small:{w:'58px',fs:'24px'} };
+    const s = sizes[size] || sizes.medium;
+    icons.forEach(ic => {
+        ic.style.width = s.w;
+        const img = ic.querySelector('.icon-img');
+        if (img) img.style.fontSize = s.fs;
+    });
+    addNotification('🔲','Desktop',`Icon size: ${size}`);
+}
+function ctxSort(by) {
+    ctxClose();
+    addNotification('🔤','Desktop',`Sorted by ${by}`);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 📣 ACTION CENTER — Quick Settings panel
+// ═══════════════════════════════════════════════════════════════
+window._acState = { wifi:true, bt:false, airplane:false, nightlight:false, focusassist:false, darkmode:true };
+function toggleActionCenter() {
+    const ac = document.getElementById('action-center');
+    if (!ac) return;
+    const isOpen = ac.classList.toggle('open');
+    if (isOpen) {
+        acRenderTiles();
+        acSyncNotifications();
+        // update clock
+        setInterval(() => {
+            const cl = document.getElementById('ac-clock');
+            if (cl) cl.textContent = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true}) + ' · ' + new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+        }, 1000);
+        const cl = document.getElementById('ac-clock');
+        if (cl) cl.textContent = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true}) + ' · ' + new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    }
+}
+const AC_TILES = [
+    { id:'wifi',     icon:'📶', label:'Wi-Fi',        color:'#3b82f6' },
+    { id:'bt',       icon:'🔵', label:'Bluetooth',     color:'#8b5cf6' },
+    { id:'airplane', icon:'✈️', label:'Airplane',      color:'#f59e0b' },
+    { id:'nightlight',icon:'🌙',label:'Night light',   color:'#f97316' },
+    { id:'focusassist',icon:'🎯',label:'Focus assist', color:'#22c55e' },
+    { id:'darkmode', icon:'🌑', label:'Dark mode',     color:'#6366f1' },
+    { id:'_hotspot', icon:'📡', label:'Hotspot',       color:'#06b6d4' },
+    { id:'_locn',    icon:'📍', label:'Location',      color:'#ef4444' },
+];
+function acRenderTiles() {
+    const el = document.getElementById('ac-tiles');
+    if (!el) return;
+    const s = window._acState;
+    el.innerHTML = AC_TILES.map(t => {
+        const on = t.id.startsWith('_') ? false : !!s[t.id];
+        return `<button onclick="acToggle('${t.id}')" style="aspect-ratio:1;border-radius:10px;border:none;background:${on?t.color:'rgba(255,255,255,0.07)'};color:white;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:20px;padding:6px;transition:background .2s;" title="${t.label}">
+            <span>${t.icon}</span>
+            <span style="font-size:9px;opacity:.8;font-family:Segoe UI,sans-serif;font-weight:600;">${t.label.split(' ')[0]}</span>
+        </button>`;
+    }).join('');
+}
+function acToggle(id) {
+    if (id.startsWith('_')) { addNotification('📣','Quick Settings', id.replace('_','') + ' toggled'); return; }
+    window._acState[id] = !window._acState[id];
+    acRenderTiles();
+    const labels = {wifi:'Wi-Fi',bt:'Bluetooth',airplane:'Airplane mode',nightlight:'Night light',focusassist:'Focus assist',darkmode:'Dark mode'};
+    addNotification('📣','Quick Settings', `${labels[id]||id}: ${window._acState[id]?'On':'Off'}`);
+    if (id==='nightlight') toggleNightLight({classList:{toggle:()=>{}}});
+}
+function acSyncNotifications() {
+    const list = document.getElementById('notification-list');
+    const acList = document.getElementById('ac-notifications');
+    if (!list || !acList) return;
+    const items = list.querySelectorAll('.notification');
+    if (!items.length) return;
+    acList.innerHTML = '';
+    items.forEach(item => {
+        const clone = item.cloneNode(true);
+        clone.style.cssText = 'background:rgba(255,255,255,0.05);border-radius:8px;padding:10px 12px;display:flex;gap:8px;cursor:pointer;';
+        clone.onclick = () => clone.remove();
+        acList.appendChild(clone);
+    });
+}
+// Close Action Center when clicking outside
+document.addEventListener('click', function(e) {
+    const ac = document.getElementById('action-center');
+    if (ac && ac.classList.contains('open') && !e.target.closest('#action-center') && !e.target.closest('.notification-button')) {
+        ac.classList.remove('open');
+    }
+});

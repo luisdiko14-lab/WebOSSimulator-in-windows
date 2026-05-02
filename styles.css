@@ -35,6 +35,55 @@ body {
 #autosave-status { transition: background .3s, color .3s; }
 #autosave-status:hover { filter: brightness(1.15); }
 
+/* Music Player bars animation */
+@keyframes musicBar {
+    from { transform: scaleY(0.4); }
+    to   { transform: scaleY(1.2); }
+}
+
+/* Voice Recorder bar animation */
+@keyframes vrPulse {
+    from { transform: scaleY(0.3); opacity: .7; }
+    to   { transform: scaleY(1.1); opacity: 1; }
+}
+
+/* Desktop right-click context menu */
+#desktop-ctx-menu {
+    position: fixed; display: none; z-index: 99999;
+    background: #2b2b2b; color: #e8e8e8;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px; padding: 4px 0;
+    min-width: 200px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    font-family: Segoe UI, sans-serif; font-size: 13px;
+    user-select: none;
+}
+#desktop-ctx-menu .ctx-item {
+    padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+    transition: background .1s;
+}
+#desktop-ctx-menu .ctx-item:hover { background: rgba(255,255,255,0.08); }
+#desktop-ctx-menu .ctx-sep { height: 1px; background: rgba(255,255,255,0.08); margin: 4px 0; }
+#desktop-ctx-menu .ctx-sub { position: relative; }
+#desktop-ctx-menu .ctx-sub .ctx-arrow { margin-left: auto; opacity: .6; font-size: 10px; }
+
+/* Action Center panel */
+#action-center {
+    position: fixed; right: 0; bottom: 48px; width: 360px; max-height: 80vh;
+    background: rgba(30,30,40,0.96); backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 8px 0 0 8px;
+    box-shadow: -8px 0 30px rgba(0,0,0,0.5);
+    display: none; flex-direction: column;
+    z-index: 9998; color: white; font-family: Segoe UI, sans-serif;
+    animation: acSlideIn .2s ease-out;
+    overflow-y: auto;
+}
+#action-center.open { display: flex; }
+@keyframes acSlideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+}
+
 /* Discord channel hover/active states */
 .discord-ch { transition: background .12s, color .12s; }
 .discord-ch:hover:not(.active) { background: rgba(79,84,92,0.3) !important; color: #dcddde !important; }
