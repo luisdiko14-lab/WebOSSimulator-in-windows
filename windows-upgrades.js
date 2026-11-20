@@ -1,5 +1,6 @@
 (() => {
   'use strict';
+  const featureBase = new URL('./windows-features/', document.currentScript.src);
   const ids = ['quick-settings','virtual-desktops','snap-layouts','clipboard-history','focus-sessions','widgets-dashboard','notification-history','personalization','accessibility','app-permissions','system-monitor','storage-sense','power-profiles','shortcut-guide','restore-points'];
   const features = new Map();
   const KEY = 'wos-nexus-state-v1';
@@ -70,8 +71,7 @@
     document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.shiftKey&&e.key.toLowerCase()==='x'){e.preventDefault();panel.classList.contains('open')?closePanel():showPanel();}if(e.key==='Escape')closePanel();});
     const screen=document.getElementById('screen-desktop');
     if(screen){const sync=()=>launch.style.display=screen.classList.contains('active')?'flex':'none';sync();new MutationObserver(sync).observe(screen,{attributes:true,attributeFilter:['class']});}
-    const base=new URL('./windows-features/',document.currentScript.src);
-    Promise.all(ids.map(id=>new Promise(resolve=>{const s=document.createElement('script');s.src=new URL(id+'.js',base).href;s.onload=resolve;s.onerror=resolve;document.head.appendChild(s);}))).then(()=>{if(features.size!==15)toast('Loaded '+features.size+' of 15 upgrade modules');});
+    Promise.all(ids.map(id=>new Promise(resolve=>{const s=document.createElement('script');s.src=new URL(id+'.js',featureBase).href;s.onload=resolve;s.onerror=resolve;document.head.appendChild(s);}))).then(()=>{if(features.size!==15)toast('Loaded '+features.size+' of 15 upgrade modules');});
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true}); else init();
 })();
