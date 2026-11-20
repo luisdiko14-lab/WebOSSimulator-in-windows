@@ -177,3 +177,26 @@ Preferred communication style: Simple, everyday language.
 - Working Apps: Calculator, Notepad, File Explorer, Settings, Task Manager, Edge, Paint, etc.
 - Security Simulations: Ransomware and BSOD for educational purposes
 - Persistent Data: Users and settings saved in `localStorage`
+
+
+## Nexus Upgrade Pack — Windows (15 additions)
+
+Open the floating **Nexus** launcher from the simulated desktop, or press **Ctrl + Shift + X**.
+
+1. Quick Settings: Wi-Fi, Bluetooth, airplane mode, night light and Do Not Disturb.
+2. Virtual Desktops: create, switch and remove named workspaces.
+3. Snap Layouts: left/right, thirds, quarters and focus presets.
+4. Clipboard History: save, copy and clear local text snippets.
+5. Focus Sessions: configurable Pomodoro-style countdown timer.
+6. Widgets Dashboard: choose weather, calendar, tasks, status and news cards.
+7. Notification History: generate demo alerts, review and clear them.
+8. Personalization Studio: theme, accent and desktop wallpaper presets.
+9. Accessibility Center: text size, contrast, reduced motion and pointer options.
+10. App Permissions: simulated camera, microphone, location and clipboard controls.
+11. System Monitor: live sample CPU, memory, network and process readings.
+12. Storage Sense: inspect virtual storage and clear demo temporary files.
+13. Power Profiles: efficiency, balanced, performance and battery-saver modes.
+14. Keyboard Shortcuts: searchable Windows-style shortcut reference.
+15. Restore Points: save and restore Nexus preference snapshots.
+
+The upgrade pack is part of the browser simulation. It does not change Windows settings, access real system resources, or back up real files. Preferences are stored in this browser's local storage.
