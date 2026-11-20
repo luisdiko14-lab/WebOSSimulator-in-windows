@@ -480,6 +480,7 @@ jobs:
 
       - name: ✅ Deployment verification
         run: |
+         sleep 12
           echo "Pages deploy action outcome: ${{ steps.deployment.outcome || 'unknown' }}"
           echo "If deployment succeeded, your Pages site should be live."
 
